@@ -1,0 +1,779 @@
+[
+ {
+  "id": "CER-01",
+  "domain": "ceramics",
+  "rule": "Compensate firing shrinkage by scaling the ware (and only the ware, never mold or casing construction parameters) by 1/(1 - s), where s is the measured wet-to-fired linear shrinkage of the user's slip. Record whether the Fusion model is fired size.",
+  "default_value": "clayShrinkagePct = 13 (scale 1.149) until a test bar is measured",
+  "range": "4.5-20 % (cone 06 earthenware about 4.5-6 %, cone 6 stoneware/porcelain 14-16 %, some porcelains about 20 %)",
+  "sources": [
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://www.clay-king.com/product/standard-cone-6-porcelain-dry-slip/",
+   "https://stoneleafpottery.com/lacn401-white-star-cone-06-04-slip/",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+  ]
+ },
+ {
+  "id": "CER-02",
+  "domain": "ceramics",
+  "rule": "Zero undercut: every cast-contact face of every plaster piece must have non-negative draft relative to that piece's pull direction AND be unoccluded along it (a ray from the face along d must not hit the cast). Fail if n.d < -sin(undercutTolDeg) or occluded. No residual-undercut tolerance is accepted (no source supports one).",
+  "default_value": "undercutTolDeg = 0.5 deg (tessellation tolerance only); residual undercut area allowed = 0",
+  "range": "0.25-0.5 deg numerical tolerance",
+  "sources": [
+   "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+   "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+   "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf",
+   "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+  ]
+ },
+ {
+  "id": "CER-03",
+  "domain": "ceramics",
+  "rule": "Zero draft is acceptable on outer (female) surfaces because the cast shrinks away, but warn below 1 deg and report the zero-draft area per layout (a 2-side split always has a 0 deg band at the seam; 3 sides give 30 deg, 4 sides 45 deg on vertical walls).",
+  "default_value": "draftWarnDeg = 1 deg",
+  "range": "0-3 deg",
+  "sources": [
+   "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+   "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+   "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+  ]
+ },
+ {
+  "id": "CER-04",
+  "domain": "ceramics",
+  "rule": "Convex plaster features the cast shrinks onto (foot-ring interiors, cores, handle holes) need generous draft, must be flagged, and should sit in a piece removed early.",
+  "default_value": "coreDraftMinDeg = 3 deg",
+  "range": "2-5 deg",
+  "sources": [
+   "https://www.mehlmandesign.com/ceramic-glass/blog-detail/slipcasting-plates/",
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+  ]
+ },
+ {
+  "id": "CER-05",
+  "domain": "ceramics",
+  "rule": "Place parting lines on the zero-draft silhouette for each pull direction, snapped to existing edges or curvature transitions; never across the foot, flat faces or decorated areas. Split straddle faces at the silhouette before building a parting line.",
+  "default_value": "snap tolerance 2 mm to nearest existing edge",
+  "sources": [
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+   "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+   "https://ceramic-resource.com/mold-building-for-slip-casting-in-ceramics/"
+  ]
+ },
+ {
+  "id": "CER-06",
+  "domain": "ceramics",
+  "rule": "Default layouts: forms whose profile never narrows upward (including the spare) can use a one-piece drop-out mold; mugs, cups and bellied or necked vessels use 2 side pieces split on an axial plane plus a bottom piece (3 pieces), optionally plus a separate spare ring (4). Choose the simplest feasible layout.",
+  "default_value": "moldLayout = auto (search order drop-out, sides2, sides2Bottom, sides3Bottom, sides4Bottom, +spare ring)",
+  "range": "1-5 plaster pieces",
+  "sources": [
+   "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/three-approaches-to-slip-casting-plates",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+  ]
+ },
+ {
+  "id": "CER-07",
+  "domain": "ceramics",
+  "rule": "Bottom/side split height: just above the highest annular horizontal slice at the base (foot recess, foot ring), plus a margin, snapped to an existing edge if one is within reach. The bottom piece must form the whole foot including any recess and be a height field from below.",
+  "default_value": "bottomSplitMargin = 3 mm above the recess top",
+  "range": "2-5 mm margin; 0 to about 25 % of ware height",
+  "sources": [
+   "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+   "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+   "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+  ]
+ },
+ {
+  "id": "CER-08",
+  "domain": "ceramics",
+  "rule": "Handles and spouts are cast in their own 2-piece mold split lengthwise on the appendage mid-plane and attached at leather-hard; detect off-axis faces on revolved bodies and route them out of the body mold unless the user accepts cast-in-place (inner dimple).",
+  "default_value": "appendageStrategy = separateMold",
+  "sources": [
+   "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles",
+   "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-the-handle/",
+   "https://digitalfire.com/project/mug+handle+casting"
+  ]
+ },
+ {
+  "id": "CER-09",
+  "domain": "ceramics",
+  "rule": "Nominal plaster wall (offset from the cast plug) scales with mold size; keep it a parameter. USG's 38 mm minimum targets production casting molds.",
+  "default_value": "plasterWall = 25 mm for ware up to about 150 mm; 30-40 mm for 150-300 mm; 40-65 mm above",
+  "range": "20-75 mm",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+  ]
+ },
+ {
+  "id": "CER-10",
+  "domain": "ceramics",
+  "rule": "Wall uniformity check on every plaster piece: warn where local thickness < 0.8 x nominal, fail where < 0.6 x nominal or < 15 mm; report minimum distance and a thickness histogram (including bridged-groove thickening) as diagnostics, not gates. No knife-thin edges at parting corners or natch bosses.",
+  "default_value": "plasterWallWarnRatio 0.8, plasterWallFailRatio 0.6, plasterWallMinAbs 15 mm",
+  "range": "warn 0.6-0.8 x",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+  ]
+ },
+ {
+  "id": "CER-11",
+  "domain": "ceramics",
+  "rule": "Chamfer or fillet outer plaster edges; optional 45 deg cuts on large outside corners to save weight. Plaster tensile strength is only about 290 psi dry and wet plaster is half as strong.",
+  "default_value": "plasterEdgeChamfer = 3 mm",
+  "range": "2-10 mm",
+  "sources": [
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+  ]
+ },
+ {
+  "id": "CER-12",
+  "domain": "ceramics",
+  "rule": "Spare (slip well): extend the plug above the rim; step it outward to form a horizontal plaster knife ledge at rim height, flare its walls outward for release, round the plaster edge at the top. Check height >= max(15 mm, 2 x predicted level drop + 5 mm), where drop = cast area x cast thickness x 0.24 g/cm3 / spare cross-section (derived constant, calibrate). spareStyle may be integrated (split with the sides), a separate ring piece, or a printed non-absorbent spout.",
+  "default_value": "spareStyle integrated, spareHeight 20 mm, spareStepOut 5 mm, spareFlareAngle 5 deg, spareTopRound 3 mm",
+  "range": "height 15-40 mm (taller for narrow necks); step-out 0-10 mm; flare 3-20 deg",
+  "sources": [
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+   "https://digitalfire.com/glossary/pour+spout"
+  ]
+ },
+ {
+  "id": "CER-13",
+  "domain": "ceramics",
+  "rule": "The rim plane is flat and coincides with the knife ledge or the spare/body parting plane, so the trimming blade can ride flat on the plaster and cut inside-to-outside.",
+  "default_value": "rim plane = top of ware (auto)",
+  "sources": [
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+  ]
+ },
+ {
+  "id": "CER-14",
+  "domain": "ceramics",
+  "rule": "Natches: spherical-cap keys (bump on one piece, socket on the mating piece) with cap depth about 0.55-0.6 x sphere radius so the rim draft is >= 20 deg; 3 per seam laid out asymmetrically (2 on seams under 100 mm); footprint edge >= natchEdgeMargin from the cavity edge and from the chamfered outer edge; the natch axis must be parallel to the relative separation direction of the two pieces in the chosen disassembly order.",
+  "default_value": "natchRadius 6 mm, natchDepth 3.5 mm (footprint about 10.9 mm), natchesPerSeam 3, natchEdgeMargin 5 mm",
+  "range": "radius 4-9 mm; 2-4 per seam",
+  "sources": [
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+   "https://digitalfire.com/glossary/mold+natches",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+   "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+   "https://meshcast.app/plaster-mold",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+  ]
+ },
+ {
+  "id": "CER-15",
+  "domain": "ceramics",
+  "rule": "Natch clearance depends on how the keys are made: plaster bump/socket pairs formed by two independently printed casings need larger play (FDM error + warp + 0.17-0.21 % setting expansion); printed or commercial natch inserts can be tight. Calibrate with a coupon and store the winner.",
+  "default_value": "natchClearance 0.4 mm radial (independent casings); 0.1 mm for printed inserts; 9.8 mm hole for 3/8 in commercial natches",
+  "range": "0.2-0.6 mm",
+  "sources": [
+   "https://digitalfire.com/project/63",
+   "https://meshcast.app/plaster-mold",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+  ]
+ },
+ {
+  "id": "CER-16",
+  "domain": "ceramics",
+  "rule": "Demold order: separate spare piece first (about 20 min after draining, once the sheen is gone; trim the rim), then the bottom piece (mold inverted), then the sides; every piece moves along its own pull vector without rocking. The toolkit emits this order and verifies it is collision-free including natches.",
+  "default_value": "disassemblyOrder = spare, bottom, sides",
+  "sources": [
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+   "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download"
+  ]
+ },
+ {
+  "id": "CER-17",
+  "domain": "ceramics",
+  "rule": "Plaster mix: weigh water and plaster at the manufacturer's consistency; mix water near 20 C (warmer raises the exotherm peak about 1:1 and speeds set; below about 18 C increases expansion); hard limit 40 C.",
+  "default_value": "plasterConsistency 70 (USG No. 1 Pottery Plaster); mixWaterTempC 20",
+  "range": "consistency 66-90 by brand; water 18-22 C target",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+   "https://digitalfire.com/material/1124",
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/"
+  ]
+ },
+ {
+  "id": "CER-18",
+  "domain": "ceramics",
+  "rule": "Batch and weights from Fusion volume V (cm3) per piece: plaster_g = V x 0.985 x (1 + overage); water_g = plaster_g x consistency/100; dry weight V x 1.10 g/cm3, wet weight V x 1.58 g/cm3; warn when any wet piece exceeds the handling limit.",
+  "default_value": "plasterDryPerCm3 0.985, plasterOveragePct 15, wetPieceWeightWarn 6 kg",
+  "range": "0.93-0.99 g/cm3; overage 10-20 %",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+  ]
+ },
+ {
+  "id": "CER-19",
+  "domain": "ceramics",
+  "rule": "Mixing and pouring: sift plaster onto water, soak 2-4 min, mix 2-5 min, finish pouring within 5 min; pour from the back into the deepest point and keep the stream off the working face (hard spots).",
+  "default_value": "soak 3 min, mix 3 min, pour within 5 min",
+  "range": "Vicat set 14-24 min",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+  ]
+ },
+ {
+  "id": "CER-20",
+  "domain": "ceramics",
+  "rule": "Remove casings from plaster no earlier than 60 min after pouring and only once the block has passed its heat peak and is cooling (modeled peak 35-65 min after mixing).",
+  "default_value": ">= 60 min and cooling",
+  "range": "60-180 min",
+  "sources": [
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+   "https://meshcast.app/guides/plaster-cracking"
+  ]
+ },
+ {
+  "id": "CER-21",
+  "domain": "ceramics",
+  "rule": "Dry new molds to constant weight with air at or below 49 C and >= 4.6 m/s airflow; never cool suddenly from above 38 C; at room temperature allow at least 48-72 h before first cast.",
+  "default_value": "43-49 C forced air, 12 mm spacing",
+  "range": "supply air up to 66 C only while still wet",
+  "sources": [
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/drying-plaster-casts-application-en-IG502.pdf",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+   "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+  ]
+ },
+ {
+  "id": "CER-22",
+  "domain": "ceramics",
+  "rule": "Release: test bare PLA with no agent first; potter's soap in about 3 thin wiped coats only on plaster faces that will touch fresh plaster (sequential workflow); never oil or Vaseline on casing faces that form the plaster's working surface.",
+  "default_value": "releaseAgent = none on PLA",
+  "sources": [
+   "https://digitalfire.com/glossary/side+rails",
+   "https://industrialplasters.com/products/soft-soap-release",
+   "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+   "https://meshcast.app/guides/mold-release-agents"
+  ]
+ },
+ {
+  "id": "CER-23",
+  "domain": "ceramics",
+  "rule": "Give each plaster piece flat, stable outer lands (pour back screeded flat, bottom piece's open face = mold standing face) so the mold can be strapped, stood and drained inverted at an angle.",
+  "default_value": "pourOpenConeDeg 30 deg flat crown land",
+  "sources": [
+   "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+  ]
+ },
+ {
+  "id": "CER-24",
+  "domain": "ceramics",
+  "rule": "Target cast wall thickness is a documentation and spare-sizing input, not geometry.",
+  "default_value": "castWallTarget 4 mm",
+  "range": "2-6 mm studio tableware",
+  "sources": [
+   "https://digitalfire.com/glossary/slip+casting",
+   "https://digitalfire.com/project/60"
+  ]
+ },
+ {
+  "id": "CER-25",
+  "domain": "ceramics",
+  "rule": "Thermal check (derived model): core peak about T0 + f x 33 K (f 0.75 at 20 mm to 0.9 at 50 mm, consistency 70); casing-face peak about core - 3 K. Warn when the casing face exceeds 50 C for reusable PLA or 63 C for PETG. Replace with the user's thermocouple log once measured.",
+  "default_value": "adiabatic rise 33 K (28-37 K)",
+  "range": "core 42-54 C at 20 C start for 20-50 mm sections",
+  "sources": [
+   "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+   "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+   "https://prusament.com/materials/pla/",
+   "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+   "local: scratchpad plaster_heat.py (derived 1-D model, gap-3)"
+  ]
+ },
+ {
+  "id": "PRN-01",
+  "domain": "printing",
+  "rule": "Never make a rigid one-piece casing that wraps a closed plaster contour or has opposing walls in one part; setting expansion (0.17-0.21 %, about 0.3 mm over 150 mm) locks it. Split it, or make it a thin sacrificial shell that is peeled off.",
+  "default_value": "split always (reusable) or 0.8 mm shell (sacrificial)",
+  "sources": [
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://digitalfire.com/glossary/mold+shell+flange",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+  ]
+ },
+ {
+  "id": "PRN-02",
+  "domain": "printing",
+  "rule": "Casing strategy is a parameter: reusable (split, flanged, clamped) or sacrificial (thin PLA, heat-gun peel, one piece per plaster piece allowed). Walls are whole multiples of the nozzle line width.",
+  "default_value": "casingStrategy reusable, casingWall 2.4 mm; sacrificial 0.8 mm (1.2 mm on flat areas)",
+  "range": "reusable 2.0-3.0 mm; sacrificial 0.8-1.2 mm",
+  "sources": [
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://digitalfire.com/glossary/0.8mm+thickness",
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+   "https://meshcast.app/guides/mold-box-generator"
+  ]
+ },
+ {
+  "id": "PRN-03",
+  "domain": "printing",
+  "rule": "Flat casing panels must stay within a span limit under plaster head H: a_max = (w_allow x E x t^3 / (0.0443 x rho x g x H))^(1/4), w_allow 0.2 mm, rho 1670 kg/m3, E 3.0 GPa (PLA) or 1.6 GPa (PETG); add ribs or curvature beyond it. PETG needs about 1.23 x the PLA wall for equal stiffness.",
+  "default_value": "PLA 2.4 mm spans about 103 mm at H 100 mm (82 mm at 250 mm)",
+  "range": "0.8 mm about 36-45 mm; 5 mm about 143-179 mm",
+  "sources": [
+   "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+   "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+   "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+  ]
+ },
+ {
+  "id": "PRN-04",
+  "domain": "printing",
+  "rule": "Casing material: PLA for sacrificial casings, and for reusable casings when mix water <= 22 C, room <= 24 C and the thickest plaster section <= 50 mm; otherwise PETG, or PLA with fan or cool-water-bath cooling. Printed clips always PETG. Never cure casings on foam or stacked (insulation raises the peak).",
+  "default_value": "casingMaterial PLA (conditional)",
+  "sources": [
+   "https://meshcast.app/guides/plaster",
+   "https://prusament.com/materials/pla/",
+   "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+   "https://digitalfire.com/project/15",
+   "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/"
+  ]
+ },
+ {
+  "id": "PRN-05",
+  "domain": "printing",
+  "rule": "Casing split rule per plaster piece, poured with its release direction d up: Part 0 base pattern plate = working-face positive + every parting face facing down, pulled exactly along -d; each seam face perpendicular to the plate is a separate flat end wall pulled along its normal carrying that seam's natches; remaining back faces are clustered into sectors whose contact normals are all within 90 deg - thetaC of the sector pull; back faces within pourOpenConeDeg of up are left open as the screeded pour face. Splits snap to planes.",
+  "default_value": "contoured back: plate + 2 sectors + end walls per side piece; plate + 4-sector ring for a bottom piece",
+  "range": "block back alternative: plate + 4 flat walls (or 2 L-frames)",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+   "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+   "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+  ]
+ },
+ {
+  "id": "PRN-06",
+  "domain": "printing",
+  "rule": "Casing-versus-plaster release draft thetaC per part: warn below 3 deg, fail below 0.5 deg; full-revolve rings use 4 sectors by default (2 halves allowed with a warning because they release only by flexing).",
+  "default_value": "casingDraftWarnDeg 3, casingDraftFailDeg 0.5, casingRingSectors 4",
+  "range": "1-5 deg",
+  "sources": [
+   "https://meshcast.app/guides/draft-angles-and-undercuts",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+  ]
+ },
+ {
+  "id": "PRN-07",
+  "domain": "printing",
+  "rule": "Casing release gate in Fusion: translate a temporary copy of each casing part 0.5, 2 and 10 mm along its pull and intersect with the plaster piece and the parts not yet removed; intersection volume must be zero.",
+  "default_value": "steps 0.05, 0.2, 1.0 cm; tolerance 0.001 cm3",
+  "sources": [
+   "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+  ]
+ },
+ {
+  "id": "PRN-08",
+  "domain": "printing",
+  "rule": "Base pattern plate thickness 4 mm; print working-face parts at fine layers without supports touching the working face; outer walls and sectors can print at draft settings.",
+  "default_value": "casingBasePlate 4 mm; layerFine 0.12 mm; layerDraft 0.24 mm",
+  "range": "plate 3-5 mm; fine 0.10-0.16 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md",
+   "https://meshcast.app/guides/best-print-settings-for-molds",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+  ]
+ },
+ {
+  "id": "PRN-09",
+  "domain": "printing",
+  "rule": "Flanges on every reusable-casing seam: thickness so two flanges fit the clamp capacity; width = ridge zone + clamp jaw depth.",
+  "default_value": "flangeThickness 3 mm, flangeWidth 12 mm (5 mm for sacrificial shells)",
+  "range": "thickness 2.4-4 mm; width 10-20 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+   "https://digitalfire.com/glossary/mold+shell+flange",
+   "https://de.wikipedia.org/wiki/Foldback-Klammer"
+  ]
+ },
+ {
+  "id": "PRN-10",
+  "domain": "printing",
+  "rule": "Ridge-and-groove labyrinth on flanges: ridge set close to the plaster face; groove wider by 2 x clearance and deeper than the ridge so the flange faces bear (a bottomed-out ridge opens a leak); groove walls >= 1.2 mm. Calibrate clearance by coupon.",
+  "default_value": "ridge 2.0 x 2.0 mm inset 1.5 mm; groove 2.5 mm wide x 2.4 mm deep; seamClearance 0.25 mm per side",
+  "range": "clearance 0.15-0.35 mm; bottom gap 0.3-0.5 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+   "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+   "https://meshcast.app/guides/3d-printed-inlays",
+   "https://meshcast.app/guides/plaster-mold"
+  ]
+ },
+ {
+  "id": "PRN-11",
+  "domain": "printing",
+  "rule": "Lead-in chamfers on ridge tips and groove mouths; 45 deg chamfer on bed-side edges against elephant's foot.",
+  "default_value": "leadInChamfer 0.5 mm x 45 deg",
+  "range": "0.4-0.6 mm",
+  "sources": [
+   "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/"
+  ]
+ },
+ {
+  "id": "PRN-12",
+  "domain": "printing",
+  "rule": "Clamp layout: spacing <= 50 mm, first clamp <= 15 mm from each seam end, >= 2 per flange, always one at mid-span; n = ceil(L/50) + 1; backup band or tape (bands alone creep 0.1-0.3 mm). Loads are small (about 1.7 kPa per 100 mm head, about 9 N per clip); clamps exist for sealing and stiffness.",
+  "default_value": "clampSpacingMax 50 mm, clampEndOffset 15 mm",
+  "range": "40-60 mm",
+  "sources": [
+   "https://meshcast.app/guides/plaster",
+   "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+  ]
+ },
+ {
+  "id": "PRN-13",
+  "domain": "printing",
+  "rule": "Printed clamp option: PETG C-channel wedge clip that slides along paired flanges, inner gap tapering 1:20 from 2 x flange + 0.4 mm at the mouth to 2 x flange - 2 x interference when seated; arms 3-4 mm, width 15-20 mm, root fillet >= 0.5 x arm, printed flat. Unvalidated in ceramic sources; test before use.",
+  "default_value": "clipTaper 0.05, clipInterference 0.15 mm per arm, clipArmThickness 3.5 mm, clipWidth 18 mm",
+  "range": "taper 1:10-1:30; interference 0.1-0.2 mm",
+  "sources": [
+   "https://fab.cba.mit.edu/classes/S62.12/people/vernelle.noel/Plastic_Snap_fit_design.pdf",
+   "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/"
+  ]
+ },
+ {
+  "id": "PRN-14",
+  "domain": "printing",
+  "rule": "Seal every casing seam and the base outside with a soft clay coil or tape in addition to the ridge/groove; optional closed-cell foam gasket in a channel with hard stops (15-25 % compression). Never sealant, hot glue or oil on surfaces that form the plaster's working face.",
+  "default_value": "sealMethod clay",
+  "sources": [
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+   "https://meshcast.app/guides/plaster",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://marinelab3d.com/blogs/news/sealing-3d-prints-ptfe-tape-epoxy-tpu-gaskets"
+  ]
+ },
+ {
+  "id": "PRN-15",
+  "domain": "printing",
+  "rule": "Base seam: a ridge around the base plate engages a groove in the foot of each wall or sector, and foot flanges are clamped to the plate flange, so slurry cannot leak under or float a domed back shell upward.",
+  "default_value": "baseSeamStyle ridge",
+  "sources": [
+   "https://meshcast.app/guides/vase-mold",
+   "https://digitalfire.com/glossary/side+rails"
+  ]
+ },
+ {
+  "id": "PRN-16",
+  "domain": "printing",
+  "rule": "Pour face: leave the back open, deboss a fill line on the inside of the walls, keep freeboard above it; pour into the deepest point away from the working face.",
+  "default_value": "fillLineDepth 0.6 mm, casingFreeboard 10 mm",
+  "range": "freeboard 10-30 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+   "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+  ]
+ },
+ {
+  "id": "PRN-17",
+  "domain": "printing",
+  "rule": "Print orientation: parting/mating faces on the bed for flatness (fit first), working-face positive facing up with no supports, overhangs <= 45 deg, grooves on bed faces (<= 5 mm wide to bridge) and ridges on top faces; print mirrored mating parts on the same printer, material and orientation.",
+  "default_value": "orientation hints written to the process sheet per part",
+  "sources": [
+   "https://digitalfire.com/project/60",
+   "https://digitalfire.com/project/33",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://meshcast.app/guides/best-print-settings-for-molds",
+   "https://digitalfire.com/glossary/all-in-one+case+mold"
+  ]
+ },
+ {
+  "id": "PRN-18",
+  "domain": "printing",
+  "rule": "Before the first mold, print calibration coupons and store the winning values: groove clearance, plaster natch clearance (two mini-casings), and clip interference.",
+  "default_value": "seam 0.15/0.20/0.25/0.30/0.35 mm; natch 0.2/0.3/0.4/0.5/0.6 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+   "https://digitalfire.com/project/63",
+   "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+  ]
+ },
+ {
+  "id": "PRN-19",
+  "domain": "printing",
+  "rule": "Every exported part must fit the printer bed; otherwise split it on planes with flanged or glued joints and print each piece in its best orientation.",
+  "default_value": "bedX 250 mm, bedY 210 mm, bedZ 210 mm (user override)",
+  "sources": [
+   "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+  ]
+ },
+ {
+  "id": "PRN-20",
+  "domain": "printing",
+  "rule": "Minimum printable feature 1.0 mm (vents, air holes, ribs).",
+  "default_value": "1.0 mm",
+  "range": ">= 0.8 mm",
+  "sources": [
+   "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+   "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+  ]
+ },
+ {
+  "id": "PRN-21",
+  "domain": "printing",
+  "rule": "Seam mismatch between independently cast pieces is expected (estimated 0.3-0.5 mm step, unquantified): print mating faces bed-side, plan to sand plaster mating faces flat on a glass plate after drying, and offer a sequential workflow (soaped piece 1 as wall for piece 2) when seams must match by construction.",
+  "default_value": "casingWorkflow independent; sanding step listed in process sheet",
+  "sources": [
+   "https://digitalfire.com/project/60",
+   "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+   "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101"
+  ]
+ },
+ {
+  "id": "SW-01",
+  "domain": "software",
+  "rule": "All script math uses Fusion internal units (cm, radians, kg); convert mm by /10; report in mm.",
+  "default_value": "cm internal, mm in reports",
+  "sources": [
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm"
+  ]
+ },
+ {
+  "id": "SW-02",
+  "domain": "software",
+  "rule": "Create parameters with UserParameters.add(name, ValueInput.createByString('25 mm'), 'mm', comment); text parameters use single-quoted expressions; booleans are unitless 0/1; edit with Parameter.expression (setting .value drops the expression); bind features with createByString('paramName').",
+  "default_value": "expressions with units",
+  "sources": [
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm",
+   "local: fusion_mcp_read apiDocumentation UserParameters.add / Parameter.expression"
+  ]
+ },
+ {
+  "id": "SW-03",
+  "domain": "software",
+  "rule": "Two parameter classes: dimensional values bound live where native features support it (spare extrude, natch size, flange sizes); structural values (layout, piece count, azimuth, sector count) and envelope-based geometry are applied by re-running the stage script. No Custom Features (preview, add-in only).",
+  "default_value": "regenerate-by-script primary",
+  "sources": [
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomFeatures_UM.htm",
+   "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+  ]
+ },
+ {
+  "id": "SW-04",
+  "domain": "software",
+  "rule": "Each MCP script call targets <= 30 s and never exceeds 40 s; never call adsk.doEvents() and never run busy or sleep loops. A timed-out call (about 60 s) is NOT cancelled and later calls queue behind it, so re-query the design before any retry.",
+  "default_value": "30 s target, 40 s hard budget",
+  "sources": [
+   "local: gap-2 MCP timing probes and Fusion AppLogFile20261002T165339.log (crash at 18:19 during a 75 s doEvents loop)",
+   "https://code.claude.com/docs/en/mcp"
+  ]
+ },
+ {
+  "id": "SW-05",
+  "domain": "software",
+  "rule": "Stage transaction: record design.timeline.count/markerPosition at stage start; on any failure set markerPosition back and call deleteAllAfterMarker(); on success group the stage's features as 'MoldGen: <stage>'. Do not rely on undo (outside a command every API change is a separate undo entry).",
+  "default_value": "timeline checkpoint per stage",
+  "sources": [
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+   "local: fusion_mcp_read apiDocumentation Timeline.markerPosition / deleteAllAfterMarker"
+  ]
+ },
+ {
+  "id": "SW-06",
+  "domain": "software",
+  "rule": "Check healthState and errorOrWarningMessage after every feature add; Design.computeAll() returning True does not mean success.",
+  "default_value": "fail stage on any error-state feature",
+  "sources": [
+   "local: fusion_mcp_read apiDocumentation TimelineObject.healthState / Design.computeAll"
+  ]
+ },
+ {
+  "id": "SW-07",
+  "domain": "software",
+  "rule": "Select faces by geometric predicates (surface type, outward normal vs axis, centroid/bbox position) and re-query after every feature; never by index or tempId; never compare entityToken strings.",
+  "default_value": "predicate helpers in moldkit/fusion",
+  "sources": [
+   "local: fusion_mcp_read apiDocumentation BRepFace.tempId / entityToken / Design.findEntityByToken"
+  ]
+ },
+ {
+  "id": "SW-08",
+  "domain": "software",
+  "rule": "Tag every generated body, feature group and component with attribute group 'moldgen' (role, pieceId, part, pullDir JSON, stage, version, paramHash); re-tag after every split or combine because attributes may stay on only one fragment.",
+  "default_value": "group 'moldgen'",
+  "sources": [
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Attributes_UM.htm"
+  ]
+ },
+ {
+  "id": "SW-09",
+  "domain": "software",
+  "rule": "Split with one tool per SplitBodyFeature (construction planes, isSplittingToolExtended True); identify results by diffing the component body set before/after and classifying by centroid side, never by SplitBodyFeature.bodies alone.",
+  "default_value": "body-set diff",
+  "sources": [
+   "local: fusion_mcp_read apiDocumentation SplitBodyFeatures.createInput / Feature.bodies",
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/SplitBodyFeatureSample_Sample.htm"
+  ]
+ },
+ {
+  "id": "SW-10",
+  "domain": "software",
+  "rule": "Moldability runs on meshes: TriangleMeshCalculator (surfaceTolerance 0.005 cm, maxSideLength chosen for about 15-25k triangles) plus a pure-Python 60 x 60 bucketed span test and occlusion test per direction (measured 0.17-0.52 s per direction at 7.6k-21k triangles). findBRepUsingRay (single hit per face) only for spot checks.",
+  "default_value": "analysisTargetTriangles 20000",
+  "range": "7.5k-39k triangles = 0.17-1.2 s per direction",
+  "sources": [
+   "local: gap-2 probe1_readonly.py measurements",
+   "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/main/LureMoldGenerator/lure_mold/parting.py",
+   "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+  ]
+ },
+ {
+  "id": "SW-11",
+  "domain": "software",
+  "rule": "Direction set: horizontal directions every 2 deg plus +Z and -Z for vessel layouts; add 200-500 Fibonacci-sphere directions, clustered face normals and principal axes only for freeform shapes. Precompute accessibility once, then score layouts by lookup.",
+  "default_value": "analysisDirStepDeg 2",
+  "range": "1-5 deg",
+  "sources": [
+   "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/",
+   "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+   "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+  ]
+ },
+ {
+  "id": "SW-12",
+  "domain": "software",
+  "rule": "Revolved fast path: extract r(z); single-valued r(z) reaching the axis means any axial plane gives valid side halves; annular slices force a Z-pulled piece over that z-range; non-decreasing r(z) up to the spare top allows a drop-out mold; any face not generated by the revolve disables the shortcut.",
+  "default_value": "used when all faces share one revolve axis",
+  "sources": [
+   "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+  ]
+ },
+ {
+  "id": "SW-13",
+  "domain": "software",
+  "rule": "Layout search: enumerate drop-out, sides2, sides2Bottom, sides3Bottom, sides4Bottom, optional +spare ring; sweep splitAzimuth (2 deg) and bottomSplitHeight; score undercut area (must be 0), zero-draft area, piece count, seam length; return the simplest zero-undercut layout plus alternatives and an undercut heat map.",
+  "default_value": "moldLayout auto, maxPlasterPieces 5",
+  "sources": [
+   "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+   "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+   "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/"
+  ]
+ },
+ {
+  "id": "SW-14",
+  "domain": "software",
+  "rule": "Virtual demold and disassembly: translate a TemporaryBRep copy of each piece 0.01/0.1/1.0 cm along its pull, intersect with the cast and remaining pieces (volume < 0.001 cm3); search removal orders (<= 5! for 5 pieces) including natches, which must be parallel to the relative motion of their two pieces.",
+  "default_value": "tolerance 0.001 cm3",
+  "sources": [
+   "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+  ]
+ },
+ {
+  "id": "SW-15",
+  "domain": "software",
+  "rule": "Assembly verification: analyzeInterference on all plaster pieces (coincident faces excluded) returns none; sum of piece volumes equals plaster volume within 0.1 %; CER-10 ratio check; per-piece dry/wet weight and batch report.",
+  "default_value": "0 interferences, 0.1 % volume balance",
+  "sources": [
+   "local: fusion_mcp_read apiDocumentation Design.analyzeInterference / MeasureManager.measureMinimumDistance"
+  ]
+ },
+ {
+  "id": "SW-16",
+  "domain": "software",
+  "rule": "Plaster body construction: revolved forms use a pure-Python rounded envelope of the profile (outer boundary of discs of radius plasterWall centered on profile points; exact minimum distance, bridges concave radii smaller than the wall) written as a fitted spline and revolved; generic forms use Shell outsideThickness with RoundedOffsetShellType and isTangentChain False; fallback primitive minus cast (warn: non-uniform walls). The cast itself always comes from exact geometry.",
+  "default_value": "envelope for revolves; 150-300 sample points",
+  "sources": [
+   "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-83A14252-0009-42AA-AE7E-435F595DE41B.htm",
+   "local: gap-2 probe2_readonly.py (mug concave radius 13.38 mm < plaster wall)"
+  ]
+ },
+ {
+  "id": "SW-17",
+  "domain": "software",
+  "rule": "MCP script conventions: def run(context) with context possibly None; readOnly true for analysis and verification; no ui.messageBox; print exactly one compact JSON line (mm units); stdout under 1 MiB; modifying scripts verify app.activeDocument.name equals the expected document and refuse otherwise.",
+  "default_value": "one JSON line per call",
+  "sources": [
+   "local: Fusion MCP tool schemas (fusion_mcp_execute readOnly enforcement)",
+   "https://github.com/hitsmaxft/fusion-mcp-client"
+  ]
+ },
+ {
+  "id": "SW-18",
+  "domain": "software",
+  "rule": "Pure-Python geometry core with no adsk imports, unit-tested outside Fusion through node scripts/ai-exec.mjs python -m pytest; thin Fusion adapters; MCP calls send a short stub that inserts the repo on sys.path, reloads all toolkit modules (persistent interpreter caches imports) and runs one stage; no numpy.",
+  "default_value": "moldkit/ core + moldkit/fusion/ adapters + fusion_stub.py",
+  "sources": [
+   "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm",
+   "local: gap-2 environment probe (Python 3.14.0, no numpy, no pip)"
+  ]
+ },
+ {
+  "id": "SW-19",
+  "domain": "software",
+  "rule": "Every stage writes a versioned JSON result (status strict_pass | conditional | inconclusive | fail | unsupported, unit-tagged metrics, limitations, next_action) to molds/<design>/runs/; human approval gates after S3 layout, after S6 verification and before S9 export, bound to a hash of the parameter snapshot; thresholds come only from parameters, never improvised by the agent.",
+  "default_value": "3 gates",
+  "sources": [
+   "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+  ]
+ },
+ {
+  "id": "SW-20",
+  "domain": "software",
+  "rule": "Export one binary STL or 3MF per body with MeshRefinementCustom (surfaceDeviation 0.001 cm, normalDeviation 10 deg), file names <design>_<role>_<pieceId>_<part>; never scale exports afterwards.",
+  "default_value": "exportFormat stl, 0.01 mm deviation",
+  "sources": [
+   "local: fusion_mcp_read apiDocumentation STLExportOptions / C3MFExportOptions",
+   "https://shapecastmolds.com/"
+  ]
+ },
+ {
+  "id": "SW-21",
+  "domain": "software",
+  "rule": "Only one agent modifies the design at a time; never run modifying scripts while the user is editing in Fusion; never call Documents.add (cannot be hidden, steals focus) without the user's consent; analysis may run on inactive documents found by name.",
+  "default_value": "ask before any modifying run in a live session",
+  "sources": [
+   "local: gap-2 incident log and Documents.add API doc",
+   "local: D:\\Coding\\fusion360-claude\\CLAUDE.md (Fusion MCP section)"
+  ]
+ },
+ {
+  "id": "SW-22",
+  "domain": "software",
+  "rule": "TemporaryBRepManager pitfalls: createTorus ignores its center (create at origin then transform); bodies inserted through a BaseFeature are non-parametric; wrap BoundaryFill createInput in try/finally with add() or cancel().",
+  "default_value": "helpers wrap these calls",
+  "sources": [
+   "local: gap-2 debug probe (build 2705.1.25)",
+   "https://ekinssolutions.com/using-temporary-b-rep-in-fusion-360/",
+   "local: fusion_mcp_read apiDocumentation BoundaryFillFeatureInput.cancel"
+  ]
+ }
+]

@@ -1,0 +1,507 @@
+{
+ "topic": "parting-lines-undercuts-traditional",
+ "summary": "Traditional slip-casting mold makers choose parting lines by marking seam lines straight onto the model (the prototype) before any plaster is poured. The marks decide how many pieces the mold has. For a two-piece split, the parting line follows the model's widest outline, the silhouette seen along the pull direction, and is checked for level with a ruler or set square. A clay bed is then built up to that line. Plaster cannot flex at all, so every piece must slide straight off the cast. Any surface that curves back under itself traps the cast, so it needs another mold section, or it gets filled with plasticine or clay before the mold is made. In CAD the same idea is the draft-analysis rule: the parting line is the loop of edges between faces with positive draft and faces with negative draft relative to the pull direction. A face that changes sign without an edge (a \"straddle\" face, common on fillets and revolved surfaces) must be split at that change before a parting line can follow it.\n\nFor cups and mugs, practitioners generally use 3 or 4 pieces: two side pieces with a vertical seam, a separate bottom, and either a separate top spare (reservoir) piece or half of the spare built into each side. They reject the plain 2-piece vertical split because its seam cuts across the foot and adds trimming. A 3-piece mold with a \"drop-out\" spare in the bottom is preferred as less bulky. Simple shapes that widen toward the rim (bowls, plates, tumblers) use one-piece drain molds, where the cast drops out when the mold is turned over. Shape Cast automates exactly this case for revolved forms. Vases with narrow necks may be poured through a hole in the bottom, or cast with a closed top and the opening cut by hand later. Handles are usually cast in their own 2-piece mold, with the seam running lengthwise along the least visible edge, and attached at leather-hard. Handles cast in place leave a dimple inside the body. Figurines and other complex forms need 3 or more pieces, and the count grows with the amount of undercutting. Seams belong on edges, ridges, or places where a plane changes into a curve. They should stay off flat faces, decorated faces, and the foot.\n\nDemolding goes in reverse order of assembly. The spare (pouring gate) piece comes off first, once the slip loses its shine (about 20 min after draining), and the rim is trimmed. The other pieces stay on for about another hour. The last section added is lifted straight off, never rocked side to side. Casting bodies shrink very little (from about 1.5%) and pull away from outer mold walls as they stiffen. They shrink ONTO any convex plaster feature, though (cores, the inside of a foot ring, the face side of a plate mold), which can lock or crack the cast. No source I read says a plaster mold tolerates true undercuts. The practical rule is zero undercuts plus 1-3 degrees of draft. Plaster wall thickness of 25-38 mm for small molds and keys or natches on every seam are standard. I found no published maximum depth-to-opening ratio for drain casting. The evidence I did find concerns venting: small pour holes must drain slowly or the cast collapses under vacuum, solid casting uses two holes 180 degrees apart, and bottom drains are about 1 in (25 mm).",
+ "findings": [
+  {
+   "claim": "An undercut is any indentation or protrusion that prevents withdrawal from a one-piece mold. Because plaster is completely rigid, any undercut on the cast surface needs an extra mold section or must be filled before molding.",
+   "details": "Wikipedia: undercut = 'any indentation or protrusion in a shape that will prevent its withdrawal from a one-piece mold.' Sheffield Pottery: 'any area where the mold curves back under itself will mechanically trap the cast'; the fix is flexible material or more mold sections. whatmakeart: the parting line must let the pieces pull apart free of undercuts; unavoidable undercuts are 'filled prior to making the mold.' Mehlman Design FAQ: 'I may have to fill undercuts with plasticine, to allow the mold section to draw away.' Smooth-On fills deep undercuts the same way before building the shell.",
+   "confidence": "high",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Undercut_(manufacturing)",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://www.mehlmandesign.com/index.php/ceramic-glass/faq",
+    "https://www.smooth-on.com/tutorials/handling-large-undercuts-brush-mold-making-process/"
+   ]
+  },
+  {
+   "claim": "For a two-piece mold, the parting line runs along the outermost, widest silhouette ('tangent to the outermost features'). It is made level to the table, and a clay bed is built up to it before the first half is poured.",
+   "details": "whatmakeart: the parting line 'should be tangent to the outermost features of the object'; use a ruler to check it is level all the way around; the clay bed reaches 'the half way point of the object, or the parting line.' The course version adds that the parting line is an infinitely thin plane perpendicular to the tangent point that divides the undercuts. Smooth-On draws parting lines on the high points before molding. Exquisite Objects leaves about 3 cm of clay bed around the widest part of a bottle.",
+   "confidence": "high",
+   "sources": [
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://whatmakeart.com/courses/reproducibility/2025-spring/01-mold-making/01-05-two-part-slipcast-mold/",
+    "https://www.smooth-on.com/tutorials/handling-large-undercuts-brush-mold-making-process/",
+    "https://exquisiteobjects.com/2013/10/02/tutorial-step-by-step-guide-for-making-a-mould-for-ceramic-slip-casting/"
+   ]
+  },
+  {
+   "claim": "The CAD equivalent of the 'widest line' is the boundary between faces with positive and negative draft relative to a chosen pull direction. Faces that cross from positive to negative draft without an edge ('straddle faces') must be split at that boundary.",
+   "details": "Hawk Ridge (SolidWorks parting line tool): the parting line is found from the 'edges between the positive and negative draft faces'; draft analysis colors faces positive (green), negative (red) and zero (yellow); straddle faces 'transition from positive to negative draft without an edge in between' and need Split Faces. The example uses 1 degree of draft. Fusion has an Inspect > Draft Analysis tool (inputs: body and pull direction; it shows a color gradient over a chosen angle range) and a Draft feature with a 'Parting Line' type. This matters for Fusion models: a filleted, revolved mug has toroidal and spline faces that straddle the silhouette, so agents must split faces at the zero-draft curve.",
+   "confidence": "high",
+   "sources": [
+    "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-F372F1AF-71F1-499D-AA1F-712E57C89806.htm",
+    "https://help.autodesk.com/view/fusion360/ENU/?contextId=SLD-MOD-DRAFT"
+   ]
+  },
+  {
+   "claim": "Practitioners decide the number of pieces by drawing seam lines on the prototype first. Seams go on edges or where planes and curves change, not on flat or decorated faces, because there they are easier to clean and less visible.",
+   "details": "Andrew Gilliatt (Ceramic Mold Making Techniques, Ceramic Arts Daily 2011): 'The biggest trick to making molds is figuring out the number of parts'; he draws seam lines on the prototype with a marker; most of his molds are 4 parts (bottom, two sides, top pouring gate). Seams are planned to fall on 'edges or places where planes and curves shift, rather than flat faces.' Ceramic Resource: put the parting line 'where the model has minimal detail to reduce the need for extensive fettling.' PMI handle article: parting line 'along the least visible part of the handle.'",
+   "confidence": "high",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://ceramic-resource.com/mold-building-for-slip-casting-in-ceramics/",
+    "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles"
+   ]
+  },
+  {
+   "claim": "Cups, mugs and vases usually get two vertical-seam side pieces plus a separate bottom, with the spare either split between the sides or as its own top piece. A plain 2-piece vertical split is considered poor because its seam cuts across the foot.",
+   "details": "Ceramic Arts Network 'Mastering Mold Design' compares options for a 10 in vase (3.5 in top, 4.5 in bottom diameter). Config A, 2 sides each holding half the reservoir with a drop-out bottom spare: poor, 'the seam bisects the bottom surface' and the foot needs trimming. Config C, 4 parts (2 sides, full reservoir piece, full bottom piece, one spare): 'a much more appropriate solution.' Config D, 3 parts (2 sides each with half the reservoir plus a drop-out spare): the author's choice, 'a less bulky mold.' Linda Gates's jug mold is 4 parts: 2 sides, base, reservoir. Hanazono's molds are 4 pieces: bottom, 2 sides, top. Mehlman: a recessed foot is handled by an insert captured between the two sides, or by a full bottom plate under the two sides.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+    "https://ceramicartsnetwork.org/daily/article/An-Introduction-to-Slip-Casting-Ceramics-with-Multi-Piece-Molds"
+   ]
+  },
+  {
+   "claim": "Simple undercut-free forms (plates, bowls, tumblers that widen toward the rim) use one-piece drain molds, and the cast drops out when the mold is inverted.",
+   "details": "Ceramics Monthly 'Three Approaches to Slip Casting Plates': a one-part drain mold is filled, cast, tipped up and drained; the spare is trimmed at leather-hard; then a board goes on top and the mold is flipped 'so the plate drops out.' Limitation: the drained face mirrors the back. Shape Cast (CHI EA '24) automates one-piece molds for revolved pots from a single 2D profile: a 75 mm pot needs about a 200 mm outer mold, the plaster offset is about 25 mm, and the slip well is added automatically.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/three-approaches-to-slip-casting-plates",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Narrow-necked vases or pitchers may be poured through a hole in the bottom, split horizontally, or cast with a closed top whose opening or lip is cut by hand.",
+   "details": "Virginia de Colombani: because the vase is narrow at the top, the pouring hole went at the bottom, and the 2-part mold is split horizontally through the middle. Made You Look Art: the pour spout went at the bottom because the vase opening was lower than the highest point of the sculpture. Digitalfire Medalta ball pitcher: 'the piece will need to be cast with a full top and the lip shape and pouring hole cut manually'; the spout is drained for 10 s and then plugged with a snug plaster insert.",
+   "confidence": "medium",
+   "sources": [
+    "https://virginiadecolombani.wordpress.com/2013/10/21/slip-casting-2-making-plaster-mold/",
+    "https://madeyoulookatart.com/making-a-3-part-mould/",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "Handles are usually cast separately in a 2-piece mold split lengthwise and attached at leather-hard. Casting them in place makes a simpler mold but leaves a dimple or hollow inside the body.",
+   "details": "PMI 'Slip-Cast Handles': a 2-part mold, with the parting line 'bisecting the handle lengthwise on its exterior and interior,' at least 1 in (2.5 cm) of space around the handle, and registration keys. Mehlman: cast-in-place avoids luting but 'the inside of the piece will often show a dimple or even a hollow'; added-on handles take more work but give a cleaner inside. Digitalfire: cast handles stick on with slip, and casting clays dry-shrink less, so the joints don't crack. Gates: after demolding the handle is attached and the piece covered for 24 h.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-the-handle/",
+    "https://digitalfire.com/project/mug+handle+casting",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "claim": "Demolding order: the spare (pouring gate) piece comes off first once the slip loses its shine, then the rim is trimmed; the other pieces come off later, with the last section added removed first and lifted straight up.",
+   "details": "Gates: drain, wait until 'the sheen has gone' (about 20 min), 'remove only the reservoir portion,' trim and sponge the rim, then leave the rest of the mold on 'another hour or so.' Gilliatt: remove the pouring-gate section first; cut with the blade flush on the mold top, cutting interior-to-exterior so the wall is pressed back against the mold. Creative Paradise: lay the mold on its side, lift the top half 'straight up' and not side to side; for multi-piece molds 'lift off the last added section of mold first.' Mehlman spare guidance: a vertical pour hole gives a consistent edge, while a horizontal spare cut gives 'a clean, square cut regardless of wall thickness.'",
+   "confidence": "high",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+   ]
+  },
+  {
+   "claim": "Leather-hard casts shrink away from outer mold walls (which helps release) but shrink onto convex plaster features (cores, the inside of foot rings, plate faces), causing sticking or cracking. No source supports tolerating real undercuts in plaster.",
+   "details": "Digitalfire: as the item stiffens 'it shrinks slightly and pulls itself away from the mold enabling removal'; cast ware can shrink as little as 1.5%, versus 6-8% for plastic stoneware. Mehlman (plates): 'As the clay sets up in the mold, it begins to shrink and compresses on to the core,' worse for deeper forms; release the core (face) side ASAP and dust the core. Sheffield: build 1-3 degrees of draft into models and use cornstarch on sticky spots. The 10-problems article blames hang-ups in corners on draft issues. Digitalfire mug jigger template uses about 5 degrees of draft. Hanazono embeds Molduct tubing so compressed air can release the cast.",
+   "confidence": "medium",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/slipcasting-plates/",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them",
+    "https://digitalfire.com/project/15",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "claim": "The spare (reservoir) is needed for even rim thickness. Without it the slip level drops and the rim casts thinner. It is filled about halfway, trimmed at leather-hard, and doubles as a trimming guide.",
+   "details": "Shape Cast: without a slip well, 'the top is thinner since it has had less time for the clay to build up before the level drops.' Mehlman: the spare is an entry port, a feeding reservoir and 'a guide for trimming.' Gates: 'fill the mold to halfway up the reservoir wall.' Gilliatt makes his pouring gate a little taller than needed to control rim quality. Digitalfire pour spout: a printed spout with a 0.8 mm wall, about 2 mm larger than the mold opening, replaces the plaster spare and comes off about 10 min after draining.",
+   "confidence": "high",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://digitalfire.com/glossary/pour+spout"
+   ]
+  },
+  {
+   "claim": "Pour and drain holes: small holes must drain slowly to avoid vacuum collapse; solid-cast molds use two holes 180 degrees apart (one vents); bottom drains about 1 in diameter. I found no published maximum depth-to-opening ratio.",
+   "details": "Creative Paradise: a collapsed cast 'is caused by a vacuum during draining, as air couldn't enter'; if the pour hole is small, drain more slowly and slow down if it gurgles; very small pieces with tiny holes can be solid-cast. Ceramics Monthly 'Special Topics': two pour holes '180 degrees from each other and located on the foot,' one venting; a bottom drain drilled with a 1 in spade bit and tapered wider toward the casting surface. Hanazono's double-walled molds use plug holes, topped up with an ear syringe and flipped.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/special-topics-in-plaster-and-slip-casting",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "claim": "Seams leave ridges that are fettled at leather-hard or bone-dry. Leaky or badly registered seams make thick ridges, so tight, flat parting faces plus keys matter more than cleanup.",
+   "details": "Mayco: seam = 'a ridge formed in greenware where mold pieces join.' Gilliatt: once bone-dry, remove seam lines with an X-Acto blade, fettling knife or metal rib, then drywall sanding mesh and a sponge (wear a respirator). Gates: clean with a fettling knife and damp sponge. Creative Paradise: cut diagonally across the seam, pull the tool toward you, check with fingertips. Sheffield: imperfect parting surfaces cause 'thick clay ridges along the seams'; the parting surface must be 'absolutely flat and even.' 10 Problems: leaks come from a parting line that isn't tight or parts that don't register.",
+   "confidence": "high",
+   "sources": [
+    "https://www.maycocolors.com/casting-glossary-of-terms/",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "claim": "Mold hierarchy terms: model, then block mold, then case, then working (production) molds. In the 3D-printing world, 'case mold' loosely means the printed shell plaster is poured into, which is the user's 'casing'.",
+   "details": "Mehlman 'Block and Case': Model (positive, scaled for shrinkage), Block Mold (first negative, used to make the Case), Case (positive: a Face plus Rails that form the plaster vessel), Working molds (consumable). Digitalfire uses 3D-printed 'case molds' and 'side rails' with planar mating surfaces that sit flat on the table; PLA releases plaster without soap; printed shells are 1.2 mm thick (3 x 0.4 mm passes).",
+   "confidence": "high",
+   "sources": [
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/block-and-case/",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/glossary/mold+natches"
+   ]
+  },
+  {
+   "claim": "Complex figurative pieces need 3 or more pieces. Piece order is planned so each section draws off cleanly. One practitioner method is to rough out each planned section in oil clay and test that it pulls off before committing to plaster.",
+   "details": "Creative Paradise: many hobby molds (e.g. Christmas trees) have 3 pieces; strap in more than one direction; last section added comes off first. Made You Look Art: a 3-part mold poured side 1, then side 2, then a third piece for a protruding element. B2W Ceramics: 'For simpler models, two parts are often enough. More intricate designs may require three or more'; plan sections and seam lines before starting. whatmakeart Blender: undercut analysis with the 3D Print Toolbox, model rotated face-down, undercut regions marked with materials, and a 0.2 mm parting strip modeled before boolean splitting.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+    "https://madeyoulookatart.com/making-a-3-part-mould/",
+    "https://b2wceramics.com/making-2-or-multipart-molds/",
+    "https://whatmakeart.com/3d-modeling/blender/add-mold-parting-lines-blender/"
+   ]
+  },
+  {
+   "claim": "Automated multi-piece mold design (research) works by finding, for each face, the cone of directions it can be pulled in, picking pull directions that cover all faces with the fewest pieces (typically 2-4), and splitting along natural edges.",
+   "details": "USC (S.K. Gupta) multi-piece molds: global accessibility analysis, where 'the parting direction of a face is in the global accessibility cone of the face'; supports non-planar parting lines; disassembly-based piece construction; parting planes 'contain natural edges of the object'; hybrid search to minimize piece count. AIMold (arXiv 2608.00800) predicts demolding orientations, identifies auxiliary components (side cores) and builds parting surfaces.",
+   "confidence": "medium",
+   "sources": [
+    "https://sites.usc.edu/skgupta/automated-design-of-multi-piece-molds-for-making-geometrically-complex-objects/",
+    "https://arxiv.org/abs/2608.00800"
+   ]
+  },
+  {
+   "claim": "Shrinkage compensation: scale the model up by 1/(1 - total shrinkage). Published casting-body shrinkages run 13-20%, and porcelain is highest.",
+   "details": "Gilliatt's reverse shrinkage formula: prototype = fired dimension / (1 - shrinkage); for 16% shrinkage a 4 in bowl needs a 4.76 in prototype. Hanazono: about 20%. Shape Cast example clay: 13%. Mehlman FAQ: earthenware under 5% up to porcelain about 15%; a fired model means accounting for two shrinkages. Old Forge Creations prints at 112% scale.",
+   "confidence": "high",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://www.mehlmandesign.com/index.php/ceramic-glass/faq",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "Undercut tolerance on any plaster piece (relative to its pull direction)",
+   "recommended_value": "0 (hard rule: every cavity face of a piece must have draft >= 0 relative to that piece's pull vector)",
+   "range": "no tolerance; flag any face with negative draft",
+   "rationale": "Plaster has 'no give at all'; anything that curves back under itself traps the cast. No source supports tolerating undercuts in rigid plaster.",
+   "sources": [
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "parameter": "minDraftAngle (warn threshold for faces near the pull direction)",
+   "recommended_value": "1 deg warning; 2-3 deg preferred where the design allows",
+   "range": "1-5 deg",
+   "rationale": "Sheffield recommends 1-3 deg built into the model; the SolidWorks parting-line example uses 1 deg; Digitalfire's jigger template uses about 5 deg. Zero-draft walls cause corner hang-ups.",
+   "sources": [
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+    "https://digitalfire.com/project/15",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "parameter": "Parting line location",
+   "recommended_value": "The zero-draft silhouette loop for each pull direction (boundary between +draft and -draft faces); split straddle faces at that loop",
+   "range": "n/a",
+   "rationale": "Matches the traditional 'tangent to outermost features / widest line' rule and the CAD definition.",
+   "sources": [
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks"
+   ]
+  },
+  {
+   "parameter": "Seam placement preference",
+   "recommended_value": "Snap seams to existing model edges or curvature transitions; avoid flat faces, decorated areas and the foot",
+   "range": "n/a",
+   "rationale": "Seams on edges are easier to clean and less noticeable; a seam cutting across the foot needs extra trimming.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://ceramic-resource.com/mold-building-for-slip-casting-in-ceramics/"
+   ]
+  },
+  {
+   "parameter": "Default piece layout for revolved vessels with no undercut in the vertical direction (widening toward the rim)",
+   "recommended_value": "1 piece (one-piece drain / drop-out mold) with spare",
+   "range": "1",
+   "rationale": "Plates, bowls and tumblers that taper outward release by inverting; Shape Cast automates this for revolved forms.",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/three-approaches-to-slip-casting-plates",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "Default piece layout for cups, mugs and bellied or necked vessels",
+   "recommended_value": "3 pieces: bottom (pull -Z) + 2 sides split on a vertical plane through the axis (pull +/-normal of the plane), each side holding half the spare; option for 4 with a separate spare ring piece",
+   "range": "3-4",
+   "rationale": "Preferred by practitioners (Config C/D; Gilliatt, Gates and Hanazono use 4). Keeps the seam off the foot.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "parameter": "Bottom/side parting height",
+   "recommended_value": "At the foot edge / base-to-wall transition (an existing edge), so the bottom piece covers the whole foot including any recess",
+   "range": "n/a",
+   "rationale": "Avoids a seam across the foot; a recessed foot is an undercut for side pieces, so it goes in the bottom piece or a captured insert.",
+   "sources": [
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms"
+   ]
+  },
+  {
+   "parameter": "Handles and spouts",
+   "recommended_value": "Default: separate 2-piece mold split lengthwise on the handle's mid-plane; attach at leather-hard",
+   "range": "cast-in-place only if the user accepts an inner dimple",
+   "rationale": "Production practice; the cleaner inside surface is worth the extra joining step.",
+   "sources": [
+    "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-the-handle/",
+    "https://digitalfire.com/project/mug+handle+casting"
+   ]
+  },
+  {
+   "parameter": "Spare (reservoir) height above rim",
+   "recommended_value": "Expose as a parameter; about 20-30 mm is a reasonable starting point for mug-sized pieces (my own estimate, not from a source)",
+   "range": "user-tunable",
+   "rationale": "Its job is to keep the rim submerged while the slip level drops; the mold is filled to about half the reservoir height. I found no published numeric height, so treat this as an assumption to confirm.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+   ]
+  },
+  {
+   "parameter": "Plaster wall thickness (offset from cavity)",
+   "recommended_value": "25-38 mm for molds under 200 mm (8 in); 38-50 mm for 200-400 mm",
+   "range": "25-75 mm",
+   "rationale": "Sheffield size table (small 1-1.5 in, medium 1.5-2 in, large 2-2.5 in, XL 2.5-3 in); Shape Cast uses a 25 mm offset; cottle boards about 1.5 in from the model; at least 1 in around handles.",
+   "sources": [
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles"
+   ]
+  },
+  {
+   "parameter": "Keys/natches per seam",
+   "recommended_value": "3-4 per parting face, tapered (about 6 mm smaller at the tip), at least 12 mm deep x 25 mm wide (traditional carved keys); or 9.5 mm commercial natches with about 0.1 mm clearance for printed embeds",
+   "range": "2-4 per seam",
+   "rationale": "Sheffield key guidance; Digitalfire natch sizes and tolerance. Poor registration causes leaks and seam ridges.",
+   "sources": [
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://digitalfire.com/project/63"
+   ]
+  },
+  {
+   "parameter": "Shrinkage scale factor",
+   "recommended_value": "scale = 1 / (1 - s_total); typical s_total 0.12-0.16 for casting bodies (user must provide)",
+   "range": "0.05-0.20",
+   "rationale": "Reverse shrinkage formula and published body values (13%, 16%, about 20%, earthenware under 5% to porcelain about 15%).",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://www.mehlmandesign.com/index.php/ceramic-glass/faq"
+   ]
+  },
+  {
+   "parameter": "Demold sequence metadata to emit for each mold",
+   "recommended_value": "Order: spare/top piece first (about 20 min after drain), then the last-assembled piece; each piece removed along its own pull vector, no rocking",
+   "range": "n/a",
+   "rationale": "Practitioner sequence; the agent can check each piece is free along its vector given the pieces still in place.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf"
+   ]
+  },
+  {
+   "parameter": "Convex plaster features (cores, inside of a foot ring)",
+   "recommended_value": "Flag for review; prefer putting them in a piece that comes off early; warn the user to dust or release them",
+   "range": "n/a",
+   "rationale": "Cast shrinks onto cores, causing lock-up or cracks, worse for deeper forms.",
+   "sources": [
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/slipcasting-plates/"
+   ]
+  },
+  {
+   "parameter": "Target cast wall thickness (for documentation / volume estimates)",
+   "recommended_value": "3-6 mm",
+   "range": "3-10 mm",
+   "rationale": "Creative Paradise: about 1/8-1/4 in; Sheffield: 1/8-3/16 in in about 10 min; ACerS lab: 5-10 mm.",
+   "sources": [
+    "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "A 2-piece vertical split whose seam cuts across the foot or bottom is 'poor mold design' because of extra trimming. Use a separate bottom piece or a drop-out spare.",
+  "Straddle faces (fillets, tori, splines that cross the silhouette) have no edge where the draft changes sign. Fusion booleans and splits will not follow the true parting line unless the face is first split at the zero-draft curve.",
+  "Placing seams on flat or decorated faces makes cleanup visible. Snap seams to existing edges or curvature transitions.",
+  "Convex plaster features (a core inside a foot ring, the face side of a plate mold) grip the cast as it shrinks, causing cracks or distortion on demold.",
+  "A narrow pour or drain hole drained too fast creates a vacuum and collapses the cast. Narrow-necked forms need venting, slow draining, a bottom pour, or a closed top cut open later.",
+  "Leaving out the spare gives a thinner rim, because the slip level drops while casting.",
+  "Leaky or poorly registered parting faces produce thick seam ridges. Parting faces must be flat and keyed, and natches must not stop pieces from seating.",
+  "Removing pieces in the wrong order or rocking them side to side damages the soft cast. The spare piece comes off first, then each piece along its own pull vector.",
+  "Forgetting shrinkage scaling (or applying it twice to a fired model) gives the wrong final size.",
+  "Assuming leather-hard flexibility will release small undercuts is not supported by any source. Treat zero undercut as the rule.",
+  "Cast-in-place handles leave an inner dimple or hollow at the attachment point.",
+  "A single-piece rigid 3D-printed outer shell is very hard to remove from set plaster. Shape Cast found this in testing, so split casings into 2-4 parts with flanges and bolts.",
+  "Combining slips or bodies with different shrinkage in one cast or join causes cracks."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast (Kent Lyons, CHI EA 2024)",
+   "url": "https://inovo.studio/pubs/shapecast-chi24.pdf",
+   "what_it_does": "Turns a 2D SVG profile into STL files for one-piece revolved slip-casting molds: an inner form scaled for shrinkage with an automatic slip well, an outer mold offset about 25 mm and split into 2 or 4 parts with flanges, M3 bolts and threaded inserts, a bottom ring, and plaster volume estimates.",
+   "relevance": "The closest prior art to the user's pipeline (shrinkage, spare, plaster offset, split printed casing). It is limited to 1-piece molds, so the user's multi-piece parting step goes beyond it."
+  },
+  {
+   "name": "Digitalfire 3D-printed case/block mold system (Tony Hansen)",
+   "url": "https://digitalfire.com/glossary/mold+natches",
+   "what_it_does": "Printed case molds, side rails, natch embeds and clips, and spareless pour spouts for plaster slip-casting molds. Parting surfaces are kept planar so shells sit flat; PLA releases plaster without soap.",
+   "relevance": "Practical sizes (9.5 mm natches, 13.5 mm holes, 0.1 mm clearance, 1.2 mm shells) and the planar-parting-face constraint for printed casings."
+  },
+  {
+   "name": "Automated design of multi-piece molds (S.K. Gupta, USC)",
+   "url": "https://sites.usc.edu/skgupta/automated-design-of-multi-piece-molds-for-making-geometrically-complex-objects/",
+   "what_it_does": "Global accessibility-cone analysis to choose parting directions, non-planar parting lines, disassembly-based piece construction, and a search that minimizes piece count (typically 2-4).",
+   "relevance": "An algorithmic model for an agent's undercut and piece-count step."
+  },
+  {
+   "name": "AIMold (arXiv 2608.00800)",
+   "url": "https://arxiv.org/abs/2608.00800",
+   "what_it_does": "AI pipeline that predicts demolding orientations, identifies auxiliary components and builds parting surfaces for complex injection molds.",
+   "relevance": "A recent reference for automating pull-direction and parting-surface decisions."
+  },
+  {
+   "name": "SolidWorks Parting Line / draft analysis (Hawk Ridge tutorial)",
+   "url": "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+   "what_it_does": "Defines the parting line as edges between positive and negative draft faces relative to the pull direction, and handles straddle faces by splitting.",
+   "relevance": "Shows the exact algorithm to replicate with the Fusion API (face normal sampling plus split face)."
+  },
+  {
+   "name": "Fusion Draft Analysis / Draft (Parting Line type)",
+   "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-F372F1AF-71F1-499D-AA1F-712E57C89806.htm",
+   "what_it_does": "Native Fusion tool showing a draft-angle color gradient over a body for a chosen pull direction, plus a Draft feature with a Parting Line option.",
+   "relevance": "Lets agents or the user visually check undercuts in Fusion before splitting."
+  },
+  {
+   "name": "whatmakeart Blender parting-line workflow",
+   "url": "https://whatmakeart.com/3d-modeling/blender/add-mold-parting-lines-blender/",
+   "what_it_does": "Uses the 3D Print Toolbox for undercut detection with the model face-down, models a 0.2 mm parting strip, and boolean-splits a box into mold halves.",
+   "relevance": "A step-by-step digital analog of the hand method for slip-cast molds."
+  },
+  {
+   "name": "Mehlman Design blog (Daniel Mehlman, production moldmaker)",
+   "url": "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+   "what_it_does": "Production moldmaker's guidance on spare orientation, handle strategy, foot configuration, block and case, and plate core release.",
+   "relevance": "Decision checklist an agent can turn into user questions and defaults."
+  },
+  {
+   "name": "Old Forge Creations fully 3D-printed 3-part system",
+   "url": "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+   "what_it_does": "Printed casing that produces a 3-part plaster mold for a 6.5 cm ornament (printed at 112% scale, about 375 ml plaster).",
+   "relevance": "An example of printed casings for multi-piece plaster molds."
+  }
+ ],
+ "techniques": [
+  {
+   "name": "Silhouette / zero-draft parting line",
+   "description": "Pick a pull direction for each piece and compute the loop where the surface normal is perpendicular to it (draft = 0). Split faces along the loop and use it as the parting boundary. For revolved bodies with a vertical split plane, the seam lies in that plane and the outer skin is undercut-free for each half. Inward-facing surfaces (foot-ring interior) are not, and must go to the bottom piece.",
+   "pros": "Matches the traditional 'widest line' rule; deterministic; easy to check by sampling normals with the Fusion API.",
+   "cons": "Straddle faces need splitting; non-revolved or sculptural forms may need several directions and non-planar parting surfaces.",
+   "sources": [
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks"
+   ]
+  },
+  {
+   "name": "Accessibility-cone piece minimization",
+   "description": "For each face, compute the set of pull directions with non-negative draft, then choose the fewest directions (pieces) that cover all faces and check that pieces can be removed one after another.",
+   "pros": "Generalizes to arbitrary shapes; gives the piece count and demold order.",
+   "cons": "Computationally heavier; the result may still need a human to place seams for looks.",
+   "sources": [
+    "https://sites.usc.edu/skgupta/automated-design-of-multi-piece-molds-for-making-geometrically-complex-objects/",
+    "https://arxiv.org/abs/2608.00800"
+   ]
+  },
+  {
+   "name": "Fill undercuts (model modification)",
+   "description": "Fill small undercuts on the model (plasticine or clay traditionally; digitally, extrude or loft the silhouette to remove the re-entrant volume) so a section can draw off, accepting the changed surface or carving it back on the greenware.",
+   "pros": "Avoids extra pieces for minor features.",
+   "cons": "Changes the cast shape; needs user approval.",
+   "sources": [
+    "https://www.mehlmandesign.com/index.php/ceramic-glass/faq",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/"
+   ]
+  },
+  {
+   "name": "Separate bottom piece vs drop-out spare",
+   "description": "Cover the foot with a full bottom piece (seam at the foot edge) or with a turned drop-out spare captured between the side pieces.",
+   "pros": "Keeps the seam off the foot; handles a recessed foot.",
+   "cons": "More pieces or turning work; the drop-out spare must itself be undercut-free.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+   ]
+  },
+  {
+   "name": "Spare options",
+   "description": "(a) Half the spare built into each side piece; (b) a separate top spare piece removed first; (c) a 3D-printed pour spout glued on as the reservoir (spareless mold). Choose a vertical or horizontal trim plane for the rim.",
+   "pros": "(a) Fewest pieces; (b) easy early removal and rim trimming; (c) no plaster spare, cleaner rim.",
+   "cons": "(a) Seam runs through the rim; (b) extra piece; (c) an extra printed part each cast.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://digitalfire.com/glossary/pour+spout",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+   ]
+  },
+  {
+   "name": "Separate appendage molds (handles, knobs)",
+   "description": "Cast handles or spouts in their own 2-piece mold split on their mid-plane, then attach with slip at leather-hard.",
+   "pros": "Simplifies the body mold; cleaner inside; handles can vary.",
+   "cons": "Extra mold and joining labor.",
+   "sources": [
+    "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-the-handle/"
+   ]
+  },
+  {
+   "name": "Release aids for shrink-on areas",
+   "description": "Dust cores with cornstarch or silica, release the core side first, embed Molduct tubing for compressed-air release, or paint a thin slip wash on the 'stick' side.",
+   "pros": "Saves casts that would otherwise crack.",
+   "cons": "Process steps rather than geometry; may leave slight blemishes.",
+   "sources": [
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/slipcasting-plates/",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  }
+ ],
+ "open_questions_for_user": [
+  "What casting body and total shrinkage % (wet to fired) will you use? Is the Fusion solid drawn at fired size (so the toolkit should scale it up) or already scaled?",
+  "Will your forms always be revolved (mugs, cups, vases), or also faceted or sculptural (non-revolved, figurines)? This decides whether a simple 'bottom + 2 sides' template is enough or a general undercut and accessibility solver is needed.",
+  "How should handles and spouts be handled: separate 2-piece molds attached at leather-hard (the usual default), or cast in place (accepting an inner dimple)?",
+  "Spare preference: half the spare built into each side piece (fewest pieces), a separate top spare piece (removed first), or a 3D-printed pour spout in place of a plaster spare?",
+  "Rim trim style: a vertical pour-hole cut (consistent edge, needs even walls) or a horizontal spare cut across the wall?",
+  "Bottom/foot: separate full bottom piece, or a drop-out spare captured between the sides? Will any designs have a recessed foot ring (which acts as a core and grips the cast)?",
+  "Where are seams acceptable on your pieces (vertical seams on the sides, the seam at the foot edge, through the rim)? Are there decorated surfaces the toolkit must keep seams off?",
+  "Should the toolkit change your model to remove undercuts or add draft (e.g. 1-3 deg), or only report them and propose more pieces?",
+  "Maximum acceptable number of plaster pieces, and target plaster wall thickness and mold weight (Sheffield suggests 25-38 mm for small molds)?",
+  "Drain casting only, or also solid casting (closed molds with feed and vent holes)?",
+  "For narrow openings: is pouring through the bottom or casting a closed top and cutting the opening acceptable? I found no published depth-to-opening limit. Do you have one from experience?",
+  "Key/natch style on plaster seams: spherical natches as in your mug example, commercial 9.5 mm natches, or tapered carved keys?"
+ ]
+}

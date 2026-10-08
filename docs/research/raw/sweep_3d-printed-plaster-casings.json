@@ -1,0 +1,690 @@
+{
+ "topic": "3d-printed-plaster-casings",
+ "summary": "Practitioners use three main ways to make plaster slip-casting molds with an FDM printer. (a) Print the positive (the pot plus its spare), then pour plaster against it one piece at a time using cottle boards or printed side rails. This is the traditional method with a printed model swapped in. Each new piece is cast against the soaped face of the previous one, so the parting faces match naturally. (b) Print a casing for each plaster piece, or one 'all-in-one' shell for the whole mold, and pour plaster straight into it. Digitalfire (Tony Hansen, who designs in Fusion 360 and OnShape and prints PLA on Prusa MK3/MK4 printers), Shape Cast (Kent Lyons, CHI'24 and CHI'25 papers), Old Forge Creations and the open-source pdaoust/mug-generator all document this approach. (c) Hybrids: a printed model with printed rails, or printed block molds used to pour rubber case molds when you need many plaster copies. The user's draft pipeline (shell each plaster piece outward into a casing) is approach (b), and it is well validated. Digitalfire calls it the 'shelling from the backside' technique, and Shape Cast generates the same geometry automatically.\n\nTypical numbers. Casing walls are 0.8 mm (two 0.4 mm nozzle widths) for single-use shells peeled off with a heat gun, 1.2 mm for rigid reusable rails, and 2.4 mm for bolted reusable casings (Shape Cast). The plaster itself is offset about 25 mm (Shape Cast) to 38 mm (USG minimum for casting molds) from the cavity. Casings are split into 2–4 parts, joined by flanges about 5 mm wide, and held with binder clips, M3 bolts in heat-set inserts, tape, magnets or rubber bands. Seams are sealed with neoprene foam tape, clay coils or tape. Natches come from printed holes that hold embed and natch hardware, or from printed dimples and bumps. PLA usually releases from plaster with no parting agent and can be heat-gunned off. PETG is suggested for casings you want to reuse, because plaster gets hot as it sets. One-piece rigid casings are reported as 'extremely difficult' to get off cured plaster, so splitting, flex slots, thin bases, compressed-air holes or heat-gun peeling are needed.\n\nWhat limits accuracy in approach (b): plaster expands 0.17–0.21% as it sets, and expansion that is held back in one direction shows up in another. Prints can warp on long or large parts, and FDM layer lines copy into the plaster and then into the clay. Practitioners deal with this by printing mating faces flat on the bed, sanding the plaster mating faces once dry, and smoothing the cavity-forming surfaces with filler primer or epoxy (XTC-3D), or by simply accepting fine lines under glaze. All of these are good candidates for Fusion user parameters: casing wall, plaster thickness, flange width and thickness, bolt or clip spacing, gasket groove, fit clearance, natch geometry, number of splits, draft, release-hole positions and printer bed size.",
+ "findings": [
+  {
+   "claim": "Pouring plaster directly into a 3D-printed negative casing (no silicone or rubber step) is a proven route to working slip-casting molds.",
+   "details": "Digitalfire v3 mug: 'Direct 3D printed case molds work well without requiring rubber molds'; 'It works so well that making a rubber case mold seems unnecessary.' Old Forge Creations: a fully printed system where each plaster piece is cast separately ('each plaster piece makes up a third of the complete plaster mould, and three of them lock together'). Shape Cast generates an inner mold, an outer mold and a base ring that 'replace the need for cottle boards'. The trade-off Shape Cast's paper names: 'the rigidity of the 3D print can make demolding the plaster difficult'. Silicone or rubber case molds stay the better choice for many copies.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/60",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://shapecastmolds.com/",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Shape Cast (CHI'24) publishes a full set of casing parameters: inner mold wall 2.4 mm, plaster thickness 25 mm, outer mold split into 2 or 4 parts with flanges, M3 bolts and heat-set inserts, and a neoprene foam-tape gasket.",
+   "details": "The inner mold's inside wall is 'offset inward by 2.4mm (thin to be fast to print, yet thick enough to be rigid and not let plaster leak)'. The plaster is 'offset 25mm from the outer wall of the inner mold'. The outer mold is the same print thickness, split into 2 or 4 parts for the print bed and for disassembly: 'we tried a one piece outer mold and removing the fully set plaster was extremely difficult.' Flanges have holes for M3 bolts and threaded inserts, and the base ring is CA-glued from segments. Gasket: 'We use neoprene foam tape as a gasket (originally intended for weatherproofing windows) and the models have provisions for this.' The inner mold is printed upside down (rim down), so the critical outer surface has no support marks and bubbles rise during the pour. The outer mold can be printed on draft settings. The inner mold was smoothed with several coats of filler primer, sanded between coats. A pour hole at the top of the outer mold (the bottom of the pot) is generated automatically. Plaster volume and dry plaster/water weights are calculated for USG No. 1. Clay shrinkage in the examples is 13%. A 75 mm diameter pot needed an outer mold of about 200 mm diameter.",
+   "confidence": "high",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://shapecastmolds.com/"
+   ]
+  },
+  {
+   "claim": "Digitalfire's thin PLA shells (0.8 mm walls) can be removed with a heat gun; they are usually single-use, with no release agent and no smoothing.",
+   "details": "'These prints have a wall thickness of only 0.8mm'; 'I did not need to use a parting agent nor did I do any smoothing on the 3D prints'; 'This time I did not backfill the 3D prints, that is better - because they are flexible they were much easier to remove from the set plaster.' PLA 'has a very low melting point so even hot water can soften it - I use a heat gun to peel it off'. Removal uses a heat gun and needle-nose pliers, which also keeps corners crisp. The all-in-one shell is described as producing 'only one mold', which is acceptable during development. mug-generator recommends 0.4 mm top thickness ('otherwise it's too strong and thick to heat-gun and peel off') and one or two bottom layers, so you can punch through to reach the plaster contact surface.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/picture/3553",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  },
+  {
+   "claim": "Flanges are the standard way to join split casings and to stop plaster leaking under the casing.",
+   "details": "Digitalfire flange recipe in Fusion 360: 'revolving twice, once with the wall and flange and a second time using a cut operation with only the flange'. The example is a 0.8 mm wall with a 5 mm wide vertical flange, and the cut revolve runs from -179.3 to 0.7 degrees to leave a flange about 1.2 mm wide. Flanges are printed 0.8 mm thick, because otherwise 'the printer makes separate motions there risking catching the edge and flexing the print'. Flanges can be printed separately and glued on. Side rails have a bottom flange that 'fits under the mold' so plaster cannot leak underneath and lift it. Inward-facing flanges let a larger casing fit on the bed. In Digitalfire v9/v10 the backplate has magnet recesses, bolt holes for threaded anchors, air holes and an outer ridge to hold the rails.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/picture/3625",
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "Casings are held together with binder clips or paper clamps, rubber bands, scotch tape, M3 bolts and heat-set inserts, magnets, or mold straps. Seams are sealed with clay coils, foam-tape gaskets or tape.",
+   "details": "Shape Cast's commercial system: 'binder clips', with 'special ridges and grooves that mesh together to prevent plaster disasters'. Shape Cast paper: M3 bolts, heat-set inserts and a neoprene gasket. Digitalfire: 'scotch tape on the backs was sufficient to keep them lined up'; 'Using paper clamps it is held together'; 'stretching a wide rubber band around the first step and clamping the shell into place'; UV-curing superglue to weld printed sections. Traditional cottles are sealed with clay coils at every seam (Ceramics Monthly; whatmakeart; Arbuckle: 'All seams should be puttied in with soft clay. Cottles may be held together w/large elastic mold bands, clamps'). Meshcast suggests 'one printed clamp per 50 mm of seam, plus a band as backup', and warns that rubber bands creep. Claybucket seals the base with plasticine or clay.",
+   "confidence": "high",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/picture/3541",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://meshcast.app/guides/plaster",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/"
+   ]
+  },
+  {
+   "claim": "In printed casings, natches are made either with printed holes that hold embed and natch hardware, or with geometry printed into the casing. Plaster pieces cast in separate shells need a system designed for flat mating faces.",
+   "details": "Digitalfire: 'traditional natches don't work in this setting' because the shells are poured with flat mating surfaces facing down. The four-part system (embed, clip, spacer, natch) needs '13.5mm holes in 3D printed case molds'. A standard 3/8 in (9.5 mm nipple) natch needs a 9.8 mm hole. Start with a 0.1 mm allowance (for example a 4.8 mm nipple in a 4.9 mm space) and reprint until it fits. The v2 design has just three parameters: ID, OD and slack. Clips have 0.8 mm walls and 0.4 mm base flanges. In the all-in-one shell, a 0.4 mm membrane defines the parting plane and has 9.4 mm holes for natch pairs. Traditional hand-made keys are half-sphere indentations pressed with 'a quarter or a dime' at 2–3 places (Ceramics Monthly), similar to the user's spherical natches.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://digitalfire.com/picture/3716",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101"
+   ]
+  },
+  {
+   "claim": "Release agents: PLA often needs none against plaster. When one is used, it should be mold soap or a thin soap film, buffed nearly dry. Oils such as Vaseline block plaster pores and reduce absorbency.",
+   "details": "Digitalfire: the printed surface 'naturally releases from rubber compounds and plaster without the need for a parting agent'. Old Forge uses mouldmaker's soap on the base plate. Claybucket uses Murphy's Oil Soap on the print and the metal flashing. Ceramics Monthly uses 50/50 Murphy's Oil Soap and water, then removes leftover soap from dry molds 'with vinegar'. Arbuckle: size with mold soap or several layers of Murphy's or dish liquid, do not size too far ahead, 'Using an oil-based release like Vaseline will release, but the oils can block the mold pores and decrease absorbency'; pouring too early lets the water in the plaster break down the soap. Meshcast: thin mineral or vegetable oil buffed nearly dry, or a dried dish-soap film; too much agent is 'the number-one cause of poor surface finish'. Because the casing surface becomes the plaster's working face, oil-based releases should be avoided there.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://meshcast.app/guides/mold-release-agents"
+   ]
+  },
+  {
+   "claim": "Plaster heats up as it sets, to temperatures close to where PLA softens. Thick pours against thin PLA risk distortion, which is why PETG is suggested for reusable casings.",
+   "details": "USG No. 1 sheet: 'When mixed with water, this material hardens and becomes very hot sometimes quickly.' Orthopaedic plaster-cast measurements reached the 49 °C burn threshold with 40 °C dip water, and peaks rose with thickness (16 to 34 plies added 1–4 °C). Meshcast: PLA 'softens around 55 °C, and a thick plaster pour can get close'; PETG is good to about 80 °C; stand the mold in cool water. CNC Kitchen notes the mix 'significantly warms up during curing'. Even so, Digitalfire routinely pours small mug and pitcher molds into 0.8 mm PLA without reported distortion. Inference (not measured): risk grows with plaster section thickness and warm water. Mixing at about 21 °C (USG allows 21–38 °C) and keeping plaster walls around 25–40 mm helps.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://meshcast.app/guides/plaster",
+    "https://meshcast.app/guides/pla-vs-petg-vs-pp-vs-tpu-filament-comparison",
+    "https://www.cnckitchen.com/blog/r85hx5mwi0vxk0gwdb7ko4rfj1g5y2",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "FDM layer lines copy into the plaster and then into the clay. Print orientation and smoothing matter most on the cavity-forming surfaces; the outer containment walls can be printed coarse.",
+   "details": "Digitalfire beer bottle: printing halves upright (concentric lines) gave far better quality than flat prints, which showed 'quite a bit of stair-stepping'. Mug: 'Printing it flat creates poured halves that fit, without the need for sanding'. Polygon facets 'are not visible in the final glazed piece'. Rough surfaces printed over support are coated with fluid epoxy. Shape Cast: inner mold printed at high resolution and smoothed with filler primer; outer mold on draft settings. Engineers Rule: car filler spray paint plus clear lacquer, which also lowers friction and protects the print from water and heat. Claybucket: spray paint plus polyurethane or lacquer. Meshcast: 'FDM layer lines are tiny mechanical keys'; 0.12 mm layers give a near-glossy cast, 0.20 mm shows lines; for plaster molds use 0.16 mm and 3 walls, with the cavity up and the sealing face on the plate. XTC-3D (Smooth-On): coats under 1/64 in (0.4 mm), 10 min pot life, 3.5 h cure; plaster is a listed substrate.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/33",
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.engineersrule.com/combining-ceramics-solidworks-and-3d-printing-it-can-be-done/",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/",
+    "https://meshcast.app/guides/best-print-settings-for-molds",
+    "https://www.smooth-on.com/products/xtc-3d/"
+   ]
+  },
+  {
+   "claim": "Getting casings off cured plaster without breaking it needs design features: split casings, flex slots, thin bases, compressed-air holes, a heat gun, or draft.",
+   "details": "Shape Cast: a one-piece outer mold was 'extremely difficult' to remove, so it is split into 2–4 bolted parts. Digitalfire: 'the thin base ... flexes enough to enable extracting the plaster form without mold breakage'; the vertical split lets you 'open the shell a little after the plaster has set'; 'The plaster molds came out using compressed air'; the backplate has air holes. Old Forge: 'blowing air between the two is a great way to release them'; start the wiggle at the corners. mug-generator: the 'efficient' casing's draft 'doesn't allow you to peel off right away; you have to cut the corners'. Meshcast: 2–5° draft on every vertical wall of rigid printed molds.",
+   "confidence": "high",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/picture/3541",
+    "https://digitalfire.com/project/33",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://github.com/pdaoust/mug-generator",
+    "https://meshcast.app/guides"
+   ]
+  },
+  {
+   "claim": "Plaster sets with 0.17–0.21% expansion, so independently cast pieces will not fit perfectly. Mating faces may need sanding, and expansion should be considered when choosing clearances.",
+   "details": "USG IG526: pottery plaster 'will expand approximately 0.17% in all directions upon setting', and if restrained in one direction it expands more in another. With blocking and casing, expansion compounds. USG No. 1 sheet: 0.21% maximum expansion. Over a 150 mm mold that is about 0.25–0.3 mm. Digitalfire: 'the mating faces of the two halves are not perfectly flat. After the halves are dry they can be sanded flat, greatly improving the fit'. Arbuckle: cold water gives more expansion. Maximum expansion is reached about 20 min after pouring.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://digitalfire.com/project/60",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "claim": "Plaster is poured into casings from the back (the non-working side), with the working face down. The first layer is brushed into the detail to free bubbles, and the stream should not hit the face.",
+   "details": "Digitalfire fills the printed form 'from the back', and 'the weight of the plaster pushes the mating surfaces down onto the table'. Shape Cast prints and pours so bubbles rise away from the critical surface, with an auto-generated pour hole at the top of the outer mold. Old Forge: pour until the surface is covered, brush the detail with a small paintbrush, then fill. USG: pour 'in the deepest area'; slurry striking the case face makes hard spots with uneven absorption; agitate or vibrate. Sheffield: move the pour stream around, never in one spot for more than a few seconds (hot spots cause suction against greenware).",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "claim": "Large casings are split to fit the printer bed and to print each piece in its best orientation, then glued or fastened together.",
+   "details": "Digitalfire: a large single print warped at all four corners after about 10 h, so the fix was to 'Cut it up into smaller pieces and print each of them at the best orientation'. The pieces took about 1 h each, about 4 h for the critical center section. Sections were taped, then welded with UV-curing superglue, and pieces from two different printers 'mate very well'. A 0.8 mm-wall shell section weighed 36 g and printed in about 1 h. Outer shells with no overhang steeper than 45° print without support. Shape Cast: the outer mold is split into 2 or 4 because it is much larger than the pot (75 mm pot, about 200 mm outer mold).",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/glossary/all-in-one+case+mold",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "A printed (PLA) pour spout or funnel can replace the plaster spare (well). Because it absorbs no water, the slip level does not need topping up.",
+   "details": "Digitalfire: 'The PLA pouring spout is deep and absorbs no water. Thus, the slip level does not need to be topped up during casting'; it also 'acts as a cutting guide' when trimming the rim; 'No spare is needed, the 3D-printed pour spouts work better.' mug-generator generates a separate 'pouring funnel with an integrated lip form', and suggests extending the inside profile 15–20 mm above the lip as the spout. Shape Cast instead adds a fixed slip well to the inner mold and rounds it with a small radius. This choice affects the user's step 2 (extend the solid upward).",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/typecode/3mm",
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://github.com/pdaoust/mug-generator",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Plaster thickness: the USG industrial guide recommends at least 1.5 in (38 mm) for casting molds. Studio and printed practice uses 25–38 mm for small ware.",
+   "details": "USG IG526: 'Allow adequate volume of plaster; 1-1/2-in. minimum wall thickness for casting molds usually is appropriate'; avoid thin edges and large changes in section thickness. Sheffield Pottery table: molds under 8 in, 1–1.5 in (25–38 mm); 8–16 in, 1.5–2 in; 16–24 in, 2–2.5 in. whatmakeart: cottles about 1.5 in from the object. Shape Cast: 25 mm. Digitalfire: thin test molds still cast three thick-walled mugs in three hours. Thinner plaster means less heat, lighter molds and less casing load, but less absorption reserve.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/project/60"
+   ]
+  },
+  {
+   "claim": "Plaster mix data the toolkit needs to compute pour volumes and casing loads.",
+   "details": "USG No. 1 Pottery Plaster: normal consistency 70 parts water per 100 parts plaster; Vicat set 14–24 min; water at 21–38 °C; 1000 psi (6.9 MPa) one hour after set versus 2400 psi (16.5 MPa) dry; wet density 1586 kg/m3; dry density 1105 kg/m3; maximum safe drying temperature 120 °F (49 °C). USG IG526: consistencies 68–90; wet molds have about half the dry strength; tensile about 290 psi. Sheffield: 70–75 water per 100 plaster, soak 2–3 min, cure 48–72 h before use. Ceramics Monthly: 3:2 plaster to water (that is, 66.7 water per 100 plaster). Arbuckle: mix 10–20% extra. Derived (not from a source): hydrostatic pressure on casing walls is about 1586 × 9.81 × depth, roughly 1.6 kPa per 100 mm of plaster head.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "claim": "Generic FDM fit clearances and fastener hole sizes apply to casing joints such as tongue-and-groove and bolted flanges.",
+   "details": "Sovol: per-side clearance is 0.05–0.15 mm for a press fit and 0.2–0.3 mm for a sliding fit (PLA 0.15–0.25, PETG 0.2–0.3, ASA 0.25–0.35). Holes print undersize because of arc compression; chamfer edges to deal with elephant's foot. M3: 3.4 mm clearance hole, 2.5 mm self-tap, 4.0–4.2 mm heat-set insert. M4: 4.5, 3.3 and 5.6 mm. Gaskets: design for 15–25% compression (under 10% leaks, over 35% squeezes out), 1.5–2.5 mm thick, held in a shallow groove or lip because 'Free-floating gaskets migrate'. Old Forge needed to widen the base-to-wall gap after a test print stuck. Digitalfire natch fits start at 0.1 mm and are tuned by test prints.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.sovol3d.com/blogs/news/fdm-3d-printing-tolerances-clearances-how-to-design-parts-that-fit",
+    "https://www.partwork.ai/blog/bolt-hole-size-chart-3d-printing/",
+    "https://marinelab3d.com/blogs/news/sealing-3d-prints-ptfe-tape-epoxy-tpu-gaskets",
+    "https://www.oldforgecreations.co.uk/blog/slipcast-ornaments-from-a-3d-printed-mould",
+    "https://digitalfire.com/glossary/mold+natches"
+   ]
+  },
+  {
+   "claim": "Printed side rails (cottle replacements) and modular boxes are the hybrid route: a printed model plus printed containment walls.",
+   "details": "Digitalfire side rails: a 1.2 mm wall (three 0.4 mm lines) 'produces a rigid rail that prints quickly'; 1.6 mm was 'too thick for fast printing'. The bottom flange width sets rigidity and bed adhesion. Long rails warp, so add pads at the ends. A slot 1.6 mm wide holds a 1.2 mm mold. A common mistake is not printing rails tall enough. Rails 'impose perpendicularity, precise cornering ... accurate dimensions'. On the pitcher project, rails were sized by measuring precisely, and 'The quality of the side rails is now the key factor in final mold accuracy'. Old Forge's v2 mould box uses 'angled sides to hold the base down' and 'sliding locks' on the walls.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/33",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://www.oldforgecreations.co.uk/blog/slipcast-ornaments-from-a-3d-printed-mould"
+   ]
+  },
+  {
+   "claim": "Clay shrinkage scaling is applied to the model before any mold or casing geometry; reported values are 10–15%.",
+   "details": "Digitalfire: about 10% total shrinkage (a 0.88 mm print shell becomes 0.8 mm). Shape Cast: 13% default, customisable in Pro. Old Forge: scaled to 112%. Engineers Rule: 12%, and 15% for Parian slip. Note that '13% shrinkage' (fraction of the wet size) and '112% scale' (multiplier) are different conventions: a factor is 1/(1-s), not 1+s.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/60",
+    "https://shapecastmolds.com/",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://www.engineersrule.com/combining-ceramics-solidworks-and-3d-printing-it-can-be-done/"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "casingWallThickness (printed casing shell)",
+   "recommended_value": "2.4 mm for reusable, bolted or clipped casings; 0.8 mm for single-use shells removed with a heat gun",
+   "range": "0.8–5 mm (1.2 mm for rigid rails; the user's current 5 mm is stiff but slow to print and harder to peel)",
+   "rationale": "Shape Cast found 2.4 mm 'thin to be fast to print, yet thick enough to be rigid and not let plaster leak'. Digitalfire and mug-generator use 0.8 mm (two nozzle widths) so the shell flexes and peels. Rails at 1.2 mm print fast and stay rigid; 1.6 mm was too thick for fast printing.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://github.com/pdaoust/mug-generator",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "parameter": "perimeters / infill (casings modelled as solid walls)",
+   "recommended_value": "3 perimeters, 15% gyroid; or model the wall at an exact multiple of the line width (n × 0.4 mm) and print it as perimeters only",
+   "range": "2–4 walls",
+   "rationale": "With fewer than 3 perimeters the infill pattern shows through the cavity wall (Meshcast). Digitalfire sizes walls to whole nozzle widths so each layer is 2–3 passes.",
+   "sources": [
+    "https://meshcast.app/guides/plaster",
+    "https://meshcast.app/guides/best-print-settings-for-molds",
+    "https://digitalfire.com/project/60"
+   ]
+  },
+  {
+   "parameter": "plasterWallThickness (offset of the plaster piece from the cavity or model)",
+   "recommended_value": "25 mm for small ware (under ~200 mm); 38 mm for larger work",
+   "range": "25–51 mm depending on mold size",
+   "rationale": "Shape Cast uses 25 mm. The USG industrial guide gives 1.5 in (38 mm) as the usual minimum. Sheffield gives 25–38 mm for molds under 8 in and 38–51 mm for 8–16 in. Keep section thickness even, to limit heat and differential stress.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "parameter": "casingFilament",
+   "recommended_value": "PETG for reusable casings; PLA for single-use or heat-gun-peel casings and for prototypes",
+   "range": "PLA / PETG (ASA possible, but more warp-prone)",
+   "rationale": "PLA softens around 55–60 °C, which helps heat-gun removal but is close to plaster's exotherm in thick sections. PETG is good to about 80 °C and tolerates moisture and alkalinity. PLA releases from plaster with no agent (Digitalfire).",
+   "sources": [
+    "https://meshcast.app/guides/plaster",
+    "https://meshcast.app/guides/pla-vs-petg-vs-pp-vs-tpu-filament-comparison",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/33"
+   ]
+  },
+  {
+   "parameter": "casingSplitCount / split strategy",
+   "recommended_value": "Never one-piece around a closed contour. Split each casing into 2 or more wall panels plus a base, or 2–4 radial segments for revolved forms.",
+   "range": "2–4 segments per casing, plus extra splits to fit the printer bed",
+   "rationale": "Shape Cast: removing a one-piece outer mold from set plaster was 'extremely difficult'. Splitting also fits large casings on the bed (75 mm pot, about 200 mm outer) and lets each piece print in its best orientation.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "parameter": "flangeWidth / flangeThickness",
+   "recommended_value": "5 mm wide (wider for bolts: at least 2.5 × the bolt diameter around the hole); 0.8–2.4 mm thick",
+   "range": "5–12 mm wide",
+   "rationale": "Digitalfire uses a 5 mm vertical flange on a 0.8 mm wall, printed 0.8 mm thick so it prints in a single pass. Flanges must be wide enough for clamps to sit securely. Bottom flanges that go under the casing stop plaster leaking underneath and lifting it.",
+   "sources": [
+    "https://digitalfire.com/picture/3625",
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/glossary/side+rails"
+   ]
+  },
+  {
+   "parameter": "fastener (bolted flanges)",
+   "recommended_value": "M3 bolts: 3.4 mm clearance hole, 4.0–4.2 mm hole for a heat-set insert (M4: 4.5 / 5.6 mm)",
+   "range": "M3–M4",
+   "rationale": "Shape Cast places M3 bolts and threaded inserts automatically on the flanges and base ring. Inserts make the casing reusable.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.partwork.ai/blog/bolt-hole-size-chart-3d-printing/"
+   ]
+  },
+  {
+   "parameter": "clampSpacing (clips, printed clamps or bolts along seams)",
+   "recommended_value": "One clamp, binder clip or bolt per 50 mm of seam, plus a band as backup",
+   "range": "40–80 mm",
+   "rationale": "Meshcast recommends one printed clamp per 50 mm of seam and warns that bands creep. Binder clips are the default in Shape Cast's commercial kit. Derived: the plaster head pushes on the walls at about 1.6 kPa per 100 mm of depth.",
+   "sources": [
+    "https://meshcast.app/guides/plaster",
+    "https://shapecastmolds.com/",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "parameter": "seam seal (gasket groove)",
+   "recommended_value": "Self-adhesive closed-cell neoprene foam tape in a shallow retaining groove, sized for 15–25% compression; clay coils or tape as a fallback",
+   "range": "Gasket 1.5–2.5 mm thick; groove depth about 75–85% of the gasket thickness",
+   "rationale": "Shape Cast uses neoprene window-seal tape with provisions in the model. Gasket guidance: under 10% compression leaks, over 35% squeezes out, and loose gaskets migrate. Cottles are traditionally sealed with clay coils.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://marinelab3d.com/blogs/news/sealing-3d-prints-ptfe-tape-epoxy-tpu-gaskets",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101"
+   ]
+  },
+  {
+   "parameter": "fitClearance (tongue-and-groove and registration between casing parts)",
+   "recommended_value": "0.2 mm per side (PLA 0.15–0.25, PETG 0.2–0.3), with 0.5 mm chamfers on insertion edges",
+   "range": "0.1–0.35 mm per side",
+   "rationale": "FDM sliding-fit guidance. Put all the clearance on the hole or groove side. Calibrate with a test coupon on the user's printer.",
+   "sources": [
+    "https://www.sovol3d.com/blogs/news/fdm-3d-printing-tolerances-clearances-how-to-design-parts-that-fit"
+   ]
+  },
+  {
+   "parameter": "natchClearance (printed spherical or conical natches formed by the casing)",
+   "recommended_value": "Start with a socket about 0.1–0.2 mm larger in radius than the bump, then tune with test prints. For commercial 3/8 in natches, print a 9.8 mm hole (or 13.5 mm holes for the Digitalfire embed system).",
+   "range": "0.1–0.3 mm",
+   "rationale": "Digitalfire starts at a 0.1 mm allowance and iterates. Plaster setting expansion (0.17–0.21%) and print error add up across two independently cast pieces.",
+   "sources": [
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://digitalfire.com/picture/3716",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "parameter": "casingDraft (walls that slide off plaster without a split)",
+   "recommended_value": "3° where no split is used; 0° is fine on faces that separate along split lines",
+   "range": "2–5°",
+   "rationale": "Meshcast recommends 2–5° on every vertical wall of rigid printed molds. mug-generator's drafted 'efficient' casing still needed its corners cut before it would peel.",
+   "sources": [
+    "https://meshcast.app/guides",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  },
+  {
+   "parameter": "print orientation",
+   "recommended_value": "Print the surfaces that form the plaster's working (clay-contact) face and its mating faces flat on the bed or without support. Print revolved surfaces upright for concentric lines. Outer containment can go any way.",
+   "range": "n/a",
+   "rationale": "Digitalfire: printing flat gives halves that fit without sanding, and upright concentric lines beat stair-stepped flat prints. Shape Cast prints the inner mold rim-down so there are no support marks. Meshcast: 'Cavity up, sealing face on the plate'.",
+   "sources": [
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/project/33",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://meshcast.app/guides/best-print-settings-for-molds"
+   ]
+  },
+  {
+   "parameter": "layerHeight",
+   "recommended_value": "0.12–0.16 mm on surfaces that form the cavity or working face; 0.2–0.28 mm (draft) on outer containment",
+   "range": "0.1–0.3 mm",
+   "rationale": "0.12 mm gives a near-glossy cast and 0.20 mm shows lines (Meshcast). Shape Cast prints the outer mold on draft settings 'with no functional impact on the plaster'.",
+   "sources": [
+    "https://meshcast.app/guides",
+    "https://meshcast.app/guides/best-print-settings-for-molds",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "surface finishing of cavity-forming casing faces",
+   "recommended_value": "Optional: filler primer in several coats with sanding between, or one thin epoxy coat (XTC-3D, under 0.4 mm per coat). Otherwise leave raw and clean up the plaster.",
+   "range": "0–3 coats",
+   "rationale": "Shape Cast uses filler primer. Digitalfire uses epoxy only on surfaces printed over support and otherwise leaves prints raw. Layer lines act as mechanical keys that grip the plaster.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.smooth-on.com/products/xtc-3d/",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://meshcast.app/guides/mold-release-agents"
+   ]
+  },
+  {
+   "parameter": "releaseAgent (casing to plaster)",
+   "recommended_value": "None on bare PLA, as a first test. Otherwise mold soap or 1:1 Murphy's Oil Soap and water, brushed thin and buffed. No Vaseline or oils on faces that become working surfaces.",
+   "range": "0–3 thin coats, reapplied every pour",
+   "rationale": "PLA naturally releases from plaster (Digitalfire). Oils block plaster pores and reduce absorbency (Arbuckle). Too much agent ruins the surface (Meshcast). Leftover soap can be removed with vinegar.",
+   "sources": [
+    "https://digitalfire.com/glossary/side+rails",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://meshcast.app/guides/mold-release-agents",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101"
+   ]
+  },
+  {
+   "parameter": "plasterConsistency / mixing",
+   "recommended_value": "70 parts water to 100 parts USG No. 1 Pottery Plaster by weight, with water at about 21 °C; soak 2–3 min",
+   "range": "66.7–90 water per 100 plaster",
+   "rationale": "USG normal consistency is 70, with a Vicat set of 14–24 min. Water at 21–38 °C is allowed; cooler water also limits exotherm, though below about 18 °C expansion increases (Arbuckle).",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "parameter": "plaster batch size (computed by script)",
+   "recommended_value": "Cavity volume × 1.15. Dry plaster mass = slurry volume × 1586 kg/m3 × 100/170; water = 70% of plaster mass.",
+   "range": "+10–20% extra",
+   "rationale": "Shape Cast and Old Forge both report volumes and plaster/water weights. Wet density from the USG sheet. Arbuckle suggests mixing 10–20% extra.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "parameter": "pour opening / pour orientation",
+   "recommended_value": "Leave the casing face opposite the working surface open (or give it a large pour hole). Cast with the working and mating faces down. Fill to a printed level mark, which is useful for even wall thickness.",
+   "range": "n/a",
+   "rationale": "Digitalfire fills 'from the back', and the plaster's weight seats the mating faces on the table. Shape Cast generates a pour hole on top. Bubbles rise away from the working face. USG warns against the stream striking the face.",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "parameter": "release aids",
+   "recommended_value": "Two or more air holes about 3–5 mm across in the casing base, sealed with clay during the pour (for compressed-air release); a thin, flexible base; optional flex slots on large flat panels",
+   "range": "n/a (hole size is an assumption; sources give no diameter)",
+   "rationale": "Digitalfire got plaster molds out with compressed air and puts air holes in its backplates. Old Forge blows air between print and plaster. Digitalfire's thin base 'flexes enough to enable extracting the plaster form'.",
+   "sources": [
+    "https://digitalfire.com/project/33",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://digitalfire.com/picture/3553"
+   ]
+  },
+  {
+   "parameter": "demold timing / drying",
+   "recommended_value": "Remove casings once the plaster has set firm (well past the 14–24 min Vicat set, typically 45–60 min, which is an assumption); dry at 49 °C (120 °F) or below; cure 48–72 h before casting slip",
+   "range": "n/a",
+   "rationale": "Plaster is at about 40% of dry strength one hour after set (1000 vs 2400 psi), and wet strength is about half of dry. USG's maximum safe drying temperature is 49 °C. Sheffield says 48–72 h, ideally a week.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "parameter": "clayShrinkage scale (applied to the model before mold or casing generation)",
+   "recommended_value": "13% (scale factor = 1/(1 − 0.13) ≈ 1.149), user-editable",
+   "range": "10–15%",
+   "rationale": "Reported values: Digitalfire about 10%, Shape Cast 13%, Old Forge 112%, Engineers Rule 12–15%.",
+   "sources": [
+    "https://digitalfire.com/project/60",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://www.engineersrule.com/combining-ceramics-solidworks-and-3d-printing-it-can-be-done/"
+   ]
+  },
+  {
+   "parameter": "overhangs on casing parts",
+   "recommended_value": "No overhang steeper than 45° from vertical, so parts print without support",
+   "range": "≤45°",
+   "rationale": "Digitalfire: 'The outer shell halves have no angles steeper than 45 degrees and thus print without printed supports'. Support marks spoil surfaces that face down.",
+   "sources": [
+    "https://digitalfire.com/glossary/all-in-one+case+mold",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  }
+ ],
+ "techniques": [
+  {
+   "name": "(a) Printed positive + cottle boards or printed rails, with sequential plaster pours",
+   "description": "Print the shrinkage-scaled object plus its spare as a thin shell. Optionally backfill it with plaster for rigidity. Block it out with clay or a printed parting membrane and pour each plaster piece in turn against the soaped previous piece, inside cottles or printed side rails sealed with clay coils.",
+   "pros": "Mating faces are cast plaster-on-plaster, so they match inherently. Traditional natches and keys work. One print can make several molds. The skills are well known (Ceramics Monthly, Arbuckle, whatmakeart).",
+   "cons": "Pieces are poured one after another (each must set, then be soaped). Needs mold soap between pieces. Layer lines on the print transfer unless smoothed. More manual work and plaster mess.",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/",
+    "https://digitalfire.com/glossary/side+rails"
+   ]
+  },
+  {
+   "name": "(b1) Per-piece printed casing (direct mother mold for each plaster piece)",
+   "description": "For each plaster piece, model the cavity-forming surface, the parting-face planes (with natch bumps or dimples) and an outer containment wall offset by the casing wall thickness. Leave the back open for pouring. Split into panels, assemble with flanges, clips or bolts, seal, and pour. This is the user's current approach, and the Old Forge Creations approach.",
+   "pros": "All pieces can be cast in parallel. Fully parametric and regenerable in Fusion. Natches are formed directly. Little cleanup.",
+   "cons": "Fit between pieces depends on print flatness and plaster expansion, so mating faces may need sanding. Casings can be hard to remove unless split or flexible. Needs printer time for every piece. Thick casings (5 mm) are slow to print.",
+   "sources": [
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://digitalfire.com/project/60",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "name": "(b2) All-in-one shell with printed parting membranes",
+   "description": "Print one assembled shell for the whole mold: the inner model, outer shell sections with flanges, and a thin (0.4 mm) membrane on each parting plane, with holes for natch pairs. Fill all chambers with plaster at once, then peel the PLA off with a heat gun.",
+   "pros": "One pour makes the whole mold, and the pieces are registered by construction. Light, fast prints (a 36 g section prints in about 1 h).",
+   "cons": "Usually single-use (destroyed on removal). The membrane leaves a 0.4 mm gap between pieces. More complex CAD.",
+   "sources": [
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/glossary/all-in-one+case+mold",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "name": "(c) Printed block mold → rubber (PMC-746) case mold → many plaster molds",
+   "description": "Print the block mold, pour silicone or urethane rubber into it, then cast plaster working molds from the rubber.",
+   "pros": "Best for production runs. The rubber flexes, so plaster demolds easily, and it is reusable many times.",
+   "cons": "Rubber is expensive (Digitalfire estimated about 2300 cm3 for one pitcher). It adds an extra generation, and rubber can distort.",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "name": "Heat-gun peel removal",
+   "description": "Use a thin PLA shell (0.8 mm walls, 0.4 mm top) and soften it with a heat gun after the plaster sets. Peel with needle-nose pliers; punch through the base if needed.",
+   "pros": "No draft or split needed. Keeps corners crisp.",
+   "cons": "Destroys the casing. Heat can damage embedded natch hardware and must stay below plaster calcination temperatures (49 °C drying limit) on the plaster surface.",
+   "sources": [
+    "https://github.com/pdaoust/mug-generator",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/project/60"
+   ]
+  },
+  {
+   "name": "Compressed-air release",
+   "description": "Leave small holes in the casing base, sealed with clay during the pour. Afterwards blow air between print and plaster.",
+   "pros": "Gentle, works with reusable rigid casings.",
+   "cons": "Needs a compressor. Holes must be sealed so they do not leak or leave nubs.",
+   "sources": [
+    "https://digitalfire.com/project/33",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system"
+   ]
+  },
+  {
+   "name": "Bolted flanges + heat-set inserts + foam gasket",
+   "description": "Split casings with flanges. M3 bolts go into heat-set inserts. Neoprene foam tape sits in a modelled groove. The base ring is CA-glued from segments.",
+   "pros": "Reusable, repeatable alignment, low leak risk.",
+   "cons": "Hardware cost and assembly time. The flanges need bed space.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "name": "Binder clips or paper clamps on ridged flanges",
+   "description": "Flanges carry interlocking ridges and grooves and are clamped with off-the-shelf binder clips.",
+   "pros": "Cheap, quick, no inserts.",
+   "cons": "Clamping force is limited. Flanges must be stiff enough not to bow between clips.",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "https://digitalfire.com/picture/3541"
+   ]
+  },
+  {
+   "name": "Magnets / tape / rubber bands / mold straps",
+   "description": "Inset magnets in flanges (Digitalfire v9), scotch tape on seam backs, rubber bands or inner-tube bands, or ratcheting mold straps.",
+   "pros": "Very fast. Tape and magnets work well on light 0.8 mm shells, where the plaster's weight seats the faces.",
+   "cons": "Bands creep. Magnets need recesses and add cost. Tape alone suits only small or light pours.",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://ceramicartsnetwork.org/daily/article/An-Introduction-to-Slip-Casting-Ceramics-with-Multi-Piece-Molds",
+    "https://meshcast.app/guides/plaster"
+   ]
+  },
+  {
+   "name": "Embed + natch + spacer + clip registration hardware",
+   "description": "Printed clips hold embeds in 13.5 mm casing holes. After the pour, natches or spacers are glued into the embeds, so the mating faces stay flat and can be sanded.",
+   "pros": "Mating faces stay flat and sandable, and broken natches can be replaced.",
+   "cons": "Extra parts to print, and needs fit tuning (the slack parameter).",
+   "sources": [
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://digitalfire.com/picture/3716"
+   ]
+  },
+  {
+   "name": "Printed pour spout instead of a plaster spare",
+   "description": "A PLA funnel or spout sits on top of the mold as the slip reservoir and doubles as a rim-trimming guide.",
+   "pros": "Absorbs no water, so the level stays up. Shortens the plaster mold.",
+   "cons": "An extra part to fit and seal on each mold. Not the same as the user's step 2 (extending the solid).",
+   "sources": [
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/typecode/3mm",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  }
+ ],
+ "prior_art": [
+  {
+   "name": "Digitalfire 3D-printed mold projects (Tony Hansen)",
+   "url": "https://digitalfire.com/typecode/3mm",
+   "what_it_does": "Long-running documented projects (mug, beer bottle, Medalta ball pitcher, jigger case molds) for printing PLA case molds, block molds, side rails, all-in-one shells and natch hardware, designed in Fusion 360 and OnShape.",
+   "relevance": "The most detailed practitioner source. It covers the user's exact workflow, including shelling in CAD, the Fusion flange-revolve trick, natch embeds, heat-gun removal and printed pour spouts."
+  },
+  {
+   "name": "Shape Cast (Kent Lyons, CHI'24 extended abstract and CHI'25 paper)",
+   "url": "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "what_it_does": "Generates printable inner mold, outer mold (split into 2 or 4, flanged, M3 bolts and inserts, gasket provisions) and base ring from a 2D profile. Computes plaster volume and mix weights. Revolved, one-piece molds only.",
+   "relevance": "A parametric generator to copy (offsets: 2.4 mm print wall, 25 mm plaster). It confirms that splitting is needed for demolding. It does not handle multi-part molds, which the user's toolkit would add."
+  },
+  {
+   "name": "Shape Cast web service",
+   "url": "https://shapecastmolds.com/",
+   "what_it_does": "Commercial service: upload a profile, get STLs. Default 13% shrinkage, binder-clip assembly, ridge and groove flanges.",
+   "relevance": "A sign of user demand, and a reference for sensible defaults."
+  },
+  {
+   "name": "pdaoust/mug-generator",
+   "url": "https://github.com/pdaoust/mug-generator",
+   "what_it_does": "An Inkscape extension that outputs OpenSCAD for a prototype, two- or three-part case-mold casings ('bucket' and 'plaster-efficient' versions), a pouring funnel and hump/slump mother molds. Uses Digitalfire natch embeds.",
+   "relevance": "Open-source code with print settings (0.8 mm walls, 0.4 mm top, lightning infill) and casing variants worth studying."
+  },
+  {
+   "name": "Old Forge Creations fully printed 3-part mould system",
+   "url": "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+   "what_it_does": "Printed base plates and walls in which each plaster third is cast separately (about 375 ml of plaster each). Uses mould soap on the base and compressed-air release. A later version added angled sides and sliding wall locks.",
+   "relevance": "A direct per-piece casing system at small scale, the same approach as the user's step 6."
+  },
+  {
+   "name": "Meshcast mold generator and guides",
+   "url": "https://meshcast.app/guides",
+   "what_it_does": "A free STL-to-mold generator with general guides on draft, release agents, print settings and plaster casting into printed molds.",
+   "relevance": "Generic numbers (2–5° draft, 3 perimeters, 0.16 mm layers, PETG, a clamp per 50 mm). It is not ceramics-specific, so treat it as secondary."
+  },
+  {
+   "name": "SolidWorks 4-part plaster mold tutorial",
+   "url": "http://blogs.solidworks.com/products/solidworks/4-part-plaster-mold-tutorial",
+   "what_it_does": "A CAD workflow: block, subtract model, split bodies, add natches to opposing parts.",
+   "relevance": "Matches the Fusion body-split approach. Gives no numeric parameters."
+  }
+ ],
+ "pitfalls": [
+  "One-piece rigid casings around a closed contour lock onto the plaster. Shape Cast called removal 'extremely difficult'. Always split, add flex, or plan for heat-gun or air release.",
+  "Thick casing walls (such as the current 5 mm) are stiff. This helps reuse but makes peeling impossible and printing slow. Without splits and draft they will trap the plaster.",
+  "Plaster exotherm: thick sections and warm mix water can approach PLA's softening point (about 55–60 °C). Thin PLA walls may bow near thick plaster. Use cool water, PETG, ribs or thinner plaster sections.",
+  "Setting expansion (0.17–0.21%, more where restrained) plus print warp means pieces cast in separate casings may not mate perfectly. Plan to sand mating faces flat and leave natch clearance.",
+  "Warping on long or large prints (corners lifted after about 10 h at Digitalfire). Split parts, add end pads or brims, and print each part in its best orientation.",
+  "Layer lines and support scars on cavity-forming faces copy into the plaster and then the clay. Keep critical faces support-free, use fine layers, or smooth them with filler primer or epoxy.",
+  "Oil-based releases (Vaseline, heavy oil) on faces that become working plaster surfaces block pores and reduce absorbency. Too much of any release ruins the surface.",
+  "Slurry hitting one spot on the working face makes hard, dense spots with uneven absorption and suction. Pour into the deepest area, from the back, and move the stream around.",
+  "Bands and tape creep under load. Rubber bands alone are not reliable for heavy pours. Clamp at stiff points, roughly every 50 mm.",
+  "Leaks at the base and seams: without bottom flanges or gaskets, plaster creeps under walls and lifts the casing. Seal every joint with gasket, clay or tape.",
+  "Traditional protruding natches do not suit casings poured with mating faces down. Natch geometry must be formed by the casing, or added afterwards with embeds.",
+  "Plaster is weak when green (about 40% of dry strength one hour after set, wet about half of dry). Demolding too early or prying chips edges, and thin edges also calcine easily.",
+  "Unit confusion: the Fusion API works in cm, so a 2.4 mm wall is 0.24 in the API. Also, 13% shrinkage is not the same as a 113% scale (the correct factor is 1/(1−s)).",
+  "Printer bed limits: the outer casing is much larger than the pot (75 mm pot, about 200 mm outer). Check the bed size and split automatically, with glue or fastener joints.",
+  "Heat-gun removal can melt embedded printed natch hardware and must not overheat the plaster surface (USG safe drying maximum is 49 °C)."
+ ],
+ "open_questions_for_user": [
+  "Which printer(s) and build volume do you have (for example Prusa MK4 at about 250×210×220 mm, or Bambu at about 256³ mm)? Which nozzle size? Splitting rules and wall multiples depend on this.",
+  "Should casings be reusable (PETG, about 2.4 mm walls, bolts or clips, gaskets) or single-use and quick to print (PLA, 0.8–1.2 mm, heat-gun peel)? Or both, as a parameter?",
+  "Why 5 mm for printedMoldWallThickness? Is it for stiffness and reuse, or a first guess? Would you accept 1.2–2.4 mm walls with ribs and flanges instead?",
+  "Preferred fastening: binder clips, M3 bolts with heat-set inserts, printed clamps or wedges, magnets, rubber bands or ratchet straps? Do you own heat-set inserts and a soldering iron?",
+  "Seam sealing: is self-adhesive neoprene foam tape acceptable, or do you prefer clay coils or tape (no gasket groove in the model)?",
+  "Natches: keep printed spherical bump-and-socket natches formed by the casing, or switch to commercial 3/8 in natches or the Digitalfire embed system (printed holes plus hardware)?",
+  "Which plaster brand and ratio do you use (for example USG No. 1 at 70:100)? Do you want the scripts to output batch weights of plaster and water per piece?",
+  "Plaster thickness target: about 25 mm (light, Shape Cast style) or 38 mm or more (USG industrial guidance)? Should it vary with object size?",
+  "For the slip reservoir, should the plaster mold include a plaster spare (your step 2), or would you use a separate printed PLA pour spout or funnel, which absorbs no water so the slip level holds?",
+  "Do you have a compressor (for air-release holes) and a heat gun? Should release holes or flex slots be generated by default?",
+  "What surface finish do you expect on the clay? Will you smooth casing faces (filler primer or XTC-3D) or accept fine layer lines?",
+  "Which clay or slip, and what shrinkage %, should be the default scale factor?",
+  "Which release agent do you have (mold soap, Murphy's, none)? Would you test bare PLA first?",
+  "Typical size range of the objects (cups and mugs up to about 120 mm, or larger vases), and maximum piece count per mold?",
+  "Are you willing to sand plaster mating faces after casting, or must the toolkit aim for fit straight off the casing (which tightens print-orientation rules)?"
+ ]
+}

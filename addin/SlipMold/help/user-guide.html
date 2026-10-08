@@ -1,0 +1,334 @@
+<!DOCTYPE html>
+<html class="auto"><head><meta charset="utf-8"><title>SlipMold user guide</title><script>
+(function () {
+  var m = /[?&]theme=(dark|light|auto)/.exec(location.search);
+  var theme = m ? m[1] : 'auto';
+  document.documentElement.className = theme;
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!m) { return; }
+    var links = document.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      var h = links[i].getAttribute('href');
+      if (/^[^:?#]+\.html(#.*)?$/i.test(h)) {
+        var p = h.split('#');
+        links[i].setAttribute('href', p[0] + '?theme=' + theme + (p[1] ? '#' + p[1] : ''));
+      }
+    }
+  });
+})();
+</script><style>
+:root { --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --line:#d1d9e0; --soft:#f6f8fa; --link:#0969da;
+        --nav:#f0f2f4; --on:#ffffff; }
+html.dark { --bg:#1e1f22; --fg:#e6e6e6; --muted:#a0a4ab; --line:#3d4046; --soft:#2a2c30; --link:#5aa2ff;
+        --nav:#26282c; --on:#3a3d43; }
+@media (prefers-color-scheme: dark) {
+  html.auto { --bg:#1e1f22; --fg:#e6e6e6; --muted:#a0a4ab; --line:#3d4046; --soft:#2a2c30; --link:#5aa2ff;
+          --nav:#26282c; --on:#3a3d43; } }
+html, body { margin:0; background:var(--bg); color:var(--fg); }
+body { font:14px/1.55 "Segoe UI", Arial, sans-serif; }
+nav { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:4px; align-items:center;
+      padding:6px 10px; background:var(--nav); border-bottom:1px solid var(--line); }
+nav a, nav button { font:13px "Segoe UI", Arial, sans-serif; color:var(--fg); background:none;
+      border:1px solid transparent; border-radius:4px; padding:2px 8px; text-decoration:none; cursor:pointer; }
+nav a:hover, nav button:hover { border-color:var(--line); text-decoration:none; }
+nav a.on { background:var(--on); border-color:var(--line); font-weight:600; }
+main { padding:8px 22px 40px; max-width:980px; }
+h1 { font-size:1.6em; border-bottom:1px solid var(--line); padding-bottom:.2em; }
+h2 { font-size:1.3em; border-bottom:1px solid var(--line); padding-bottom:.15em; margin-top:1.6em; }
+h3 { font-size:1.1em; margin-top:1.3em; }
+a { color:var(--link); text-decoration:none; } a:hover { text-decoration:underline; }
+code { font:12.5px Consolas, "Courier New", monospace; background:var(--soft); padding:1px 4px; border-radius:3px; }
+pre { background:var(--soft); border:1px solid var(--line); border-radius:5px; padding:10px 12px; overflow:auto; }
+pre code { background:none; padding:0; }
+table { border-collapse:collapse; margin:10px 0; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:4px 9px; vertical-align:top; }
+th { background:var(--soft); }
+td.num, th.num { text-align:right; }
+blockquote { margin:10px 0; padding:2px 14px; border-left:4px solid var(--line); color:var(--muted); }
+hr { border:0; border-top:1px solid var(--line); }
+li { margin:2px 0; }
+.foot { color:var(--muted); font-size:12px; margin-top:30px; }
+</style></head>
+<body><nav><button onclick="history.back()" title="Back">&#9664; Back</button><a href="user-guide.html" class="on">User guide</a><a href="parameters.html">Parameters</a><a href="validation.html">Tested shapes</a><a href="add-in.html">Add-in reference</a></nav><main>
+<h1 id="slipmold-user-guide">SlipMold user guide</h1>
+<p>For someone who models in Fusion 360 and wants a plaster slip-casting mold plus the 3D-printable casings that make it, without writing code. You work through a small panel in Fusion: one click, Make mold, builds the whole kit and ends with print files, a pouring sheet and a Results page. There are no approval steps.</p>
+<p>Companion documents: <a href="parameters.html">PARAMETERS.md</a> (every parameter, generated), <a href="add-in.html">ADDIN.md</a> (the add-in internals and the scripting entry points), <a href="validation.html">VALIDATION.md</a> (which shapes were tested).</p>
+<h2 id="1-what-the-kit-makes">1. What the kit makes</h2>
+<p>From one solid (a mug, cup, bowl, vase...) it builds, inside your Fusion document:</p>
+<ol>
+<li>a plug: your model plus a "spare" (the slip well above the rim, with a flat knife ledge for trimming);</li>
+<li>a plaster block around the plug, cut into 1 to 4 plaster pieces with spherical keys (natches) so they register and release from the cast;</li>
+<li>for every plaster piece, a printable casing (mother mold: a core plate plus ring sectors, flanges and clip sites) that you fill with plaster;</li>
+<li>PETG clips that hold the casing flanges together (snap clips on curved seams, rail clips on straight ones), and a printed stand for every casing;</li>
+<li>3MF print files, one per part, and a process sheet (a leak test to print first, plaster weights, pour and demold order, print settings).</li>
+</ol>
+<p>Example, the validated Mug (an 80 x 80 mm revolved mug with decorative grooves, 354 cm3):</p>
+<table>
+<thead><tr><th>Result</th><th>Value</th></tr></thead>
+<tbody>
+<tr><td>Layout</td><td><code>sides2Bottom</code>: 3 plaster pieces (bottom, side1, side2), 10 natches, unique fit checked</td></tr>
+<tr><td>Plaster block</td><td>tapered outer shape, 1557.5 cm3, 161 mm across at the wide end, 125 mm tall</td></tr>
+<tr><td>Plaster per piece</td><td>bottom 412.9 cm3, side1 571.7 cm3, side2 572.2 cm3 (wet 0.65 / 0.90 / 0.90 kg)</td></tr>
+<tr><td>Batch</td><td>1764 g dry USG No. 1 Pottery Plaster + 1234 g water (70 consistency, 15 % overage), 2.46 kg wet</td></tr>
+<tr><td>Casings</td><td>one printed part per core, floor and ring sector of each piece, plus one stand per piece (15 parts)</td></tr>
+<tr><td>Clips</td><td>PETG clips, one file per kind with its count (6 files), including two spare short clips</td></tr>
+<tr><td>Files</td><td>21 3MF files for the casing parts, stands and clips, plus <code>process-sheet.html</code></td></tr>
+</tbody></table>
+<p>The casing and clip numbers depend on the design. For example, the small leak-test cup (24 mm radius, 40 mm tall, <code>sides2Bottom</code>, <a href="validation.html">VALIDATION.md</a> section 6) also exports 21 3MF files: 15 casing files (3 of them stands) and 6 clip files.</p>
+<p>The cast is trimmed at the ledge, so the finished piece has the rim you modelled.</p>
+<h2 id="2-install">2. Install</h2>
+<p>Needs Fusion 360 on Windows and a copy of this repository. In a PowerShell window in the repository folder:</p>
+<pre><code>powershell -ExecutionPolicy Bypass -File tools\install_addin.ps1</code></pre>
+<p>This links <code>%APPDATA%\Autodesk\Autodesk Fusion 360\API\AddIns\SlipMold</code> to <code>addin\SlipMold</code> (a junction, no admin rights). It never deletes anything that is not its own link. Useful options:</p>
+<ul>
+<li><code>-DryRun</code> says what it would do; <code>-Uninstall</code> removes only its own link;</li>
+<li><code>-MoldsDir D:\Molds</code> sends all results to that folder instead of <code>&lt;repo&gt;\molds</code> (see section 13).</li>
+</ul>
+<p>Then in Fusion: Utilities &gt; Add-Ins (Shift+S) &gt; Add-Ins tab &gt; SlipMold &gt; Run. Tick "Run on Startup" to load it with Fusion. The panel <strong>SlipMold</strong> appears in the Design workspace, Solid tab. Three buttons are on the toolbar (Make mold, Parameters, Results); the <strong>Advanced</strong> drop-down holds Run stage, Reset from stage and Help. (If Python is installed, <code>python tools/install_addin.py</code> does the same.) After the repository's add-in shell is updated, stop and run the add-in once (SlipMold &gt; Stop, then Run); later code changes apply at the next click without a restart.</p>
+<h2 id="3-prepare-the-model">3. Prepare the model</h2>
+<p>Checklist, before the first click:</p>
+<ul>
+<li>One solid body, closed (S0 fails with "source body is not a closed solid" otherwise). Several visible bodies are fine if you pick the right one in <strong>Make mold</strong>; only that body is used.</li>
+<li>+Z is up: the opening (rim) faces +Z and the foot is at the bottom. The casting axis is Z. S0 warns when the model looks upside down or lying on its side; rotate it (Move/Copy, rotate about X) and run again.</li>
+<li>Real size: model the ware at its finished (greenware) size. If you model the fired size, set <code>mold_shrinkagePct</code> (for example 12) and the kit scales the plug by 1/(1 - s/100). With 0 (the default) the plug gets no scale feature. Any Fusion unit works; the kit reads millimetres.</li>
+<li>Position does not matter. The ware can sit anywhere in X, Y and Z; the mold is built around the centre of its footprint at its foot.</li>
+<li>The body can be in the root component, or in a sub-component whose occurrence has not been moved or rotated.</li>
+<li>Keep the design history on (a parametric design). A Part design is switched to Hybrid by S1.</li>
+<li>Constrain the sketches that drive the model. S0 warns "sketches not fully constrained in ...": changing the mold parameters later can reshape an under-constrained model.</li>
+<li>Save the document once (File &gt; Save). Unsaved documents work, but results go to <code>molds/Untitled</code> and no versions are saved.</li>
+</ul>
+<p>Rims that work:</p>
+<table>
+<thead><tr><th>Rim</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Flat rim (a planar top face), round or any outline</td><td>the spare starts on that face, outline offset outward by <code>mold_spareStepOut</code></td></tr>
+<tr><td>Rounded, full-round or sloped lip (no flat top)</td><td>the spare starts 0.2 mm below the highest point on the outline of that section; the cast is trimmed at that ledge (S2 warns "the rim has no flat top face ...")</td></tr>
+</tbody></table>
+<p>Other shapes that work: round or non-round (oval, rounded square) vessels, foot recesses, waists and necks that side pulls can still release, bowls that widen upward (one-piece <code>dropOut</code>), hollow or shelled bodies (the cavity is filled in the plug, S2 reports it).</p>
+<p>Not supported yet: see section 12.</p>
+<h2 id="4-the-buttons-in-order">4. The buttons, in order</h2>
+<p>All buttons live in Design &gt; Solid &gt; SlipMold. Make mold, Parameters and Results are on the toolbar; Run stage, Reset from stage and Help are in the Advanced drop-down.</p>
+<ol>
+<li><p><strong>Make mold.</strong> The one button that builds. Its dialog has:</p>
+<ul>
+<li><strong>Model body</strong>: a selection box for the solid body of the ware. It starts with the body you selected in the canvas; if none, the tagged body (the one used before), a body named <code>master_part</code>, or the only visible solid body. Choosing another body tags it as the mold source (the tag moves) and S0 and what depends on the body run again. A body that SlipMold built (a plug, a casing) is refused.</li>
+<li><strong>Printer</strong> group: "Nozzle diameter" (drop-down, 0.2 to 1.0 mm) is the nozzle you print the casings and clips with (clearances, ridge and wall widths and layer heights follow it). "Fit offset (mm per side)" (-0.2 to +0.3) comes from your tolerance test: 0 for a calibrated printer; + loosens every printed fit, - tightens. Both are saved in your SlipMold settings for every mold; a <code>mold_nozzle</code> or <code>mold_fitOffset</code> user parameter wins for its design.</li>
+<li><strong>Save a version after each stage</strong> (needs a document saved once) and <strong>Casings one piece per step (S7)</strong>. Both are remembered.</li>
+<li>A text box with the model in use and the stale list: "Will run: ..." names the stages that are out of date, with the reason for the first three, or "Nothing to run: the mold is up to date".</li>
+</ul>
+<p>OK creates any missing <code>mold_</code> parameter on first use (S1), then runs every out-of-date stage, S0 to S9, to the exports. It stops only when a check fails, a stage errors or the model has no moldable layout; warnings never stop it. They are listed on the Results page. A progress dialog shows the four groups (Model | Layout | Plaster | Casings), the last step's lines, "Step N took X s" and a bar of the stages done. <strong>Cancel after this step</strong> stops cleanly; click Make mold again to continue from there. The Results page opens by itself at the end, also after a failure or a cancel.</p>
+<p>Each step freezes Fusion for about 5 s or less. S3 (the layout search), S8 (the clip site checks) and S9 (one part per step) run over several steps; S7 builds one piece's casings in one step and checks them in the next. Measured with no saves: the small leak-test cup took 39 steps, the longest 4.4 s; Mug 01.1 took 41 steps, the longest 4.1 s, and 40 s in all. A save adds about 1.5 s to its step. While Make mold is running do not edit the design or switch documents (the run stops if the active document changes).</p></li>
+<li><p><strong>Parameters.</strong> Opens Fusion's own Change Parameters dialog (the same as Modify &gt; Change Parameters). The 7 parameters you set are under User Parameters; each comment starts with its group in brackets (<code>[Plaster]</code>, <code>[Spare]</code>, ...). If the design lacks any of them, the button first creates it with its default value, so every one can be edited before the first run. SlipMold's own values and your printer are not in that list (section 8). Changes apply at the next Make mold; only the stages they affect run again. The plug's features are driven by the <code>mold_</code> parameters, so the plug may follow at once; the mold pieces are rebuilt only by Make mold. How to edit the values: section 8.</p></li>
+<li><p><strong>Results.</strong> Shows the active design in the SlipMold window (also described in section 7): the status, the warnings, about six key numbers, buttons for the exports folder and the process sheet, the per-stage details and a link to Help. Dock it or keep it floating while you work.</p></li>
+<li><p><strong>Advanced &gt; Run stage.</strong> Runs one stage by name with optional JSON arguments (for example <code>{"maxSeconds": 6}</code>). Stale earlier stages are reported, not fixed; use Make mold normally. A stage that works in steps (S3, S8, S9) is repeated until it is done. The stage's page opens in the SlipMold window.</p></li>
+<li><p><strong>Advanced &gt; Reset from stage.</strong> Deletes what SlipMold built from that stage onward (never your model), deletes those stages' reports in <code>runs/</code> and forgets their results in <code>mold.json</code>. No archives are kept. Make mold then rebuilds them. S0 and S1 are not in the list.</p></li>
+<li><p><strong>Advanced &gt; Help.</strong> Shows this guide in the SlipMold window inside Fusion (with the Parameters, Tested shapes and Add-in reference pages; Back returns to the previous page).</p></li>
+</ol>
+<p>A normal first session: select the model, Make mold (set the printer in its dialog), read the Results page, print the leak-test piece. Parameters is for changing a value afterwards.</p>
+<p>Pipeline stages, so the messages make sense: S0 intake (checks the model), S1 params (creates the input parameters), S2 plug, S3 moldability (layout), S4 plaster block, S5 split into pieces and natches, S6 verify (virtual demolding), S7 casings, S8 clips, S9 export. Grouped in the progress dialog: Model (S0 to S2), Layout (S3), Plaster (S4 to S6), Casings (S7 to S9).</p>
+<h2 id="5-choosing-a-layout">5. Choosing a layout</h2>
+<p>S3 tests which ways of splitting the mold release every surface of the plug and ranks them: no seam across the foot first, then fewest pieces, then least zero-draft area, then shortest seam. With <code>mold_layout</code> = <code>'auto'</code> (the default) S3 picks the best and Make mold carries on; it does not stop for you to confirm.</p>
+<p>Where to look: the Results page shows "Plaster pieces" with the layout name, and the S3 page (Stage details) shows the layout, the number of pieces, whether it is moldable (the undercut), the bottom split height, the seam length and a rough plaster amount. The layouts S3 compared, each with its undercut, zero-draft area and seam length, are in <code>runs/s3_moldability.json</code> under <code>summary.alternatives</code>.</p>
+<p>Check:</p>
+<ul>
+<li>undercut should be 0 mm2 for the layout used (the plug releases);</li>
+<li>zero-draft area is surface that pulls straight, so it grips: smaller is better, 0 is rare for a vertical-sided vessel;</li>
+<li>fewer pieces are easier to cast, but a seam across the foot is called out in a warning ("the best layout has a seam across the foot", and "accepting a seam across the foot would save N piece(s)");</li>
+<li><code>sides3Bottom</code> and <code>sides4Bottom</code> can be proposed but cannot be built yet: S5 then fails with "split not implemented yet" (see section 11).</li>
+</ul>
+<p>Layouts you can use: <code>dropOut</code> (one piece, pulls straight down: bowls and cups that widen upward), <code>sides2</code> (two halves), <code>sides2Bottom</code> (two halves plus a bottom plate: mugs and anything with a foot or a waist).</p>
+<p>Change it: open Parameters, set <code>mold_layout</code> to one of the words above (in single quotes), and optionally <code>mold_splitAzimuth</code> (the first vertical split, for example to keep a seam off a decoration; it applies to a fixed layout or a turned ware, while with <code>'auto'</code> on any other ware S3 searches the azimuth itself), then press Make mold again. Only the stages that read these values run again (S3 onward). After you force a layout only that layout is analysed; set <code>mold_layout</code> back to <code>'auto'</code> to return to the recommended one. To change only the bottom split height, add an override <code>mold_bottomSplitHeight</code> (section 8); to allow more or fewer pieces, add <code>mold_maxPieces</code> (default 5). If S3 fails with "no layout up to N pieces releases every surface" the model needs changing (add draft, remove undercuts); see section 11.</p>
+<h2 id="6-checking-the-plaster-pieces">6. Checking the plaster pieces</h2>
+<p>S4 builds the plaster block, S5 cuts the pieces and adds the natches, S6 removes every piece virtually in every order and measures. Make mold does not stop after S6, so read it afterwards: warnings are at the top of the Results page, and the S4, S5 and S6 pages under Stage details show the numbers. S4: block diameter and height, thinnest plaster wall, plaster volume and wet weight. S5: pieces, keys (natches), the fit, the closest key to a piece edge. S6: the verdict, the closest key to the cast, the demold order, the plaster batch and the largest interference. The page's Checks line counts the checks passed and failed (its table is folded).</p>
+<p>Check:</p>
+<ul>
+<li>S6 verdict is pass and its page lists no failed check;</li>
+<li>S5 "Fit" is <code>unique</code>: each piece fits only one way (a wrong assembly would be a defect);</li>
+<li>"Demold order" is the order you will open the mold in, and <code>Max interference</code> is 0;</li>
+<li>no wet piece above 6 kg (S6 warns), and the plaster wall is what you want (<code>mold_plasterWall</code>, 25 mm). The wall check skips the small chamfer on the top rim edge, where the plaster is about 3 mm thinner by design (22 mm on a 25 mm wall); measuring it there is not a defect.</li>
+</ul>
+<p>Change: <code>mold_plasterWall</code> re-runs S4 onward (the base follows the wall, and so does the natch size: the key radius is 0.24 x the wall, within 3 to 10 mm and reduced to fit the wall). <code>mold_plasterOuterShape</code> and the draft are engine values you can override. The other key values (<code>mold_natch*</code>: radius, depth, clearance, keys per seam, gender) are overrides too and re-run S5 onward (section 8). <code>mold_natchClearance</code> only shapes the plaster keys (no test print): change it if a plaster dry fit asks for it, since a natch change redoes the pieces and everything after them.</p>
+<h2 id="7-reading-the-results-page">7. Reading the Results page</h2>
+<p>S7 builds the casings, S8 the clips, S9 exports one part per step (so long exports never freeze Fusion). When Make mold ends, the Results page opens in the SlipMold window; the Results button shows it again at any time. Top to bottom:</p>
+<ul>
+<li><strong>Status.</strong> "Done: the mold files are ready" (with the number of warnings), or the failure: what stopped, at which stage, what it means, the numbered "What to do" steps, the raw message and the end of the log. Other states are "Out of date" (the model or the parameters changed since the last run), "Not finished" and "Stopped before the end" (cancelled); each tells you to click Make mold. "No mold yet" before the first run.</li>
+<li><strong>Warnings.</strong> Every warning of the run in plain words, grouped by stage, each with what to do. Warnings never stopped the run: read them before you print.</li>
+<li><strong>Key numbers</strong> (at most six): plaster pieces and layout, plaster batch, printed casing parts and mass, clips to print, the piece to print first (leak test) and the number of export files.</li>
+<li><strong>Buttons.</strong> "Open the exports folder" (for the slicer) and "Process sheet" (read in the SlipMold window; it is <code>exports/process-sheet.html</code>).</li>
+<li><strong>Stage details</strong> (folded): one row per stage with status, date, seconds and first line; click a stage for its page. <strong>Export files</strong> (folded): the 3MF files with sizes. The page's top bar links the whole add-in log.</li>
+<li>A link to Help at the bottom.</li>
+</ul>
+<p>Check before printing: the status says Done, you have read the warnings, and the process sheet names the casing to print first for the leak test (section 9).</p>
+<h2 id="8-the-parameters-you-will-actually-touch">8. The parameters you will actually touch</h2>
+<p>Everything is in <a href="parameters.html">PARAMETERS.md</a> with defaults and what re-runs. SlipMold creates only 7 user parameters, the ones you set; it works out the rest, and your printer comes from a profile. The short list:</p>
+<table>
+<thead><tr><th>Want to</th><th>Parameter</th><th>How</th><th>Re-runs from</th></tr></thead>
+<tbody>
+<tr><td>Fired-size model</td><td><code>mold_shrinkagePct</code></td><td>set</td><td>S2</td></tr>
+<tr><td>Taller or wider slip well, bigger knife ledge</td><td><code>mold_spareHeight</code>, <code>mold_spareStepOut</code>; <code>mold_spareFlare</code></td><td>set; override</td><td>S2</td></tr>
+<tr><td>Thicker or thinner plaster</td><td><code>mold_plasterWall</code> (the base and the natch size follow it; override <code>mold_plasterBase</code> to change only the base)</td><td>set</td><td>S4</td></tr>
+<tr><td>Force the layout</td><td><code>mold_layout</code>; <code>mold_splitAzimuth</code></td><td>set</td><td>S3</td></tr>
+<tr><td>Allow more or fewer pieces</td><td><code>mold_maxPieces</code> (default 5)</td><td>override</td><td>S3</td></tr>
+<tr><td>Looser or tighter keys</td><td><code>mold_natchClearance</code> (plaster dry fit)</td><td>override</td><td>S5</td></tr>
+<tr><td>Casing material</td><td><code>mold_casingMaterial</code> (<code>'PETG'</code> or <code>'PLA'</code>)</td><td>set</td><td>S7</td></tr>
+<tr><td>Your printer</td><td><code>bedX</code>, <code>bedY</code>, <code>bedZ</code>, <code>bedMargin</code>, <code>nozzle</code>, <code>fitOffset</code></td><td>printer profile (nozzle and fit offset: SlipMold &gt; Make mold)</td><td>S7</td></tr>
+<tr><td>Casing wall, freeboard</td><td><code>mold_casingFreeboard</code>; the casing wall follows the nozzle</td><td>override</td><td>S7</td></tr>
+<tr><td>Ridge fit</td><td><code>seamClearance</code> (calibrate with the leak test)</td><td>printer profile</td><td>S7</td></tr>
+<tr><td>A seam that leaks</td><td><code>mold_ridgeCount</code>, <code>mold_ridgeHeight</code></td><td>override</td><td>S7</td></tr>
+<tr><td>Clip grip</td><td><code>mold_clipPreload</code> (calibrate with the leak test)</td><td>override</td><td>S7</td></tr>
+</tbody></table>
+<p>How to edit a value you set: click SlipMold &gt; Parameters (or Modify &gt; Change Parameters), find the <code>mold_*</code> name under User Parameters, type the new expression and close the dialog; then Make mold (only the affected stages run again). For an override or the printer profile see "Overrides and the printer profile" below.</p>
+<ul>
+<li>Values are Fusion expressions with units (<code>25 mm</code>, <code>15 deg</code>). Fusion refuses a value it cannot parse.</li>
+<li>They may be formulas that use the model's own parameters, for example <code>mold_plasterWall</code> = <code>cupHeight / 4</code>. SlipMold compares the evaluated values, so a change of <code>cupHeight</code> alone is seen through the model it reshapes (everything runs again); after changing a parameter that does not shape the model, use Reset from stage.</li>
+<li>Text parameters (the inputs <code>mold_layout</code> and <code>mold_casingMaterial</code>, and the overrides <code>mold_plasterOuterShape</code>, <code>mold_plasterOuterTaper</code> and <code>mold_natchGender</code>) take one word in single quotes, for example <code>'auto'</code> or <code>'sides2Bottom'</code>. Fusion has no list type, so the comment lists the allowed words. Make mold checks them before any stage runs and stops with a message such as "mold_layout = 'sides5' is not one of: auto | dropOut | ...".</li>
+<li>Do not delete or rename one of the parameters you set. If one goes missing, Make mold stops with "... missing from the design (deleted or renamed ...)": rename it back, or click Parameters to recreate it with its default. Deleting an override is fine.</li>
+</ul>
+<h3 id="overrides-and-the-printer-profile">Overrides and the printer profile</h3>
+<ul>
+<li><strong>Override one value for one mold.</strong> In Change Parameters click + and add a user parameter with the exact name, for example <code>mold_clipArm</code> = <code>2.2 mm</code> or <code>mold_bedX</code> = <code>200 mm</code>. Its value wins for that mold. Delete the parameter to go back to SlipMold's value. Make mold runs again the stages that read it. S1 lists every override, with its value and the engine's, as a warning (and in <code>mold.json</code> under <code>resolved</code>). The engine values <code>mold_maxPieces</code>, <code>mold_spareFlare</code> and <code>mold_plasterOuterShape</code> work the same way: they are not in the design unless you add them.</li>
+<li><strong>Printer profile.</strong> Nozzle, bed size and print clearances apply to every mold. Make mold asks for the nozzle and the fit offset; the rest goes once in <code>%APPDATA%\SlipMold\config.json</code> under <code>"printer"</code>, as numbers in mm, for example <code>{"printer": {"nozzle": 0.6, "fitOffset": 0.05, "bedX": 220, "bedY": 220, "bedZ": 250}}</code>. A value you leave out keeps its default (table in <a href="parameters.html">PARAMETERS.md</a>). A profile change re-runs S7 onward. The key <code>"materials"</code> in the same file overrides the clip material constants (PETG modulus and strain limit).</li>
+<li><strong>Printed fits.</strong> Seam clearance, groove depth and clip openings are set for a calibrated PETG print on a 0.4 mm nozzle and open by <code>fitOffset + 0.125 x (nozzle - 0.4)</code> mm per side. Find your fit offset with a tolerance test print and the leak test (process sheet section 1). Evidence and procedure: <a href="../../../docs/research/fit-tolerances.md" class="ext">fit-tolerances.md</a>.</li>
+<li><strong>Anycubic Kobra 4 with Anycubic Slicer Next</strong> (the printer this workspace is used with). The default bed 260 x 260 x 260 mm matches it. Pick the nozzle you fitted (0.25, 0.4, 0.6 or 0.8 mm) in Make mold. In the slicer: PETG, the process sheet's layer heights, Elephant foot compensation about 0.2 mm (the slicer's default is 0), X-Y hole and contour compensation 0, no supports. Tolerance test: right-click the empty plate &gt; Add Handy models &gt; Orca Tolerance Test; turn its result into the Fit offset, not into the slicer's X-Y compensation (<a href="../../../docs/research/fit-tolerances.md" class="ext">fit-tolerances.md</a>, Calibration).</li>
+<li><strong>Derived values follow others.</strong> The plaster base and the natch size follow <code>mold_plasterWall</code>; the flange follows the ridges; the casing wall and base plate follow the nozzle; the clip arm and spacing follow the strain limit and the force the seam needs. Change the input behind them first: an override stops a value from following.</li>
+</ul>
+<h2 id="9-calibration-with-the-leak-test">9. Calibration with the leak test</h2>
+<p>Fit is the part theory cannot give you: it depends on your printer and filament. The kit has no separate test prints. Instead the first section of the process sheet, "First print: leak test", tells you to print ONE piece's casing before the rest: the piece whose seams cover every kind of seam the mold uses (the Results page names it under "Print first (leak test)"). Print that piece's casing parts, its stand and its clips, plus the two spare clips. The clip files carry the count for the whole mold (for example <code>PETG_clip_short_x34.3mf</code>): print only the numbers the sheet lists for that piece. Use the printer and material of production (PETG by default).</p>
+<p>The spare clips are short clips at preload 0.5 and 0.9 mm (the default <code>mold_clipPreload</code> is 0.7 mm). Every short clip carries its preload as 1, 2 or 3 grooves on its spine: 0.5, 0.7 and 0.9 mm.</p>
+<p>Assemble the piece as in section 10, then run the four tests in order:</p>
+<table>
+<thead><tr><th>Test</th><th>What to do</th><th>Good result</th><th>If not</th></tr></thead>
+<tbody>
+<tr><td>Fit</td><td>push the ridges into their grooves with light pressure; run a 0.05 mm feeler gauge along each clipped seam</td><td>the ridges slide in with light pressure; the gauge enters nowhere</td><td>ridges will not enter: raise <code>seamClearance</code> by 0.05 mm in the printer profile (default 0.16 mm), or override <code>mold_seamClearance</code> for this mold</td></tr>
+<tr><td>Clips</td><td>put each clip on and take it off by hand; swap the two spares onto one foot site</td><td>every clip goes on by hand, snaps behind its bead and comes off by hand</td><td>the 0.7 mm clips are loose or hard to push: override <code>mold_clipPreload</code> with the value of the better spare (0.5 or 0.9 mm)</td></tr>
+<tr><td>Water</td><td>fill to 5 mm below the fill line; leave it 30 min on a paper towel</td><td>no drip at any seam, corner or taped line</td><td>a seam drips: note where, override <code>mold_ridgeCount</code> (default 3) or <code>mold_ridgeHeight</code> (default 1 mm)</td></tr>
+<tr><td>Plaster</td><td>cast this piece; demold at 45 min</td><td>no drip, flash 0.3 mm or less; the parts, clips and tape come off by hand</td><td>a drip: as for Water; ridges that will not enter: as for Fit</td></tr>
+</tbody></table>
+<p>After a change, press Make mold and print the test again. Do not print the other pieces until this one passes.</p>
+<p>Notes:</p>
+<ul>
+<li>The plaster keys (natches) need no test print: they are plaster against plaster, cast in two independent casings, and <code>mold_natchClearance</code> (default 0.5 mm) only shapes the plaster. If plaster pieces bind in a dry fit, override it one step higher (<code>mold_natchClearance</code> = 0.6 mm); a change re-runs S5 to S9.</li>
+<li>Lines with no ridge or no clip (for example the bottom piece's radial sector joints), and the floor/core line of a side piece that no clip clamps, are sealed with tape from outside. The water test checks the tape too.</li>
+<li>A change to the seam values or the clip values re-runs S7 to S9, because the casing beads, stop lugs and stands depend on the clip values.</li>
+<li>Order of work for a new design: run Make mold once with the defaults, print the leak-test piece, set the values, press Make mold again, then print the other pieces.</li>
+</ul>
+<h2 id="10-printing-and-casting">10. Printing and casting</h2>
+<p>Everything below comes from the process sheet in the exports folder (<code>process-sheet.html</code>; the numbers there are for your design). Its first section is the leak test: print one piece's casing first and check it before you print the rest (section 9).</p>
+<ol>
+<li><strong>Print.</strong> Casing material is PETG by default (<code>mold_casingMaterial</code>; <code>'PLA'</code> is the other choice), clips and stands as well. Every body, component and export file name starts with its material (<code>PETG_side1_core</code>, <code>PETG_clip_short_x34.3mf</code>); a clip file name ends with the count to print. Cores, plates and floors (working faces) and clips at 0.12 mm layers, sectors and stands at 0.24 mm, no supports. The sheet lists each part with its piece, quantity, orientation (for example "plate back on the bed, working face up") and its mass.</li>
+<li><strong>Weigh the plaster.</strong> USG No. 1 Pottery Plaster at consistency 70 (70 g water per 100 g plaster). The sheet gives dry plaster and water per piece and the batch total with 15 % overage. Mix water at 21 C, never warm.</li>
+<li><strong>Assemble each casing.</strong> Per piece, the sheet (section 4) lists the parts, the clip counts and the assembly order: the demold order reversed, stand first. Set the base part on its stand, then add each part in order.
+<ul>
+<li>Short snap clips go on the curved foot seams. Push each on from the flange edge until the barb snaps behind the bead on the sector foot. The flat arm wraps under the base, which the stand lifts off the bench.</li>
+<li>Rail clips go on the straight vertical seams. Slide each down from the top, lead-in end first, onto the stop lugs, the lower rail first. Use the <code>_flat</code> rails where one flange is a core or plate.</li>
+<li>The ridges seal every clipped seam once the clips are on: no clay. Tape from outside every line that has no ridge or no clip (for example the bottom piece's radial sector joints) and the unclamped floor/core line of a side piece. The sheet lists these lines.</li>
+<li>Never put oil, sealant or hot glue on a surface that forms the plaster's working face.</li>
+</ul></li>
+<li><strong>Pour.</strong> Each piece has its own casing, so the pours are independent: all pieces in one session, any order. Fill to the debossed fill line and screed the open face flat.</li>
+<li><strong>Temperature.</strong> Room at most 24 C while the plaster sets; above it use PETG casings or cool them. Never insulate or stack curing casings: the setting heat softens PLA.</li>
+<li><strong>Demold</strong> the casing parts per piece in the order on the sheet (for the Mug: sectors, then the core, the floor last), then dry-fit the plaster pieces. The plaster pieces come off the cast in the mold opening order shown (Mug: bottom, side1, side2).</li>
+</ol>
+<h2 id="11-troubleshooting">11. Troubleshooting</h2>
+<p>When Make mold stops on a failure, the SlipMold window opens the Results page with the message on top, "What to do", the stage in brief and the end of the add-in log; <strong>Results</strong> shows it again later. The same data is stored in <code>molds/&lt;design&gt;/runs/&lt;stage&gt;.json</code> (for reading only) and <code>runs/addin.log</code>, where every step is listed with its time, for example <code>[3.8 s]</code>.</p>
+<table>
+<thead><tr><th>Message (or the start of it)</th><th>Meaning</th><th>What to do</th></tr></thead>
+<tbody>
+<tr><td>no active document / active document has no Fusion design</td><td>no design is open</td><td>open the design in the Design workspace</td></tr>
+<tr><td>no source body: select it and click SlipMold &gt; Make mold, name it master_part, or leave exactly one visible solid body ...</td><td>S0 cannot tell which body is the ware</td><td>select the body in Make mold's Model body box, or hide the other bodies</td></tr>
+<tr><td>several bodies are tagged as the mold source (...)</td><td>two bodies carry the source tag</td><td>select the one you want in Make mold (this moves the tag)</td></tr>
+<tr><td>X is a body SlipMold built. Select the ware (your model) instead.</td><td>the Model body box holds a plug, plaster or casing body</td><td>select your own model body</td></tr>
+<tr><td>source body 'X' is in component C whose occurrence O is moved or rotated</td><td>a moved sub-component</td><td>move the body to the root component or reset the occurrence position</td></tr>
+<tr><td>source body is not a closed solid</td><td>the body is a surface or open shell</td><td>repair it into one closed solid</td></tr>
+<tr><td>model may not be +Z up ... / model looks upside down ... / model may be upside down ...</td><td>warnings: the rim is not facing +Z</td><td>rotate so the opening faces +Z and run again (rotate 180 deg about X if upside down, 90 deg if on its side)</td></tr>
+<tr><td>more than one outer loop at z ranges ... (handle/appendage?)</td><td>a handle or spout</td><td>handles are not supported: model the cup without it</td></tr>
+<tr><td>plug is wider (X mm) than the spare top (Y mm): the model is wider below the rim than at it (a handle or a bulge?)</td><td>S2: a handle, or a body wider than its rim</td><td>remove the handle (mold it separately), or widen the spare with <code>mold_spareStepOut</code></td></tr>
+<tr><td>sketches not fully constrained in ...</td><td>a sketch can reshape the ware when parameters change</td><td>constrain the sketch before changing parameters</td></tr>
+<tr><td>some horizontal sections are not star-shaped ...</td><td>an overhang that the plaster-block method may not wrap</td><td>check the layout and the plaster result; simplify the shape if S4 fails</td></tr>
+<tr><td>invalid expression(s), nothing changed ...</td><td>a parameter value Fusion cannot parse</td><td>fix the value in Parameters (units included, text in single quotes)</td></tr>
+<tr><td>mold_... = '...' is not one of: ...</td><td>a Text parameter with a word SlipMold does not know</td><td>set one of the listed words, in single quotes, in Parameters (or delete the parameter if it is an override)</td></tr>
+<tr><td>mold_... missing from the design (deleted or renamed ...)</td><td>one of the parameters you set was deleted or renamed</td><td>rename it back, or click Parameters to recreate it with its default (deleting an override is fine)</td></tr>
+<tr><td>Printer nozzle not confirmed: casings and clips are built for 0.4 mm ...</td><td>a warning: no nozzle is saved in your settings yet</td><td>open Make mold, pick the nozzle and press OK; it is remembered</td></tr>
+<tr><td>no layout up to N pieces releases every surface ...</td><td>undercuts that no allowed split releases</td><td>add draft, remove the undercut or handle, add a <code>mold_maxPieces</code> override only if S5 can split the result</td></tr>
+<tr><td>layout X: split not implemented yet (supported: dropOut, sides2, sides2Bottom)</td><td>S3 proposed a 3-4 side layout</td><td>set <code>mold_layout</code> to a supported layout in Parameters, then Make mold</td></tr>
+<tr><td>revolved cross-check disagrees: mesh X ... vs revolved Y ...</td><td>S3's two layout checks do not agree on the layout you forced</td><td>set <code>mold_layout</code> to <code>'auto'</code>, then Make mold</td></tr>
+<tr><td>the best layout has a seam across the foot / accepting a seam across the foot would save N piece(s)</td><td>warnings from S3</td><td>accept it, or change the split (override <code>mold_bottomSplitHeight</code>)</td></tr>
+<tr><td>layout X has no bottom piece: the contoured plate blank needs a bottom split ...</td><td>the <code>mold_plasterOuterShape</code> override is <code>'contoured'</code> with a one-piece layout</td><td>delete the override, or set it to <code>'tapered'</code></td></tr>
+<tr><td>plug is not revolved about the SlipMold Z axis ...</td><td>the <code>mold_plasterOuterShape</code> override is <code>'contoured'</code> on a non-round plug</td><td>delete the override, or set it to <code>'tapered'</code></td></tr>
+<tr><td>draft D deg &lt; 1 deg (casing release) / no valid draft in [a, b] deg</td><td>the plaster side cannot get enough draft</td><td>delete the <code>mold_plasterOuterDraft</code> or <code>mold_plasterOuterDraftMax</code> override if you added one (SlipMold searches 3 to 8 deg), or use a different layout</td></tr>
+<tr><td>3D wall min W mm &lt; mold_plasterWall - 0.05 mm</td><td>plaster too thin somewhere</td><td>raise <code>mold_plasterWall</code> or review the shape</td></tr>
+<tr><td>unique fit not reached ... / natchMargin check failed</td><td>natch placement or small seam faces</td><td>override <code>mold_natchRadius</code> (smaller), <code>mold_natchesPerSeam</code> (fewer) or <code>mold_natchEdgeMargin</code> (smaller), or raise <code>mold_plasterWall</code>, and look at the S5 page again</td></tr>
+<tr><td>no feasible disassembly order</td><td>S6 found no way to open the mold</td><td>review the layout and natches (override <code>mold_natchDepth</code>)</td></tr>
+<tr><td>mold_casingBasePlate (X mm) must exceed mold_flangeThickness (Y mm)</td><td>casing plate thinner than the flange</td><td>delete the <code>mold_casingBasePlate</code> override (SlipMold sizes it 0.8 mm above the flange), or raise it</td></tr>
+<tr><td>casing part ... is X x Y x Z mm but the bed allows ... levers: ... oversize parts are not split automatically</td><td>a casing part is bigger than the printer</td><td>set your real bed size in the printer profile (config.json <code>"printer"</code>: <code>bedX</code>, <code>bedY</code>, <code>bedZ</code>) or override <code>mold_bedX/Y/Z</code> for this mold; or lower <code>mold_plasterWall</code> or <code>mold_spareHeight</code>, override <code>mold_casingFreeboard</code> or <code>mold_ridgeCount</code> (a narrower flange), or use a larger printer; there is no automatic split</td></tr>
+<tr><td>seated clip hits &lt;part&gt; (&lt;n&gt; mm3)</td><td>a clip, seated on its seam, runs into a casing part (a bead, lug, stand or crossing flange)</td><td>override <code>mold_clipEndOffset</code> with 15 mm (default 10 mm); if the part is the stand, override <code>mold_standHeight</code> with 6 mm (default 5 mm)</td></tr>
+<tr><td>barb does not catch ...</td><td>pulled outward a little, a clip does not meet its bead, so it could slide off</td><td>Make mold, so the casings and clips use the same parameters</td></tr>
+<tr><td>check snapStrain:p0.9 ... (or p0.5, p0.7)</td><td>a clip bends too far when it snaps on (the strain is above the limit)</td><td>a spare (p0.5, p0.9): none, compare it in the leak test and set it aside if it whitens; the main clip (p0.7): delete the <code>mold_clipArm</code> override (SlipMold picks the thickest arm within the strain limit) or lower the <code>mold_clipPreload</code> override by 0.1 mm</td></tr>
+<tr><td>seated clips overlap at N site pairs</td><td>two clips take the same space</td><td>override <code>mold_clipEndOffset</code> with 15 mm, or <code>mold_clipWidth</code> with 14 mm (defaults 10 and 16 mm); if it repeats, read the S8 page (Results &gt; Stage details)</td></tr>
+<tr><td>X is still stale after running: ...</td><td>the stage ran but its inputs still differ</td><td>Reset from stage X, then Make mold</td></tr>
+<tr><td>not saved: the document was never saved (File &gt; Save once to keep versions)</td><td>save versions is on for an unsaved file</td><td>File &gt; Save once; results go to <code>molds/Untitled</code> until then</td></tr>
+<tr><td>save failed ...</td><td>Fusion could not save a version (offline, locked)</td><td>save manually, then Make mold</td></tr>
+<tr><td>Make mold is running (step N, ...): wait for it ...</td><td>a run is in progress</td><td>wait, or Cancel after this step (headless: <code>cancel()</code> stops it at once)</td></tr>
+<tr><td>the previous Make mold run stopped advancing (its step event was lost); it was reset ...</td><td>a run stopped without finishing (shown after a minute)</td><td>click Make mold again; if it repeats, Utilities &gt; Add-Ins &gt; SlipMold &gt; Stop, then Run</td></tr>
+<tr><td>the add-in's step event was not delivered at start-up ...</td><td>the add-in loaded oddly</td><td>Utilities &gt; Add-Ins &gt; SlipMold &gt; Stop, then Run</td></tr>
+<tr><td>the active document changed (started in X, now Y)</td><td>you switched documents during a run</td><td>activate X and click Make mold again</td></tr>
+<tr><td>bed face not on z = 0 / mesh not closed / triangles ... &gt; cap (S9)</td><td>export check failed for one part</td><td>read the report; Reset from S9 and Make mold; if it repeats, report the file name</td></tr>
+</tbody></table>
+<p>Rule of thumb: fix the cause, then Make mold; only stages that are stale run. A failed stage rolls back to the previous good state. Nothing ever changes your model.</p>
+<h3 id="designs-made-before-2026-10-07">Designs made before 2026-10-07</h3>
+<p>There is no migration. A design built by the older version (Select model, Regenerate and three approval gates) starts fresh:</p>
+<ol>
+<li>Move the old <code>molds/&lt;design&gt;</code> folder away (or rename it).</li>
+<li>In Change Parameters delete the retired user parameters <code>mold_wareScale</code>, <code>mold_maxPieces</code>, <code>mold_spareFlare</code> and <code>mold_plasterOuterShape</code>. If a feature of the design uses one of them, first set that feature's expression to the value. Left in the design, the last three would act as overrides of the engine's values.</li>
+<li>Select the model body and press Make mold. Everything runs again from S0 and rebuilds the plug, plaster, casings and clips.</li>
+</ol>
+<h2 id="12-limits">12. Limits</h2>
+<ul>
+<li>Handles, spouts and other through-loop appendages: S3 cannot release them in one mold and nothing routes them to a separate mold. Model the body without them (they need their own mold).</li>
+<li>Layouts with 3 or 4 side pieces (<code>sides3Bottom</code>, <code>sides4Bottom</code>) are proposed by S3 but S5 cannot split them yet; only <code>dropOut</code>, <code>sides2</code> and <code>sides2Bottom</code> run to the end. A bottom "insert" variant is not built.</li>
+<li>Casing parts larger than the printer bed fail (no automatic splitting); change printer values or the levers listed in the message.</li>
+<li>The <code>contoured</code> plaster outer shape (an override) works only for revolved plugs; the default <code>tapered</code> works for any shape.</li>
+<li>One ware body at a time, whose highest point is the rim (a handle above the rim breaks the crown section).</li>
+<li>The plaster keys have no test print; the plaster dry fit may need one step more <code>mold_natchClearance</code> (an override).</li>
+<li>Make mold does not pause for your judgement: it reports numbers and warnings but does not judge casting quality. Read the Results page before you print.</li>
+<li>Tested shapes and the numbers: <a href="validation.html">VALIDATION.md</a>. Wavy or scalloped rims, very large wares and highly complex undercuts are untested.</li>
+</ul>
+<h2 id="13-where-the-files-go">13. Where the files go</h2>
+<p>Each design gets a folder named after the document (letters, digits, <code>._-</code>; others become <code>_</code>):</p>
+<pre><code>molds/&lt;design&gt;/
+  mold.json                 the state of the mold: settings, parameters, layout, pieces, results of every stage
+                            ("pipeline": run counter and each stage's status, run, date, seconds, kept results
+                            and warnings), the export progress ("exportProgress")
+  runs/&lt;stage&gt;.json         one report per stage, for people to read; nothing reads them back
+  runs/addin.log           the add-in log: each step with its wall time, and full tracebacks
+  runs/addin_status.json    live status of a running Make mold
+  exports/                  3MF files and process-sheet.html</code></pre>
+<p>Whether a stage is out of date comes from <code>mold.json</code> (run numbers and parameter hashes), never from file times or from <code>runs/</code>: deleting <code>runs/</code> breaks nothing (the stage pages then show less detail).</p>
+<p>The models stay in your Fusion document: component <code>SlipMold</code> with the plug, the plaster pieces and sub-components Casings and Clips. With "Save a version after each stage" on (and the document saved once), Fusion keeps a version after S1, S2, S4, S5, S7 and S8, so you can go back.</p>
+<p>Moving the results folder: install with <code>-MoldsDir D:\Molds</code>, or set the environment variable <code>MOLDKIT_MOLDS_DIR</code>, or put <code>"moldsDir"</code> in <code>%APPDATA%\SlipMold\config.json</code>. The default is <code>molds</code> inside the repository. Without a design the log goes to <code>%TEMP%\SlipMold\addin.log</code>. The printer profile and the clip material constants go in the same config file (section 8).</p>
+<h2 id="14-running-without-the-add-in">14. Running without the add-in</h2>
+<p>From Fusion's Utilities &gt; Scripts and Add-Ins &gt; Scripts &gt; + (create a script, paste this in its <code>.py</code>), or the same code from any script runner. <code>REPO</code> is your copy of the repository.</p>
+<pre><code>import sys, adsk.core
+REPO = r"D:\Coding\fusion360-claude"
+sys.path.insert(0, REPO)
+for k in [k for k in sys.modules if k == "moldkit" or k.startswith("moldkit.")]:
+    del sys.modules[k]                      # pick up edits to the repository
+from moldkit.fusion import runner_host
+
+def run(_context):
+    r = runner_host.make_runner()           # same engine as the buttons; saves versions if the doc was saved
+    res = r.run_until_stop()                # runs stale stages until the end or a failure
+    msg = res["error"]["message"] if res["error"] else res["text"]
+    adsk.core.Application.get().userInterface.messageBox(msg)</code></pre>
+<p>Fusion is busy while it runs. The add-in's own entry points do the same without freezing Fusion for long (one step per event, status in <code>runs/addin_status.json</code>): see <a href="add-in.html">ADDIN.md</a>. <code>r.reset_from("s4")</code> resets from a stage and <code>r.plan()</code> shows what is stale without running anything.</p>
+<p class="foot">From docs/USER_GUIDE.md (tools/build_help.py).</p></main><script>
+document.addEventListener('click', function (e) {
+  var a = e.target.closest ? e.target.closest('a.ext') : null;
+  if (!a) { return; }
+  e.preventDefault();
+  try { adsk.fusionSendData('open', a.href); }
+  catch (err) { window.location.href = a.href; }
+});
+window.addEventListener('load', function () {
+  setTimeout(function () { try { adsk.fusionSendData('loaded', JSON.stringify({title: document.title, w: window.innerWidth, h: window.innerHeight})); } catch (err) {} }, 300);
+});
+</script></body></html>

@@ -1,0 +1,264 @@
+{
+ "topic": "gap-2",
+ "summary": "INCIDENT, READ FIRST: Fusion crashed and restarted at 18:19 on 2026-10-02 while my read-only timeout probe was running. The probe was a 75 s busy loop that called adsk.doEvents(). The local log has the sequence. The script started at 18:17:47 (MCP temp file script-8b80272a…py). One second later Fusion logged repeated NEUTRON_BUG_ALERT \"sys_error 62026 (entity is not alive)\". At 18:18:18 it logged \"Hang detected\". The log ends at 18:19:02, which is when the loop would have finished, and CER crash reports followed at 18:19:07. Fusion now has 0 open documents. \"Rib 3 circles\" was the user's active document and had unsaved changes. Its newest crash-recovery autosave is from 18:14:59, so edits made between 18:15 and 18:17 may be lost. The new session logged \"show recovery document\". The user should recover it before any agent touches Fusion again. I stopped all Fusion work after finding this. I ran no script that modifies a design. I created no documents. I changed no workspace files; my probe scripts are only in the scratchpad.\n\nMeasured, all read-only, on the inactive document \"Mug 01.1\" through app.documents:\n- (b) findBRepUsingRay returns each face only once, at its first hit. A +X ray at z=1.5 mm crosses the foot four times but returns only 2 faces. A ray at z=40 mm returns 1 face where there are 2 crossings. Cost is 0.15 ms per call with visibleEntitiesOnly=False and 0.28 ms with True.\n- (c) TriangleMeshCalculator takes 0.02–0.08 s for 7.6k–38.8k triangles. The pure-Python bucketed span/occlusion test plus an 80×80 crossing raster takes 0.17 s at 7.6k, 0.23 s at 12.4k, 0.52 s at 21.4k and 1.2 s at 38.8k triangles, per pull direction. Mesh analysis is clearly viable, and numpy is not needed.\n- (e) The MCP request times out between 50 s (passed) and 62 s (failed), with \"Request timed out\". The script keeps running inside Fusion after the timeout, and later calls queue behind it. The MCP runs scripts outside any command: activeCommand during the run is 'SelectCommand', and the file is executed as run(None). Autodesk's documentation says every API call made outside a command is its own undo entry, so one MCP run is not one undo transaction.\n- (a), (d) and (f) need a design to be modified, so I did not run them: the computed task forbids modifying scripts, and the user's live document had unsaved work. A guarded, untested probe for them is ready.\n\nWhat this means for the architecture:\n- Run moldability and verification analysis on meshes: TriangleMeshCalculator, then pure Python. Use B-rep rays only for spot checks, or through an untested re-cast loop that starts each new ray 1 µm past the previous first hit.\n- Prefer regenerate-by-script, with rollback through Timeline.markerPosition and deleteAllAfterMarker rather than undo.\n- Keep every MCP call under about 30–40 s.\n- Never call adsk.doEvents() or run long loops in an MCP script.\n\nThe user's mug is a solid revolve with three concave toroidal grooves (concave radius 13.38 mm, 3.34 mm deep) and a 3.45 mm foot recess. Every 20–40 mm outward offset is therefore larger than the concave radius. An exact offset has to bridge those grooves, which is exactly the case Fusion's shell may fail on, and it remains untested.",
+ "findings": [
+  {
+   "claim": "A Fusion crash and restart coincided with my 75 s read-only probe that called adsk.doEvents(); the user's unsaved document closed",
+   "details": "Log C:/Users/tiago/AppData/Local/Autodesk/Autodesk Fusion 360/2ZJ2WSXMNVD3T7M7/logs/AppLogFile20261002T165339.log:\n- 18:17:47: MCP Script.cpp writes and runs my loop script.\n- 18:17:48–49: 14x NEUTRON_BUG_ALERT 'Serious sys_error 62026 (entity is not alive)' in receiveASMEventReports.\n- 18:18:18: '[Hang Detection] Hang detected', with the user's recent commands listed (chamfer edit, extrude and others).\n- 18:19:02: last log line, matching the end of the 75 s loop. CER cer.log written at 18:19:07 and 18:19:16.\n- 18:19:15: new Fusion360 process.\nLater 30 s, 50 s and 62 s loops (also calling doEvents) did not crash, so the trigger is not deterministic. Possible contributors: doEvents re-entrancy while the user was editing, a timed-out MCP request, and transient bodies left by earlier TemporaryBRepManager probes. The crash-recovery file list shows 'Rib 3 circles' SavedTime 20261002T181459 (f5da3416…backup).",
+   "confidence": "high",
+   "sources": [
+    "local: Fusion AppLogFile20261002T165339.log lines ~7380-7400 and tail",
+    "local: C:/Users/tiago/AppData/Local/Temp/Neutron/script-8b80272a-a0d8-435b-8c22-62c763ff04a2.py",
+    "local: CrashRecovery/AutoSavedFileList.xml",
+    "PowerShell Get-Process Fusion360 StartTime 18:19:15"
+   ]
+  },
+  {
+   "claim": "findBRepUsingRay returns each face once, at its first hit, so it cannot count crossings by itself. Cost is about 0.15 ms per call with visibleEntitiesOnly=False and 0.28 ms with True",
+   "details": "Test body: Mug (13 faces). The search used BRepFaceEntityType, proximityTolerance -1.0 and a hitPoints ObjectCollection.\n- +X ray at z=40 mm: 1 result (torus, x=-36.72 mm), although the ray enters and exits the same groove face.\n- +X ray at z=1.5 mm: 2 results (cones at x=-22.72 and -18.89 mm) for 4 real crossings.\n- +Z ray on the axis: 2 planes (3.45 and 80 mm).\n- Timing over 300 random rays: 0.149 ms/call (vis=False), 0.275 ms/call (vis=True).\nThe documented signature works positionally: (originPoint, rayDirection, entityType, proximityTolerance, visibleEntitiesOnly, hitPoints). It also works on a component of a document that is not active.",
+   "confidence": "high",
+   "sources": [
+    "MCP probe1_readonly.py output (scratchpad)",
+    "fusion_mcp_read apiDocumentation ^findBRepUsingRay$ (Component/BaseComponent doc text: 'If an entity is hit more than once, the entity is returned once for the first intersection')"
+   ]
+  },
+  {
+   "claim": "TriangleMeshCalculator plus a pure-Python span test takes well under 1 s per pull direction at 5k–25k triangles, so numpy is unnecessary",
+   "details": "Mesh settings: surfaceTolerance=0.005 cm with maxSideLength 4.5/3/2/1.5 mm. Grid G=60, raster 80x80 rays.\n\n| Triangles | Mesh calculate | Bucket | Occlusion | Raster |\n|---|---|---|---|---|\n| 7,570 | 0.019 s | 0.051 s | 0.076 s | 0.045 s |\n| 12,392 | 0.019 s | 0.035 s | 0.136 s | 0.060 s |\n| 21,392 | 0.051 s | 0.072 s | 0.368 s | 0.083 s |\n| 38,816 | 0.075 s | 0.116 s | 0.995 s | 0.087 s |\n\nExtracting nodeCoordinatesAsDouble and nodeIndices into lists takes ≤0.007 s. Occlusion cost grows with candidate checks (96k up to 1.45M).\n\nThe test gave correct geometry for the mug along X: 114 of 6,400 rays crossed more than twice, which is exactly the 3.45 mm foot-recess band (3 rows × ~38 columns). That recess has to be formed by the bottom piece. It works on transient TemporaryBRepManager bodies too.",
+   "confidence": "high",
+   "sources": [
+    "MCP probe1_readonly.py output (scratchpad)"
+   ]
+  },
+  {
+   "claim": "Each MCP script call times out at about 60 s, but the script keeps running in Fusion and later calls queue behind it",
+   "details": "- Loops of 30 s and 50 s returned normally, with about 55 ms start latency.\n- Loops of 62 s and 75 s returned 'Error: Request timed out'.\n- The 62 s script still finished in Fusion: it wrote its result file at 18:22:57, about 62 s after starting.\n- A 55 s call sent right after the timed-out 75 s call also timed out, because it waited in the queue.\nClaude Code's own default MCP_TOOL_TIMEOUT is about 28 h. Its per-request timer for HTTP/connector servers is the largest of 60 s, the tool timeout and MCP_TIMEOUT, so the ~60 s limit probably comes from the Fusion MCP bridge or connector layer. The wrapper caps stdout at 1 MiB and calls run(None).",
+   "confidence": "high",
+   "sources": [
+    "MCP timing probes (this session)",
+    "https://code.claude.com/docs/en/mcp",
+    "local: Neutron temp script wrapper (_NsSanitizedWriter, run(None))"
+   ]
+  },
+  {
+   "claim": "One MCP script run is not one undo transaction: scripts run outside a command, so each modifying API call becomes its own undo entry",
+   "details": "- During the script, ui.activeCommand == 'SelectCommand', and the run is on MainThread.\n- The MCP executes a temporary .py file with run(None), with no command wrapper.\n- Autodesk: without a command, 'every API call that causes a change within Fusion will show up as a separate operation in the undo list'. Only work done in a command's execute handler is bundled into one undo.\n- Documents.add cannot be called inside command events, and its visible argument 'must always be true'. A hidden scratch document is therefore impossible, and creating any document steals focus from the user's document.\nI did not test this by modifying a design.",
+   "confidence": "medium",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+    "fusion_mcp_read apiDocumentation Documents.add",
+    "MCP environment probe output"
+   ]
+  },
+  {
+   "claim": "The user's 'Mug 01.1' is a solid revolve whose concave radii (13.38 mm) are smaller than every proposed plaster wall (20–40 mm)",
+   "details": "Timeline: 'Mug Sketch' (12 curves; dims baseMoldHeight, cupDiameter/2, cupHeight, cupHeight*0.21), then 'Revolve3'. Body 'Mug': 13 faces, 354.18 cm³, bbox ±40 × 0–80 mm.\n- Three concave tori: minor radius 13.38 mm, major 50.04 mm, groove depth 3.34 mm, at z 8–25.6, 32–49.6 and 56–73.6 mm.\n- Foot: bottom recess plane at z=3.45–3.5 mm, r≤18.3 mm, inside a concave cone (half-angle 16.7°).\n- User parameters: cutCount=3, baseMoldHeight=5 mm, cupHeight=80 mm, cupDiameter=80 mm, printedMoldWallThickness=5 mm.\nAn exact outward offset t>13.38 mm leaves those torus faces with no valid offset, so the offset has to bridge each groove. Whether Fusion's RoundedOffset shell manages this is UNTESTED.",
+   "confidence": "high",
+   "sources": [
+    "MCP probe2_readonly.py output (scratchpad)"
+   ]
+  },
+  {
+   "claim": "Fusion's Python 3.14.0 has no numpy and no pip installed, but it bundles ensurepip (pip-25.2 wheel) and has the user site enabled. numpy 2.5.3 ships a cp314 win_amd64 wheel",
+   "details": "- Interpreter: Fusion 2705.1.25, sys.version 3.14.0. find_spec('numpy') is None.\n- Python\\Lib\\site-packages holds only README.txt and speedtest.py. Lib\\ensurepip\\_bundled\\pip-25.2-py3-none-any.whl is present.\n- site.ENABLE_USER_SITE=True, user site %APPDATA%\\Python\\Python314\\site-packages (does not exist yet).\n- PyPI: numpy-2.5.3-cp314-cp314-win_amd64.whl, uploaded 2026-09-06, requires_python >=3.12.\n- Autodesk recommends a local copy of a module in the script's directory or a subdirectory rather than installing it or adding it to sys.path.\nI did not install anything.",
+   "confidence": "high",
+   "sources": [
+    "MCP environment probe output",
+    "local listing of webdeploy/.../Python",
+    "https://pypi.org/pypi/numpy/2.5.3/json",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm"
+   ]
+  },
+  {
+   "claim": "Read-only analysis works on an inactive document and through TemporaryBRepManager, with one API bug: createTorus ignores its center",
+   "details": "- Mesh, rays, curvature and timeline reads all worked on 'Mug 01.1' while 'Rib 3 circles' was active, without activating it.\n- TemporaryBRepManager.createSilhouetteCurves(face, Vector3D(1,0,0), False) on all 13 faces: 20 wires in 0.02 s. This gives parting curves without SilhouetteSplit.\n- createProjectedBodyOutline also exists.\n- createTorus(P(0,0,5), Z, 4, 1) produced a torus at z = −1…+1, so the center was ignored. Move the torus with tbm.transform after creating it.\n- Transient bodies support meshManager and booleanOperation.",
+   "confidence": "high",
+   "sources": [
+    "MCP probe1 and debug probe outputs",
+    "fusion_mcp_read apiDocumentation createSilhouetteCurves, createProjectedBodyOutline, createTorus"
+   ]
+  },
+  {
+   "claim": "How SplitBody result bodies can be identified is still unverified. The API offers only the inherited Feature.bodies",
+   "details": "- The SplitBodyFeature class lists splitBodies, splittingTool and isSplittingToolExtended, but no bodies property of its own.\n- Feature.bodies 'Returns the bodies that were modified or created by this feature'. For BaseFeature it behaves differently depending on whether the feature is being edited.\nThe recommended identification method is in the techniques list (body-set diff, then classify by side). I did not test it.",
+   "confidence": "low",
+   "sources": [
+    "fusion_mcp_read apiDocumentation ^SplitBodyFeature$ and Feature.bodies"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "Maximum duration of one MCP script call",
+   "recommended_value": "≤30 s target, 40 s hard budget",
+   "range": "50 s passed; 62 s timed out",
+   "rationale": "The request times out at about 60 s, but Fusion keeps executing, so a modifying script can finish after the agent has already seen an error. Later calls queue behind it.",
+   "sources": [
+    "MCP timing probes this session"
+   ]
+  },
+  {
+   "parameter": "adsk.doEvents() / long loops in MCP scripts",
+   "recommended_value": "Never call doEvents; no busy or sleep loops",
+   "rationale": "The 75 s doEvents loop coincided with kernel 'entity is not alive' alerts, hang detection and a Fusion crash that closed the user's unsaved document.",
+   "sources": [
+    "Fusion AppLogFile20261002T165339.log"
+   ]
+  },
+  {
+   "parameter": "Undo/rollback strategy",
+   "recommended_value": "Record des.timeline.markerPosition at the start of a run. Roll back by setting markerPosition and calling deleteAllAfterMarker(). Optionally group the run's features in a timeline group. Do not rely on Ctrl+Z.",
+   "rationale": "MCP scripts run outside a command, so each API change is its own undo entry.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+    "fusion_mcp_read Timeline.deleteAllAfterMarker / markerPosition"
+   ]
+  },
+  {
+   "parameter": "Mesh density for moldability analysis",
+   "recommended_value": "surfaceTolerance 0.005 cm; maxSideLength ≈ sqrt(2.3·A/T) with T≈15–25k triangles (2 mm for an 80 mm mug gives about 21k)",
+   "range": "7.5k–39k triangles: 0.17–1.2 s per pull direction",
+   "rationale": "Measured pure-Python cost stays under 0.6 s per direction up to 21k triangles.",
+   "sources": [
+    "MCP probe1 output"
+   ]
+  },
+  {
+   "parameter": "Analysis method for undercut, crossing and span tests",
+   "recommended_value": "Mesh (TriangleMeshCalculator) with a 2D-bucketed grid (G=60) and projected barycentric tests, in pure Python",
+   "rationale": "B-rep rays return each face only once. The mesh test is fast and needs no numpy.",
+   "sources": [
+    "MCP probe1 output",
+    "fusion_mcp_read findBRepUsingRay doc"
+   ]
+  },
+  {
+   "parameter": "findBRepUsingRay usage",
+   "recommended_value": "visibleEntitiesOnly=False, proximityTolerance=-1. Use it for first-hit occlusion spot checks only. To get all hits, re-cast from 1 µm past each first hit (untested); cost is about (k+1)×0.15 ms per ray.",
+   "rationale": "Single hit per face is confirmed. visibleEntitiesOnly=False is about 2× faster and does not depend on visibility state.",
+   "sources": [
+    "MCP probe1 output"
+   ]
+  },
+  {
+   "parameter": "Which document a script targets",
+   "recommended_value": "Find the target by name in app.documents and pass readOnly:true for analysis. Modifying scripts must check app.activeDocument.name against the expected document and refuse otherwise.",
+   "rationale": "Analysis works on inactive documents. Documents.add cannot create hidden documents, so creating one always steals focus.",
+   "sources": [
+    "MCP probes",
+    "fusion_mcp_read Documents.add"
+   ]
+  },
+  {
+   "parameter": "Third-party Python packages",
+   "recommended_value": "None by default. If numpy is ever needed, vendor a cp314 wheel with pip --target into a toolkit lib/ folder, keyed to Fusion's Python minor version.",
+   "rationale": "Pure Python is fast enough. Fusion has no pip, and Autodesk recommends local module copies.",
+   "sources": [
+    "https://pypi.org/pypi/numpy/2.5.3/json",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm"
+   ]
+  },
+  {
+   "parameter": "Torus creation in TemporaryBRepManager",
+   "recommended_value": "createTorus at the origin, then tbm.transform with a translation matrix",
+   "rationale": "In build 2705.1.25 the center argument is ignored.",
+   "sources": [
+    "MCP debug probe"
+   ]
+  }
+ ],
+ "techniques": [
+  {
+   "name": "Mesh span/occlusion test (pure Python)",
+   "description": "Project mesh nodes onto (u,v,w) with w along the pull direction, and bucket triangle bounding boxes in a 60×60 grid. For each triangle whose projected signed area is positive (or negative), check whether its centroid falls inside another triangle that lies farther along +d (or −d), with a 0.1 mm depth tolerance. A raster of rays parallel to d counts crossings; more than 2 means re-entrant.",
+   "pros": "0.17–0.52 s at 7.6k–21k triangles. Works on design bodies and on transient bodies. Located the mug's foot-recess undercut correctly.",
+   "cons": "Results depend on tessellation near silhouettes. Needs an epsilon tolerance on depth and on projected area.",
+   "sources": [
+    "MCP probe1 output"
+   ]
+  },
+  {
+   "name": "B-rep ray re-cast (march)",
+   "description": "Call findBRepUsingRay, take the nearest hit, restart the ray 1 µm past that hit, and repeat until nothing is returned. This yields every crossing despite the single-hit-per-face rule.",
+   "pros": "Exact B-rep positions. About 0.15 ms per call.",
+   "cons": "Untested (the probe was written but could not run after the crash). Edges and tangencies may produce duplicate hits.",
+   "sources": [
+    "fusion_mcp_read findBRepUsingRay doc",
+    "scratchpad probe4_readonly.py (not run)"
+   ]
+  },
+  {
+   "name": "TemporaryBRepManager silhouette curves",
+   "description": "tbm.createSilhouetteCurves(face, viewDir, False) on each face, or createProjectedBodyOutline, to get parting-line wires without a SilhouetteSplit feature.",
+   "pros": "Read-only. 0.02 s for 13 faces.",
+   "cons": "Gives wires, not split bodies. Splitting still needs a modifying feature.",
+   "sources": [
+    "MCP probe1 output"
+   ]
+  },
+  {
+   "name": "Regenerate-by-script with timeline-marker rollback",
+   "description": "Each generation run records the marker position, builds its features, and on failure or rebuild rolls the timeline back with deleteAllAfterMarker. Parameters live in user parameters that the script reads.",
+   "pros": "Avoids undo spam and partial states. Keeps each call short.",
+   "cons": "Not live-associative. Untested in this environment.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+    "fusion_mcp_read Timeline docs"
+   ]
+  },
+  {
+   "name": "Guarded throwaway-document probe for shell / SilhouetteSplit / SplitBody",
+   "description": "probe3_modifying_UNRUN.py builds these test forms with transient B-rep and a base feature:\n- a grooved form matching the mug (concave R13.38)\n- a neck with a concave fillet of 5 mm or 30 mm\n- a waist\nIt then tries RoundedOffset outside shells of 20, 25, 30 and 40 mm, a SilhouetteSplit along X, and a SplitBody on the YZ plane, reporting body counts. It refuses to run in a saved or non-empty document.",
+   "pros": "Answers (a), (d) and (f) directly.",
+   "cons": "Untested. Needs the user's consent and a new active document, and must be run one TEST per call.",
+   "sources": [
+    "scratchpad probe3_modifying_UNRUN.py"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Fusion crashed during a 75 s read-only adsk.doEvents() loop. Never use doEvents or long loops in MCP scripts.",
+  "A timed-out MCP call does not cancel the script: Fusion finishes it, and a modifying script will still change the design. Re-query the design state before retrying.",
+  "Calls queue behind a script that is still running, so the next call can time out too. Wait, or check, before issuing another.",
+  "One MCP run creates N undo entries, not one. Use timeline-marker rollback instead.",
+  "findBRepUsingRay returns each face once (first hit only), so a crossing count on B-rep undercounts. On the mug it found 2 of 4 foot crossings and 1 of 2 groove crossings.",
+  "Documents.add cannot make hidden documents (visible must be true), so creating a probe document steals focus from the user's live design.",
+  "TemporaryBRepManager.createTorus ignores its center argument in build 2705.1.25.",
+  "The mug's concave radius (13.38 mm) is below every candidate plaster wall (20–40 mm), so an exact outward offset has to bridge the grooves. Shell success there is untested.",
+  "MCP scripts receive context=None and stdout is capped at 1 MiB. Do not rely on context.",
+  "numpy is absent and Fusion has no pip. Installing into Fusion's own folder is lost when Fusion updates."
+ ],
+ "prior_art": [
+  {
+   "name": "Autodesk Fusion API user manual: Commands",
+   "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+   "what_it_does": "Explains that API changes made outside a command are separate undo operations, while a command's execute handler bundles them into one transaction.",
+   "relevance": "Answers (e): MCP scripts run outside a command."
+  },
+  {
+   "name": "Autodesk Fusion API user manual: Python specific issues",
+   "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm",
+   "what_it_does": "Recommends local copies of third-party modules next to the script.",
+   "relevance": "How to vendor numpy if it is ever needed."
+  },
+  {
+   "name": "Claude Code MCP docs (timeouts)",
+   "url": "https://code.claude.com/docs/en/mcp",
+   "what_it_does": "Documents MCP_TOOL_TIMEOUT (default about 28 h), the per-server timeout setting and the per-request timer.",
+   "relevance": "Shows that the ~60 s limit is not Claude Code's tool default."
+  },
+  {
+   "name": "numpy 2.5.3 on PyPI",
+   "url": "https://pypi.org/pypi/numpy/2.5.3/json",
+   "what_it_does": "Lists numpy-2.5.3-cp314-cp314-win_amd64.whl (uploaded 2026-09-06).",
+   "relevance": "numpy could be vendored for Fusion's Python 3.14.0."
+  }
+ ],
+ "open_questions_for_user": [
+  "Fusion crashed at 18:19 during my probe and closed 'Rib 3 circles', which had unsaved changes. Please accept Fusion's document recovery: the newest autosave is from 18:14:59, so edits made after that may be lost. Has it recovered correctly?",
+  "May an agent run the modifying probe (probe3_modifying_UNRUN.py) in a new throwaway design while you are not editing in Fusion? It covers the outward RoundedOffset shell at 20/25/30/40 mm on a mug-like grooved form, SilhouetteSplit, and SplitBody body identification. It switches the active document while it runs.",
+  "Is your mug meant to be solid, with three concave grooves (R13.38 mm, 3.3 mm deep) and a 3.5 mm foot recess? The recess is an undercut for the side pieces, so the bottom piece must form it.",
+  "Do you accept regenerate-by-script, where changing a parameter re-runs the generator and rolls the timeline back, instead of a live parametric timeline that updates on its own?",
+  "Your mug sketch uses 'baseMoldHeight' as one of its dimensions. Should mold parameters be allowed to drive the ware geometry, or should ware and mold parameters stay separate?"
+ ]
+}

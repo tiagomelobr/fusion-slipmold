@@ -1,0 +1,146 @@
+{
+ "gaps": [
+  {
+   "priority": 1,
+   "question": "For each per-piece printed casing (step 6), how should the casing be split, and what are the concrete joint dimensions? We need the number of parts, the split planes, and which part forms the plaster's working face, which forms the back walls and which forms the parting-face plates. We also need the flange tongue-and-groove profile (ridge height and width, groove depth, lead-in chamfer), a printed clamp design (C-clip, wedge or cam: jaw opening and grip), clamp spacing, and how to seal the base and the casing-to-casing seams.",
+   "why_it_matters": "The user's current method shells each plaster piece outward by 5 mm. That makes a one-piece casing around a closed contour, which Shape Cast found 'extremely difficult' to remove from set plaster. Researchers give only flange widths (5 to 20 mm), a sliding clearance (0.2 to 0.25 mm per side) and a clamp spacing of 1 per 50 mm, and that spacing comes from a generic, non-ceramic site (Meshcast). No source gives a groove or ridge profile or a printed clamp geometry. No source gives a rule for cutting the casing so that each casing part releases from the plaster piece. This second release problem (casing parts off the plaster) is separate from the plaster coming off the cast, and nobody has turned it into an algorithm. The user explicitly asked for grooves and printed clamps, and this step defines the whole step-6 script.",
+   "suggested_searches": [
+    "Shape Cast molds STEP download flange ridge groove dimensions binder clip",
+    "pdaoust mug-generator case_mould_original.scad flange key module (read source)",
+    "lisawong plaster_mould_maker TECHNICAL-REFERENCE tongue groove slot bulldog clip dimensions",
+    "printables slip casting mold box clamp",
+    "3D printed cottle board clamp plaster",
+    "digitalfire mold shell flange clip design",
+    "Old Forge Creations mould box v2 sliding locks angled sides"
+   ]
+  },
+  {
+   "priority": 2,
+   "question": "Which proposed Fusion operations actually work in the user's environment (Fusion 2705 driven through MCP), and how fast are they? (a) An outward RoundedOffset shell of 20 to 40 mm on the user's filleted mug and on necked or concave test forms. Where does it fail? (b) findBRepUsingRay: it returns each entity only once, at the first hit, so a crossing-count or span test cannot run on B-rep. What does each call cost? (c) TriangleMeshCalculator plus a pure-Python span test at 5k to 25k triangles: how long does it take? (d) SilhouetteSplit on a filleted revolved body. (e) Is one MCP script run one undo transaction, and is there a timeout? (f) Can SplitBody result bodies be identified reliably?",
+   "why_it_matters": "The answers decide the architecture. We have to choose between live expression-bound features and regenerate-by-script, between mesh analysis and B-rep analysis, and decide whether the plaster body can be a true offset or needs the revolve-profile or block-minus-cast fallback. The computational researcher assumed B-rep rays could be used for verification and left the signature 'to verify via MCP' (the documentation page returned 404). The feasibility researcher's single-hit-per-entity finding undermines B-rep crossing counts. No researcher benchmarked anything or tested a 25 mm outward shell where the concave radius is smaller than the wall thickness, which is common at necks and waists. Whether numpy can be installed under Python 3.14 is also unverified.",
+   "suggested_searches": [
+    "Run MCP probe scripts on the user's mug: shell outsideThickness 2.5 cm, RoundedOffsetShellType, isTangentChain=False",
+    "Fusion API findBRepUsingRay same face multiple intersections",
+    "Fusion 360 shell outside thickness fails concave radius smaller than thickness",
+    "Autodesk Fusion MCP fusion_mcp_execute script transaction undo timeout",
+    "Fusion 360 SplitBodyFeature bodies empty workaround"
+   ]
+  },
+  {
+   "priority": 3,
+   "question": "What peak temperature does setting pottery plaster (USG No. 1 at consistency 70) actually reach in mold-sized sections of 20 to 50 mm, at 18 to 30 °C mix water? And how do PLA and PETG casing walls of 0.8 to 5 mm deform at that temperature under hydrostatic load plus restrained setting expansion?",
+   "why_it_matters": "This sets the default filament (PLA or PETG), the maximum plaster thickness for each pour, casing wall thickness and ribbing, and whether to recommend a cool-water bath. The only number we have is a derived adiabatic estimate of 45 to 50 °C, labelled 'not measured'. PLA softening is quoted as 55 to 60 °C. Digitalfire routinely pours into 0.8 mm PLA without reported distortion, while several sources recommend PETG. The 'about 40 to 50 mm maximum single pour in PLA' figure is flagged as unverified. The orthopaedic data cover thin bandages, not 25 mm or thicker blocks.",
+   "suggested_searches": [
+    "gypsum plaster hydration temperature rise thermocouple block thickness",
+    "pottery plaster setting temperature peak mold making measured",
+    "plaster of paris exotherm temperature 50 mm cast",
+    "PLA heat deflection temperature 0.45 MPa creep 45 50 C thin wall",
+    "PLA mold box warped plaster pour",
+    "PETG vs PLA plaster casting mold box heat"
+   ]
+  },
+  {
+   "priority": 4,
+   "question": "When each plaster piece is cast in its own printed casing (instead of poured plaster-on-plaster against the previous piece), what seam mismatch should we expect? That means the step or gap at the cavity face, parting-face flatness, and the natch play needed. The tolerance stack includes FDM accuracy and warp, restrained setting expansion of 0.17 to 0.21% or more (more in unrestrained directions), and casing deflection.",
+   "why_it_matters": "The user's plan assumes the pieces cast separately will mate well enough to leave 'few seams'. The evidence is anecdotal: Digitalfire sands the mating faces flat after drying, and Old Forge reports it working. Nobody quantifies the step at the cavity face that becomes a seam ridge on the clay. The answer decides three things. First, whether the toolkit generates fully independent casings, an all-in-one shell, or a hybrid where piece 1 is cast in a casing and then used as a wall for piece 2. Second, natch clearance, where values range from 0.1 to 0.6 mm (see contradictions). Third, whether a sanding allowance and calibration coupons are required.",
+   "suggested_searches": [
+    "3D printed case mold plaster halves fit seam gap slip casting",
+    "digitalfire mating faces sanded flat 3D printed plaster mold",
+    "restrained setting expansion gypsum direction mold box",
+    "Old Forge Creations 3 part mould fit seams",
+    "Crafting the Curve CHI 2025 Shape Cast two-part mold evaluation"
+   ]
+  },
+  {
+   "priority": 5,
+   "question": "What piece-layout and parting rules are validated for non-revolved forms and forms with appendages? Specifically: (a) how to choose the bottom/side split height and the side split azimuth on faceted, oval or lobed forms; (b) where natches can go on horizontal side/bottom interfaces given each piece's removal direction and the disassembly order; (c) how much residual undercut leather-hard slip-cast clay tolerates, if any; (d) what the plaster's outer form should look like near seams, such as flat lands for strapping and a stable base for inverted draining.",
+   "why_it_matters": "The recommended layout-library search (drop-out, 2 sides, 2 sides plus bottom, 3 or 4 sides plus bottom) and the revolve shortcut are derived and untested in plaster practice. A residual-undercut tolerance (under 1 mm²) is suggested 'pending calibration' with no source. One researcher points out that hemispherical natches on a horizontal side/bottom interface can block horizontal side removal, but no practitioner source confirms a convention. Whether the toolkit can handle 'any shape in Fusion 360', or should limit v1 to revolved forms, depends on these rules and on the user's scope answer.",
+   "suggested_searches": [
+    "slip casting mold natch placement bottom piece side pieces removal order",
+    "multi-piece plaster mold oval faceted vessel parting line",
+    "leather hard slip cast undercut tolerance release",
+    "Priyadarshi Gupta multi-piece permanent mold parting directions disassembly",
+    "Mehlman mold design foot ring insert bottom plate"
+   ]
+  },
+  {
+   "priority": 6,
+   "question": "How should the spare (slip well) be dimensioned and built? That covers height in mm, step-out or flare, the rim trim plane, the knife shelf, and the choice between three options: built into the side pieces, a separate top piece, or a printed non-absorbent pour spout.",
+   "why_it_matters": "No source gives a spare height. The proposals are a computed 15 to 20 mm based on an unverified water-budget constant of 0.24 g/cm³, a 20 to 30 mm guess, and 20 mm taken from mug-generator's 15 mm filler tube. Shape Cast's 'regular' and 'tall' dimensions are unknown. Digitalfire says no spare is needed if a printed spout is used. The choice changes piece count and casing count, the user's step 2 (extending the solid upward), and where the rim parting plane goes.",
+   "suggested_searches": [
+    "Shape Cast slip well regular tall height STEP",
+    "mug-generator funnel_shelf_width filler_tube_height source",
+    "slip casting spare height pouring gate depth inches",
+    "digitalfire 3D printed pour spout depth dimensions",
+    "Mehlman spare vertical horizontal step-back dimensions"
+   ]
+  }
+ ],
+ "contradictions": [
+  {
+   "issue": "Plaster mold wall thickness",
+   "positions": "USG IG526: 38 mm is the usual minimum for casting molds. The claude-code-conventions researcher states 38–51 mm as a 'must' with high confidence, but bases it only on cottle-gap guidance. Shape Cast uses 25 mm, mug-generator 30 mm (min 20), Meshcast 20 mm, mouldflow 12 mm. Sheffield gives 25–38 mm for molds under 8 in. Recommended defaults across researchers range from 25 to 38 mm.",
+   "how_to_resolve": "Make it a parameter. Default to 25 mm for ware up to about 150 mm, scale up with size per the Sheffield table, and adjust for the user's casts-per-day and drying capacity. Ask the user for their size range and how they dry molds."
+  },
+  {
+   "issue": "Verification tolerance for plaster wall uniformity",
+   "positions": "plaster-fundamentals: warn at 0.6–0.8× nominal and fail below 0.6× nominal or 15 mm. fusion-feasibility: minimum wall must be at least plasterWall − 0.5 mm, which effectively demands an exact offset. That would fail any block fallback, flat seam lands, or the 45° corner cuts recommended for saving weight.",
+   "how_to_resolve": "Use the ratio-based thresholds from plaster practice as pass/fail. Report the minimum distance as a diagnostic, not a gate."
+  },
+  {
+   "issue": "Clay shrinkage formula and default value",
+   "positions": "plaster-fundamentals and parting-lines: scale = 1/(1−s), default s = 13%. existing-mold-software: default 12%, 'record whether 1+s or 1/(1−s)'. claude-code: design 10% larger (1+s style). mug-generator uses 10%, Old Forge 112%, Digitalfire about 10%.",
+   "how_to_resolve": "Use 1/(1−s), with s taken from the user's own measured wet-to-fired test bar. Store s as a parameter (default 13% until measured) and apply it only to the ware, never to mold or casing construction parameters."
+  },
+  {
+   "issue": "Natch size, clearance and count",
+   "positions": "Clearance: Digitalfire printed inserts 0.1 mm; plaster-fundamentals 0.15 mm radial; mug-generator key tolerance 0.5 mm; Meshcast natch fit 0.6 mm. Size: mouldflow r = 2.5 mm, OpenSCAD gist r = 4 mm, existing-software recommendation r = 6 mm, mug-generator r = 6.75 mm, Meshcast r = 9 mm, coin keys 18–24 mm diameter, Sheffield ≥12 mm deep × 25 mm wide. Count: 2 per seam (software, Digitalfire), 3 (fundamentals), 3–4 (Sheffield).",
+   "how_to_resolve": "Separate the cases. Plaster-to-plaster keys formed by two independently printed casings need larger clearance (start at 0.3–0.5 mm). Printed or commercial inserts can use 0.1 mm. Set the default to a 6–9 mm radius with about 10° draft and 3 per seam, asymmetric. Calibrate with a printed coupon (see gap 4)."
+  },
+  {
+   "issue": "Draft requirement and hard-fail threshold",
+   "positions": "Digifab and plaster-fundamentals: 0° is acceptable on outer surfaces because the cast shrinks away; only negative draft fails. Sheffield and parting-lines: 1–3° built in, and 'zero-draft walls cause corner hang-ups'. A K=2 side split always has a 0° band at the seam. Undercut tolerance: computational uses −sin(0.25°), fusion-feasibility −sin(0.5°). Meshcast's 2–5° applies to rigid printed casings, not to plaster.",
+   "how_to_resolve": "Fail on negative draft beyond a small tessellation tolerance (−0.25° to −0.5°). Warn below 1°, report zero-draft area per layout, and require at least 3° on convex plaster cores. Apply the casing-draft rule separately, to casing-versus-plaster release."
+  },
+  {
+   "issue": "Casing wall thickness and flange width",
+   "positions": "Digitalfire and mug-generator: 0.8 mm sacrificial shells peeled off with a heat gun. Rails: 1.2 mm. Shape Cast: 2.4 mm. mouldflow: 3 mm. Meshcast: 4 mm. printpal and the user's current value: 5 mm. The claude-code researcher calls 5 mm a minimum. Flanges: about 5 mm (Digitalfire) versus 15–20 mm (mouldflow, Meshcast) versus 6 mm (mug-generator).",
+   "how_to_resolve": "Offer two casing strategies as a parameter: sacrificial (0.8–1.2 mm, PLA, heat-gun peel) and reusable (2.4–3 mm, flanged and clamped). Size flange width to the chosen clip or bolt. Ask the user which strategy they want and why they chose 5 mm."
+  },
+  {
+   "issue": "Casing material: PLA vs PETG",
+   "positions": "Digitalfire pours routinely into 0.8 mm PLA, and PLA needs no release agent and peels off with a heat gun. Meshcast, plaster-fundamentals and the casings researcher recommend PETG for thick or reusable casings because of the exotherm (derived peak of 45–50 °C against PLA softening at 55–60 °C).",
+   "how_to_resolve": "Needs measured exotherm data (gap 3) or a thermocouple test on the user's first pour. Meanwhile default to PLA for small pours and sacrificial casings, and to PETG for plaster sections over about 40 mm or reusable casings."
+  },
+  {
+   "issue": "Release agent on casing surfaces that form the plaster working face",
+   "positions": "Digitalfire: PLA releases plaster with no agent. Meshcast: thin mineral or vegetable oil buffed nearly dry. Arbuckle and the plaster researchers: oil-based releases block plaster pores and reduce absorbency. The claude-code researcher says to apply parting compound 'thickly', while USG, Industrial Plasters and CAN say 3 thin coats with the excess wiped off.",
+   "how_to_resolve": "Test with no agent on PLA first. Use soap sizing (thin coats, wiped) only on plaster-to-plaster faces. Never use oil on casing faces that form the plaster's working surface."
+  },
+  {
+   "issue": "Spare (slip well) height and necessity",
+   "positions": "plaster-fundamentals: max(15 mm, 2 × predicted drop + 5 mm), about 15–20 mm for a mug. parting-lines: 20–30 mm (own estimate). existing-software: 20 mm (from a 15–20 mm filler tube). Digitalfire: 'No spare is needed, the 3D-printed pour spouts work better'.",
+   "how_to_resolve": "Expose spareStyle (integrated plaster, separate piece, or printed spout) and spareHeight as parameters with a 20 mm default. Calibrate with the first cast and ask the user's preference (gap 6)."
+  },
+  {
+   "issue": "How the Lure Mold Generator does parting analysis",
+   "positions": "existing-mold-software technique text: ray casting 'via Component.findBRepUsingRay in Fusion'. computational-moldability, which read parting.py: pure-Python barycentric ray tests on mesh triangles bucketed in a 60×60 XY grid, with mesh booleans. fusion-feasibility: findBRepUsingRay returns each entity only once, at its first hit.",
+   "how_to_resolve": "Trust the source-code reading: the prior art is mesh-based. Base the toolkit's crossing-count and span tests on TriangleMeshCalculator meshes. Keep findBRepUsingRay for occlusion spot-checks only after a probe confirms how it behaves (gap 2)."
+  },
+  {
+   "issue": "Drying new plaster molds with heat",
+   "positions": "USG IG502/IG1366: dry with forced air at 43–49 °C, never above 49 °C, and never cool suddenly from above 38 °C. Meshcast: 'Never force-dry plaster with heat (it cracks days later)'.",
+   "how_to_resolve": "Follow the USG primary data in the instructions: moderate forced-air heat up to 49 °C is fine. Warn against higher temperatures and sudden cooling."
+  },
+  {
+   "issue": "Plaster batch density constant and demold timing",
+   "positions": "Batch: 0.985 g dry plaster/cm³ (USG IG503 slurry weight of 1,674 g/L) versus 1,586 kg/m³ × 100/170 = 0.933 g/cm³ (the casings researcher's formula). Demold from casing: 45–60 min (casings researcher, assumed), at least 60 min and after the exotherm peaks (fundamentals), 2–3 h before assembling the mold (CAN).",
+   "how_to_resolve": "Use 0.985 g/cm³ with 10–20% overage, since the roughly 5% difference falls inside the overage. Make the constant brand-specific. Give the demold rule as 'at least 60 min and only once the block is cooling', not a fixed time."
+  },
+  {
+   "issue": "Weak claims in the claude-code-conventions research output",
+   "positions": "It says walls 'must' be 38–51 mm, the casing minimum is 5 mm, parting compound goes on 'thickly', the parting line goes 'on a plane parallel to the pour opening' (other researchers use a vertical plane through the axis plus a bottom split), and casting too long 'retains excess water' (other sources say longer casting gives thicker walls). These conflict with the better-sourced researchers, and its sources are thin.",
+   "how_to_resolve": "Use that output only for workspace and skill conventions (the workflow-cost rules), not for ceramic design rules. Where it conflicts, the plaster-fundamentals, parting-lines and casing researchers take precedence."
+  }
+ ]
+}

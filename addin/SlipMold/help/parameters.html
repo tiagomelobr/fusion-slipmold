@@ -1,0 +1,248 @@
+<!DOCTYPE html>
+<html class="auto"><head><meta charset="utf-8"><title>Parameter reference</title><script>
+(function () {
+  var m = /[?&]theme=(dark|light|auto)/.exec(location.search);
+  var theme = m ? m[1] : 'auto';
+  document.documentElement.className = theme;
+  document.addEventListener('DOMContentLoaded', function () {
+    if (!m) { return; }
+    var links = document.querySelectorAll('a[href]');
+    for (var i = 0; i < links.length; i++) {
+      var h = links[i].getAttribute('href');
+      if (/^[^:?#]+\.html(#.*)?$/i.test(h)) {
+        var p = h.split('#');
+        links[i].setAttribute('href', p[0] + '?theme=' + theme + (p[1] ? '#' + p[1] : ''));
+      }
+    }
+  });
+})();
+</script><style>
+:root { --bg:#ffffff; --fg:#1f2328; --muted:#59636e; --line:#d1d9e0; --soft:#f6f8fa; --link:#0969da;
+        --nav:#f0f2f4; --on:#ffffff; }
+html.dark { --bg:#1e1f22; --fg:#e6e6e6; --muted:#a0a4ab; --line:#3d4046; --soft:#2a2c30; --link:#5aa2ff;
+        --nav:#26282c; --on:#3a3d43; }
+@media (prefers-color-scheme: dark) {
+  html.auto { --bg:#1e1f22; --fg:#e6e6e6; --muted:#a0a4ab; --line:#3d4046; --soft:#2a2c30; --link:#5aa2ff;
+          --nav:#26282c; --on:#3a3d43; } }
+html, body { margin:0; background:var(--bg); color:var(--fg); }
+body { font:14px/1.55 "Segoe UI", Arial, sans-serif; }
+nav { position:sticky; top:0; z-index:2; display:flex; flex-wrap:wrap; gap:4px; align-items:center;
+      padding:6px 10px; background:var(--nav); border-bottom:1px solid var(--line); }
+nav a, nav button { font:13px "Segoe UI", Arial, sans-serif; color:var(--fg); background:none;
+      border:1px solid transparent; border-radius:4px; padding:2px 8px; text-decoration:none; cursor:pointer; }
+nav a:hover, nav button:hover { border-color:var(--line); text-decoration:none; }
+nav a.on { background:var(--on); border-color:var(--line); font-weight:600; }
+main { padding:8px 22px 40px; max-width:980px; }
+h1 { font-size:1.6em; border-bottom:1px solid var(--line); padding-bottom:.2em; }
+h2 { font-size:1.3em; border-bottom:1px solid var(--line); padding-bottom:.15em; margin-top:1.6em; }
+h3 { font-size:1.1em; margin-top:1.3em; }
+a { color:var(--link); text-decoration:none; } a:hover { text-decoration:underline; }
+code { font:12.5px Consolas, "Courier New", monospace; background:var(--soft); padding:1px 4px; border-radius:3px; }
+pre { background:var(--soft); border:1px solid var(--line); border-radius:5px; padding:10px 12px; overflow:auto; }
+pre code { background:none; padding:0; }
+table { border-collapse:collapse; margin:10px 0; display:block; overflow-x:auto; }
+th, td { border:1px solid var(--line); padding:4px 9px; vertical-align:top; }
+th { background:var(--soft); }
+td.num, th.num { text-align:right; }
+blockquote { margin:10px 0; padding:2px 14px; border-left:4px solid var(--line); color:var(--muted); }
+hr { border:0; border-top:1px solid var(--line); }
+li { margin:2px 0; }
+.foot { color:var(--muted); font-size:12px; margin-top:30px; }
+</style></head>
+<body><nav><button onclick="history.back()" title="Back">&#9664; Back</button><a href="user-guide.html">User guide</a><a href="parameters.html" class="on">Parameters</a><a href="validation.html">Tested shapes</a><a href="add-in.html">Add-in reference</a></nav><main>
+<h1 id="parameter-reference">Parameter reference</h1>
+<p>Generated from <code>moldkit/defaults.json</code> by <code>python tools/gen_param_docs.py</code>: do not edit by hand. 53 parameters: 7 you set, 9 printer profile values and 37 engine values. The guide for using them is <a href="user-guide.html">USER_GUIDE.md</a>.</p>
+<p>Every parameter has a name <code>mold_&lt;name&gt;</code>, but only some are user parameters in the design:</p>
+<ul>
+<li><strong>Parameters you set</strong> (7): SlipMold creates them as user parameters. Edit them in Fusion's own Change Parameters dialog: SlipMold &gt; Parameters opens it (and first creates any missing one), or use Modify &gt; Change Parameters &gt; User Parameters.</li>
+<li><strong>Printer profile</strong> (9): your printer's bed, nozzle and print clearances. They are not in the design: you set them once in the user config file and they apply to every mold.</li>
+<li><strong>Engine values</strong> (37): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).</li>
+</ul>
+<p>Each user parameter's comment starts with the group title in brackets, for example <code>[Plaster]</code>. Values are expressions with units, for example <code>25 mm</code> or <code>15 deg</code>, and may be formulas that use the model's own parameters (<code>mold_plasterWall = cupHeight / 4</code>); SlipMold compares the evaluated values, so a change of <code>cupHeight</code> alone is seen through the model it reshapes (everything runs again), and after changing a parameter that does not shape the model use Reset from stage. Text parameters keep their single quotes (<code>'auto'</code>) and accept only the choices listed below; Make mold stops with a message before any stage runs when a Text value is not one of them. Changes apply on the next Make mold. The defaults below are research values (rule ids point to <code>docs/research/design-rules.md</code>); calibrate the ones marked in the description with the leak test (process sheet section 1: one piece's casing printed first). Model sizes are in millimetres whatever the document unit.</p>
+<h2 id="what-runs-again-when-a-value-changes">What runs again when a value changes</h2>
+<p>Each stage remembers a hash of the resolved values of the parameter groups it reads: your inputs, the engine's values, the printer profile and any overrides. When a resolved value changes and you press Make mold, only the stages whose hash changed (and the stages after them) run again; the earlier results stay valid. The change can be an input you edited, an override you added, changed or deleted, a printer profile value (a change to the printer profile runs S7 onward) or a value an engine rule reads: <code>mold_plasterWall</code> also sets <code>mold_plasterBase</code> and <code>mold_natchRadius</code>, and <code>mold_ridgeCount</code> also sets <code>mold_flangeWidth</code>. An override equal to the engine's value changes nothing. S1 only writes the parameters.</p>
+<table>
+<thead><tr><th>Group</th><th>Changing it runs again</th></tr></thead>
+<tbody>
+<tr><td>ware</td><td>S2 onward (S2, S3, S4, S5, S6, S7, S8, S9)</td></tr>
+<tr><td>spare</td><td>S2 onward (S2, S3, S4, S5, S6, S7, S8, S9)</td></tr>
+<tr><td>layout</td><td>S3 onward (S3, S4, S5, S6, S7, S8, S9)</td></tr>
+<tr><td>plaster</td><td>S4 onward (S4, S5, S6, S7, S8, S9)</td></tr>
+<tr><td>natches</td><td>S5 onward (S5, S6, S7, S8, S9)</td></tr>
+<tr><td>casing</td><td>S7 onward (S7, S8, S9)</td></tr>
+<tr><td>seams</td><td>S7 onward (S7, S8, S9)</td></tr>
+<tr><td>clips</td><td>S7 onward (S7, S8, S9)</td></tr>
+<tr><td>printer</td><td>S7 onward (S7, S8, S9)</td></tr>
+</tbody></table>
+<p>Stage names: S2 plug, S3 moldability, S4 plaster, S5 split and natches, S6 verify, S7 casings, S8 clips, S9 export.</p>
+<h2 id="parameters-you-set">Parameters you set</h2>
+<p>These 7 are the only <code>mold_</code> user parameters SlipMold creates. Change them in Change Parameters; the defaults are a good start.</p>
+<table>
+<thead><tr><th>Parameter</th><th>Default</th><th>Unit</th><th>Group</th><th>Runs again</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_plasterWall</code></td><td><code>25 mm</code></td><td>mm</td><td>Plaster</td><td>S4 onward</td><td>Nominal plaster wall around the cast plug</td><td>CER-09</td></tr>
+<tr><td><code>mold_spareHeight</code></td><td><code>20 mm</code></td><td>mm</td><td>Spare</td><td>S2 onward</td><td>Slip well height above the rim</td><td>CER-12</td></tr>
+<tr><td><code>mold_spareStepOut</code></td><td><code>10 mm</code></td><td>mm</td><td>Spare</td><td>S2 onward</td><td>Outward step at rim height = flat plaster knife ledge for trimming</td><td>CER-12</td></tr>
+<tr><td><code>mold_layout</code></td><td><code>'auto'</code></td><td>text</td><td>Layout</td><td>S3 onward</td><td>Plaster piece layout: auto (S3 picks the best) | dropOut | sides2 | sides2Bottom | sides3Bottom | sides4Bottom. Choices: <code>'auto'</code>, <code>'dropOut'</code>, <code>'sides2'</code>, <code>'sides2Bottom'</code>, <code>'sides3Bottom'</code>, <code>'sides4Bottom'</code></td><td>SW-13</td></tr>
+<tr><td><code>mold_splitAzimuth</code></td><td><code>0 deg</code></td><td>deg</td><td>Layout</td><td>S3 onward</td><td>Azimuth of the first vertical split plane, used with a fixed layout or a turned (revolved) ware; with layout auto on any other ware S3 searches the azimuth itself</td><td>CER-06</td></tr>
+<tr><td><code>mold_casingMaterial</code></td><td><code>'PETG'</code></td><td>text</td><td>Casing</td><td>S7 onward</td><td>Casing print material, the prefix of every casing part name: PETG (recommended: heat deflection about 75 C; setting plaster warms the casing to 40-55 C) | PLA (58 C). Choices: <code>'PETG'</code>, <code>'PLA'</code></td><td>PRN-04</td></tr>
+<tr><td><code>mold_shrinkagePct</code></td><td><code>0</code></td><td>-</td><td>Ware</td><td>S2 onward</td><td>Linear shrinkage % the plug is scaled up for, by 1/(1-s). 0 = model already at greenware size (no scale feature)</td><td>CER-01</td></tr>
+</tbody></table>
+<h2 id="printer-profile">Printer profile</h2>
+<p>Your printer's values. They are not user parameters: SlipMold reads them from the <code>"printer"</code> key of the user config file <code>%APPDATA%/SlipMold/config.json</code> (<code>~/.slipmold/config.json</code> when APPDATA is unset), as numbers in millimetres, and uses them for every mold. A value you leave out keeps the default below. The key is the parameter name without <code>mold_</code>:</p>
+<pre><code>{"printer": {"nozzle": 0.6, "bedX": 220, "bedY": 220, "bedZ": 250}}</code></pre>
+<p>To change one value for a single mold instead, add the user parameter (for example <code>mold_bedX = 200 mm</code>) in Change Parameters: it wins over the profile for that mold; delete it to go back. Changing a profile value runs again: S7 onward (S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Default</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_fillLineDepth</code></td><td><code>0.6 mm</code></td><td>mm</td><td>Fill-line deboss depth</td><td>PRN-10</td></tr>
+<tr><td><code>mold_seamClearance</code></td><td><code>0.16 mm</code></td><td>mm</td><td>Ridge/groove clearance per flank; follows the nozzle and the fit offset. To change only the ridges (the fit offset also moves the clips), add a mold_seamClearance user parameter (this mold) or set seamClearance under printer in config.json (every mold)</td><td>PRN-22</td></tr>
+<tr><td><code>mold_grooveBottomGap</code></td><td><code>0.5 mm</code></td><td>mm</td><td>Extra groove depth so flange faces bear (the sector foot grooves print on the bed face in draft layers)</td><td>PRN-22</td></tr>
+<tr><td><code>mold_bedX</code></td><td><code>260 mm</code></td><td>mm</td><td>Printer bed X</td><td>PRN-15</td></tr>
+<tr><td><code>mold_bedY</code></td><td><code>260 mm</code></td><td>mm</td><td>Printer bed Y</td><td>PRN-15</td></tr>
+<tr><td><code>mold_bedZ</code></td><td><code>260 mm</code></td><td>mm</td><td>Printer height</td><td>PRN-15</td></tr>
+<tr><td><code>mold_bedMargin</code></td><td><code>5 mm</code></td><td>mm</td><td>Safety margin inside the bed limits</td><td>PRN-15</td></tr>
+<tr><td><code>mold_nozzle</code></td><td><code>0.4 mm</code></td><td>mm</td><td>Nozzle diameter (the Make mold dialog asks for it): walls and ridges snap to whole lines, layer heights scale with it, printed clearances open 0.125 mm per mm over 0.4</td><td>PRN-16</td></tr>
+<tr><td><code>mold_fitOffset</code></td><td><code>0 mm</code></td><td>mm</td><td>Per-side fit correction from your tolerance test: + loosens every printed fit (ridge grooves, clip openings and barbs), - tightens; 0 for a calibrated printer</td><td>PRN-22</td></tr>
+</tbody></table>
+<p>The clip material's constants are in the <code>materials</code> block of <code>moldkit/defaults.json</code>; the <code>"materials"</code> key of the same config file overrides them, for example <code>{"materials": {"PETG": {"strainMaxPct": 1.4}}}</code>.</p>
+<table>
+<thead><tr><th>Material</th><th>Modulus low / mid / high (MPa)</th><th>Strain limit (%)</th><th>Description</th></tr></thead>
+<tbody>
+<tr><td>PETG</td><td>1000 / 1200 / 1500</td><td>1.5</td><td>Clip arm material: elastic modulus low / mid / high and the bending strain it takes without whitening</td></tr>
+</tbody></table>
+<h2 id="engine-values-override-per-mold">Engine values (override per mold)</h2>
+<p>SlipMold sets these itself, so there is no user parameter for them. To change one for the current mold, open Change Parameters, add a user parameter with exactly that name (for example <code>mold_clipArm = 2.2 mm</code>) and Make mold; its value wins over the engine's. Delete the parameter to go back to the engine's value. S1 lists every override with its value and the engine's value as a warning, and mold.json keeps them under <code>resolved</code>. A derived value follows other values (the rule is in its description), so change the input behind it first and override it last.</p>
+<h3 id="spare">Spare</h3>
+<p>The slip well added above the rim (the reservoir that holds extra slip).</p>
+<p>A change of a value in this group runs again: S2 onward (S2, S3, S4, S5, S6, S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_spareFlare</code></td><td><code>15 deg</code></td><td>deg</td><td>Outward flare of the well walls</td><td>CER-12</td></tr>
+</tbody></table>
+<h3 id="layout">Layout</h3>
+<p>How the plaster mold is split into pieces.</p>
+<p>A change of a value in this group runs again: S3 onward (S3, S4, S5, S6, S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_maxPieces</code></td><td><code>5</code></td><td>-</td><td>Hard cap on plaster pieces</td><td>SW-13</td></tr>
+<tr><td><code>mold_bottomSplitMargin</code></td><td><code>3 mm</code></td><td>mm</td><td>Margin above the highest annular slice for the bottom/side split</td><td>CER-07</td></tr>
+<tr><td><code>mold_bottomSplitHeight</code></td><td><code>0 mm</code></td><td>mm</td><td>Manual bottom split height above the foot plane; 0 = auto</td><td>CER-07</td></tr>
+</tbody></table>
+<h3 id="plaster">Plaster</h3>
+<p>The plaster block around the plug: wall thickness, outer shape and draft.</p>
+<p>A change of a value in this group runs again: S4 onward (S4, S5, S6, S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_plasterBase</code></td><td><code>25 mm</code> (derived)</td><td>mm</td><td>Plaster thickness under the foot. Derived: equal to plasterWall</td><td>CER-09</td></tr>
+<tr><td><code>mold_plasterEdgeChamfer</code></td><td><code>3 mm</code></td><td>mm</td><td>Chamfer on outer plaster edges</td><td>CER-11</td></tr>
+<tr><td><code>mold_plasterOuterShape</code></td><td><code>'tapered'</code></td><td>text</td><td>Outer plaster shape: tapered (straight tapered side around any plug, eases casing release; frustum = alias) | contoured (follows a revolved plug). Choices: <code>'tapered'</code>, <code>'contoured'</code> (also accepted: <code>'frustum'</code>)</td><td>PRN-06</td></tr>
+<tr><td><code>mold_plasterOuterDraft</code></td><td><code>3 deg</code></td><td>deg</td><td>Minimum draft of the tapered side (casing release); warn &lt; 3 deg, fail &lt; 1 deg</td><td>PRN-06</td></tr>
+<tr><td><code>mold_plasterOuterDraftMax</code></td><td><code>8 deg</code> (derived)</td><td>deg</td><td>Maximum draft searched for the smallest blank; = plasterOuterDraft for a fixed draft. Derived: equal to the larger of 8 deg and plasterOuterDraft</td><td>PRN-06</td></tr>
+<tr><td><code>mold_plasterOuterTaper</code></td><td><code>'auto'</code></td><td>text</td><td>Wide end of the tapered blank: auto (smaller blank) | wideTop | wideBottom. Choices: <code>'auto'</code>, <code>'wideTop'</code>, <code>'wideBottom'</code> (also accepted: <code>'widerTop'</code>, <code>'widerBottom'</code>)</td><td>PRN-06</td></tr>
+</tbody></table>
+<h3 id="natches">Natches</h3>
+<p>The spherical keys that register the plaster pieces to each other.</p>
+<p>A change of a value in this group runs again: S5 onward (S5, S6, S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_natchRadius</code></td><td><code>6 mm</code> (derived)</td><td>mm</td><td>Sphere radius of the cap key. Derived: 0.24 x plasterWall to 0.5 mm, within 3-10 mm, lowered until the socket and natchEdgeMargin fit across the wall</td><td>CER-14</td></tr>
+<tr><td><code>mold_natchDepth</code></td><td><code>3.5 mm</code> (derived)</td><td>mm</td><td>Cap depth (about 0.58 x radius). Derived: equal to 0.58 x natchRadius, to 0.1 mm</td><td>CER-14</td></tr>
+<tr><td><code>mold_natchClearance</code></td><td><code>0.5 mm</code></td><td>mm</td><td>Radial play between plaster bump and socket (independent casings); plaster to plaster, so it does not follow the printer fit (printed dome and cup errors both loosen it)</td><td>CER-15</td></tr>
+<tr><td><code>mold_natchesPerSeam</code></td><td><code>3</code></td><td>-</td><td>Keys per seam, asymmetric</td><td>CER-14</td></tr>
+<tr><td><code>mold_natchEdgeMargin</code></td><td><code>5 mm</code></td><td>mm</td><td>Min distance from a key to the cast (measured in 3D) and from its footprint to the seam edges</td><td>CER-14</td></tr>
+<tr><td><code>mold_natchGender</code></td><td><code>'mixed'</code></td><td>text</td><td>Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) | single (all bumps of an interface on one piece). Choices: <code>'mixed'</code>, <code>'single'</code></td><td>CER-14</td></tr>
+</tbody></table>
+<h3 id="casing">Casing</h3>
+<p>The 3D-printed casing (mother mold) walls and fill line.</p>
+<p>A change of a value in this group runs again: S7 onward (S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_casingWall</code></td><td><code>2.4 mm</code> (derived)</td><td>mm</td><td>Reusable casing wall. Derived: 2.4 mm rounded up to whole nozzle lines</td><td>PRN-02</td></tr>
+<tr><td><code>mold_casingBasePlate</code></td><td><code>4.8 mm</code> (derived)</td><td>mm</td><td>Base pattern plate thickness; keep it 0.8 mm over flangeThickness. Derived: flangeThickness + 0.8 mm, rounded up to whole nozzle lines</td><td>PRN-05</td></tr>
+<tr><td><code>mold_casingRingSectors</code></td><td><code>4</code></td><td>-</td><td>Sectors for full-ring casing backs</td><td>PRN-06</td></tr>
+<tr><td><code>mold_casingFreeboard</code></td><td><code>10 mm</code></td><td>mm</td><td>Casing wall height above the plaster fill line</td><td>PRN-10</td></tr>
+</tbody></table>
+<h3 id="seams">Seams</h3>
+<p>Flanges, ridges and grooves where casing parts meet.</p>
+<p>A change of a value in this group runs again: S7 onward (S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_flangeThickness</code></td><td><code>4 mm</code></td><td>mm</td><td>Flange thickness; leaves a 2.5 mm floor under the 1.5 mm ridge grooves</td><td>PRN-08</td></tr>
+<tr><td><code>mold_flangeWidth</code></td><td><code>15 mm</code> (derived)</td><td>mm</td><td>Flange width: the ridge zone (3 ridges: 14.6 mm) + a land at the edge; the clip beads sit over the outer grooves. Derived: the ridge zone (ridgeCount, ridgeWidth, ridgeHeight, ridgeInset, seamClearance) + the 1.2 mm edge land, rounded up to whole mm</td><td>PRN-08</td></tr>
+<tr><td><code>mold_ridgeCount</code></td><td><code>3</code></td><td>-</td><td>Sealing ridges per seam (same offsets on every seam, so the ridge lines turn the corners)</td><td>PRN-09</td></tr>
+<tr><td><code>mold_ridgeWidth</code></td><td><code>0.8 mm</code> (derived)</td><td>mm</td><td>Ridge top width (2 nozzle lines; 45-degree flanks below). Derived: equal to 2 x nozzle</td><td>PRN-09</td></tr>
+<tr><td><code>mold_ridgeHeight</code></td><td><code>1 mm</code></td><td>mm</td><td>Ridge height</td><td>PRN-09</td></tr>
+<tr><td><code>mold_ridgeInset</code></td><td><code>1.5 mm</code></td><td>mm</td><td>Casing wall outer face to the first ridge</td><td>PRN-09</td></tr>
+<tr><td><code>mold_footGrooveInnerClear</code></td><td><code>0.51 mm</code> (derived)</td><td>mm</td><td>Cavity-side clearance of the first foot groove (room for the plaster's setting expansion). Derived: equal to seamClearance + 0.35 mm (plaster setting expansion about 0.17 mm + 0.2 mm print error)</td><td>PRN-09</td></tr>
+</tbody></table>
+<h3 id="clips">Clips</h3>
+<p>The PETG clips that hold casing flanges together.</p>
+<p>A change of a value in this group runs again: S7 onward (S7, S8, S9).</p>
+<table>
+<thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
+<tbody>
+<tr><td><code>mold_clipSpacingMax</code></td><td><code>25 mm</code> (derived)</td><td>mm</td><td>Max centre spacing of the short snap clips along a foot seam (force: about 5.8 N per clip). Derived: one short clip's arm force / the seam's force demand, to whole mm (never below clipWidth)</td><td>PRN-12</td></tr>
+<tr><td><code>mold_clipEndOffset</code></td><td><code>10 mm</code></td><td>mm</td><td>Foot bead run and clips kept this far from a crossing flange's outer face</td><td>PRN-12</td></tr>
+<tr><td><code>mold_clipArm</code></td><td><code>2.4 mm</code> (derived)</td><td>mm</td><td>Clip arm thickness (PETG; 20 mm free length). Derived: the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip material's limit</td><td>PRN-13</td></tr>
+<tr><td><code>mold_clipWidth</code></td><td><code>16 mm</code></td><td>mm</td><td>Short snap clip width along the seam</td><td>PRN-13</td></tr>
+<tr><td><code>mold_clipPreload</code></td><td><code>0.7 mm</code></td><td>mm</td><td>Short clip preload per arm; spares at 0.5 and 0.9 mm are printed to compare in the leak test</td><td>PRN-13</td></tr>
+<tr><td><code>mold_clipRailPreload</code></td><td><code>0.8 mm</code></td><td>mm</td><td>Rail clip preload per arm (vertical seams)</td><td>PRN-13</td></tr>
+<tr><td><code>mold_clipRailMax</code></td><td><code>60 mm</code></td><td>mm</td><td>Longest rail clip; longer vertical seams get several stacked rails</td><td>PRN-13</td></tr>
+<tr><td><code>mold_lugHeight</code></td><td><code>3 mm</code></td><td>mm</td><td>Stop lugs on the vertical flanges above the foot; the lowest rail clip rests on them</td><td>PRN-13</td></tr>
+<tr><td><code>mold_standHeight</code></td><td><code>5 mm</code></td><td>mm</td><td>Printed stand under the base part, so the foot clips' flat arm wraps under its back</td><td>PRN-13</td></tr>
+<tr><td><code>mold_standWall</code></td><td><code>4 mm</code></td><td>mm</td><td>Stand ring wall width</td><td>PRN-13</td></tr>
+</tbody></table>
+<h2 id="settings-that-are-not-fusion-parameters">Settings that are not Fusion parameters</h2>
+<p>These live in the <code>settings</code> block of <code>moldkit/defaults.json</code> and apply to every design. They are analysis thresholds, plaster and print process values and the export format. Changing the <code>process</code> or <code>export</code> values makes S9 export again (its settings hash changes); the others apply the next time the stage that reads them runs. Edit them only if you know why.</p>
+<table>
+<thead><tr><th>Section</th><th>Key</th><th>Default</th></tr></thead>
+<tbody>
+<tr><td>analysis</td><td><code>undercutTolDeg</code></td><td><code>0.5</code></td></tr>
+<tr><td>analysis</td><td><code>draftWarnDeg</code></td><td><code>1.0</code></td></tr>
+<tr><td>analysis</td><td><code>coreDraftMinDeg</code></td><td><code>3.0</code></td></tr>
+<tr><td>analysis</td><td><code>analysisDirStepDeg</code></td><td><code>2.0</code></td></tr>
+<tr><td>analysis</td><td><code>analysisTargetTriangles</code></td><td><code>20000</code></td></tr>
+<tr><td>analysis</td><td><code>plasterWallWarnRatio</code></td><td><code>0.8</code></td></tr>
+<tr><td>analysis</td><td><code>plasterWallFailRatio</code></td><td><code>0.6</code></td></tr>
+<tr><td>analysis</td><td><code>plasterWallMinAbsMm</code></td><td><code>15.0</code></td></tr>
+<tr><td>analysis</td><td><code>releaseToleranceCm3</code></td><td><code>1e-05</code></td></tr>
+<tr><td>analysis</td><td><code>casingDraftWarnDeg</code></td><td><code>3.0</code></td></tr>
+<tr><td>analysis</td><td><code>casingDraftFailDeg</code></td><td><code>1.0</code></td></tr>
+<tr><td>process</td><td><code>plaster</code></td><td><code>USG No. 1 Pottery Plaster</code></td></tr>
+<tr><td>process</td><td><code>consistency</code></td><td><code>70</code></td></tr>
+<tr><td>process</td><td><code>dryPlasterGPerCm3</code></td><td><code>0.985</code></td></tr>
+<tr><td>process</td><td><code>overagePct</code></td><td><code>15</code></td></tr>
+<tr><td>process</td><td><code>wetDensityGPerCm3</code></td><td><code>1.58</code></td></tr>
+<tr><td>process</td><td><code>mixWaterTempC</code></td><td><code>21</code></td></tr>
+<tr><td>process</td><td><code>shopTempMaxC</code></td><td><code>24</code></td></tr>
+<tr><td>process</td><td><code>wetPieceWeightWarnKg</code></td><td><code>6.0</code></td></tr>
+<tr><td>process</td><td><code>casingMaterialDefault</code></td><td><code>PETG</code></td></tr>
+<tr><td>process</td><td><code>clipMaterial</code></td><td><code>PETG</code></td></tr>
+<tr><td>process</td><td><code>layerFine</code></td><td><code>0.12</code></td></tr>
+<tr><td>process</td><td><code>layerDraft</code></td><td><code>0.24</code></td></tr>
+<tr><td>process</td><td><code>plaDensity</code></td><td><code>1.24</code></td></tr>
+<tr><td>process</td><td><code>petgDensity</code></td><td><code>1.27</code></td></tr>
+<tr><td>export</td><td><code>format</code></td><td><code>3mf</code></td></tr>
+<tr><td>export</td><td><code>surfaceDeviationMm</code></td><td><code>0.01</code></td></tr>
+<tr><td>export</td><td><code>normalDeviationDeg</code></td><td><code>10</code></td></tr>
+<tr><td>export</td><td><code>maxTriangles</code></td><td><code>150000</code></td></tr>
+</tbody></table>
+<p class="foot">From docs/PARAMETERS.md (tools/build_help.py).</p></main><script>
+document.addEventListener('click', function (e) {
+  var a = e.target.closest ? e.target.closest('a.ext') : null;
+  if (!a) { return; }
+  e.preventDefault();
+  try { adsk.fusionSendData('open', a.href); }
+  catch (err) { window.location.href = a.href; }
+});
+window.addEventListener('load', function () {
+  setTimeout(function () { try { adsk.fusionSendData('loaded', JSON.stringify({title: document.title, w: window.innerWidth, h: window.innerHeight})); } catch (err) {} }, 300);
+});
+</script></body></html>

@@ -1,0 +1,672 @@
+{
+ "topic": "existing-mold-software",
+ "summary": "No existing Fusion 360 add-in turns an arbitrary solid into a slip-casting plaster mold plus 3D-printable casings. The Fusion add-ins on the Autodesk Marketplace are built for injection molding. They split a part into core and cavity along a parting surface, and none of them makes a spare, natches, plaster shells or casings. Fusion itself has useful building blocks. Draft Analysis and Accessibility Analysis show undercuts in the UI, but the API can only list analyses that already exist; it cannot create them. Silhouette Split can be created from the API, with three modes, but its solid-split mode only works when the parting line is planar. Component.findBRepUsingRay is available for ray casting. Lip/Groove has no API at all. So undercut detection and tongue-and-groove geometry have to be written in our own code.\n\nThe closest working examples are all outside Fusion, and they agree on most numbers. Shape Cast (CHI'24/'25) starts from a 2D profile of a revolved pot. It uses 13% shrinkage, a 25 mm plaster offset and 2.4 mm printed walls. The outer casing is split into 2 or 4 sectors because a one-piece casing was \"extremely difficult\" to remove from set plaster. Its flanges first used M3 bolts plus a neoprene foam-tape gasket, and later changed to ridges, grooves and binder clips. pdaoust/mug-generator (Inkscape + OpenSCAD, written entirely with Claude) builds 2- or 3-part case molds. Defaults: plaster 30 mm, case wall 0.8 mm (peeled off with a heat gun), natch radius 6.75 mm, key tolerance 0.5 mm, filler tube 15 mm high at 20°, shrinkage 10%. It switches to 3 parts automatically when the foot is concave. The Meshcast plaster-mold web tool exposes the most complete set of slip-cast parameters: plaster 20 mm, shell 4 mm, 2/3/4 housings, natch radius 9 mm, natch fit 0.60 mm, natch draft 10°, seam fit 0.20 mm, clamp clearance 0.35 mm. Tony Hansen's Digitalfire work supplies practitioner detail: 0.8 mm PLA case molds made by shelling, a printed natch-embed system that fits 13.5 mm holes, flanges with clamps, a printed pour spout that doubles as a trimming guide, and heat-gun removal.\n\nTwo code projects are close to the agent toolkit we want. lisawong/plaster_mould_maker is a Python package (mouldflow) plus a Claude Code skill, `stl-to-plaster-mould`. It has hash-bound human review gates (input, then plaster, then forms, then export) and versioned JSON results with fixed status outcomes. It checks release by measuring penetration volume and depth at sampled translations. Its rules explicitly forbid the model from improvising thresholds. Defaults include 3 mm form walls, 20 mm lips, 0.25 mm groove clearance per side, 2.5 mm spherical keys, and a print coupon that tests 5 groove clearances. TheJoeJep/AutodeskFusionLureMoldGenerator is a real Fusion add-in built against Fusion 2704 (we run 2705). It chooses the split height by ray casting: on a turtle model, a centred split released 62% of the shape and the ray-cast split released 93%. It keeps all geometry code in plain Python with 304 tests that run outside Fusion. It also documents Fusion API traps: orientedMinimumBoundingBox came out 17% too large, tool bodies must be consumed rather than deleted, and add-in modules must be purged from sys.modules to reload. Together, these projects give a well-supported default parameter set and a proven architecture for our Fusion toolkit.",
+ "findings": [
+  {
+   "claim": "No Fusion 360 add-in exists for slip-cast plaster molds; Marketplace mold add-ins target injection molding",
+   "details": "Mold Commands V4.2E ($10) provides Remove Holes, Parting Extrusion/Offset/Extraction/Connect/Combine/Stitch, Nesting (Rectangular/Cylinder) and Parting Split. The developer warns the core/cavity separation 'may fail' depending on the parting surfaces. It publishes no parameters. Searches also found AIG Mold Wizard and NexGenCAM Injection Mold Wizard; both are injection-mold oriented. None of these makes spares, natches, uniform plaster shells or casings. A Fusion forum answer (search snippet) says Fusion has no automatic parting-line tool comparable to SolidWorks.",
+   "confidence": "high",
+   "sources": [
+    "https://marketplace.autodesk.com/apps?id=44916951188326107&appLang=en&os=Win64",
+    "https://apps.autodesk.com/FUSION/en/Detail/HelpDoc?appId=5737568183660398764&appLang=en&os=Win64"
+   ]
+  },
+  {
+   "claim": "In Fusion, Draft Analysis and Accessibility Analysis can only be read from the API, not created; Silhouette Split can be created; Lip/Groove has no API",
+   "details": "In the official C++ API headers and docs, AccessibilityAnalyses and DraftAnalyses expose only count, item and itemByName, so a script can list analyses that already exist but cannot create one or read per-face results. SilhouetteSplitFeatures.createInput(viewDirection, targetBody, operation) and add() do exist. The SilhouetteSplitOperations enum has FacesOnly, ShelledBody and SolidBody. The UI reference states that Split Solid Body needs a planar parting line and Split Shelled Body needs a body that is already shelled. There are no Lip or Groove feature headers in the API. Component.findBRepUsingRay is documented and can be used for our own ray-cast undercut checks. Implication: undercut detection must be our own code (face normals plus ray casts), and natches and tongue/groove must be modeled from primitives.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/AutodeskFusion360/FusionAPIReference",
+    "https://raw.githubusercontent.com/AutodeskFusion360/FusionAPIReference/HEAD/Fusion_API_CPP_Reference/include/Fusion/Features/SilhouetteSplitFeatures.h",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-INSPECT-TOOLS.htm"
+   ]
+  },
+  {
+   "claim": "Silhouette Split is unreliable on real geometry",
+   "details": "The Tech & Espresso tutorial reports that Silhouette Split struggles with non-coplanar parting lines when splitting bodies, that the parting line cannot be placed by hand, and that Split Face is the fallback. A search snippet from a forum adds that split-shelled 'pretty much breaks every time' except on simple shapes. It is useful for proposing a parting line, but the toolkit needs a fallback: Split Faces Only plus our own planar or stepped split bodies.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.techandespresso.com/blog/fusion-360-silhouette-split-tool",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm"
+   ]
+  },
+  {
+   "claim": "Shape Cast automates profile → plaster mold casings with concrete numbers: 25 mm plaster, 2.4 mm printed walls, 13% shrinkage, casing split into 2 or 4 sectors",
+   "details": "Input is a single-path SVG of the fired outer profile at 1:1. It is revolved and scaled up for shrinkage (13% in the paper's examples, adjustable). A slip well is added automatically, with a small radius to round off the plaster. A 'design proof' print is inset 1.2 mm (3 × a 0.4 mm nozzle). The inner mold wall is offset 2.4 mm, a value chosen in testing as thin enough to print fast but rigid and leak-free. The plaster is modeled as a 25 mm offset from the inner mold. The outer mold is split into 2 or 4 sectors, partly so it fits the printer bed (a 75 mm pot needs an outer mold of about 200 mm) and partly because removing set plaster from a one-piece outer mold was 'extremely difficult'. Flanges carry M3 bolts in heat-set inserts. A neoprene foam-tape gasket seals the joints, with clearance designed in so the tape can compress without deforming the print. The bottom ring is glued with CA. Parts are printed upside down so the critical surface has no support marks and bubbles rise when plaster is poured. The tool also reports plaster volume and dry plaster/water weights for USG No. 1. The implementation uses Inkscape plus Clipper for 2D offsets, because naive offsets self-intersect, and Blender Python for revolves and volumes.",
+   "confidence": "high",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Shape Cast later moved from bolts and gaskets to ridges/grooves on flanges plus binder clips, and added slip-well presets and 2-part molds",
+   "details": "The current site lists slip well None/Regular/Tall, outer molds on/off (to use your own container), flange ridges for binder-clip assembly, STL/STEP output, and shrinkage default 13% (Pro tier to change it). The free tier makes one-part molds only and does not allow undercuts. Pro supports 'horizontally split two-part forms'. The site warns that scaling the output STLs is NOT recommended because of the precision-fit features. Its 'wall thickness' option is the ceramic wall, used for volume estimates, not the plaster thickness. The CHI'25 abstract reports 501 beta users, 626 finalized models and a questionnaire of 17 users. The CHI'24 paper noted that invalid SVG input was the main failure: the user ends up doing '2D CAD' instead of 3D CAD.",
+   "confidence": "high",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "https://dl.acm.org/doi/10.1145/3706598.3713866",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Meshcast's plaster-mold generator exposes the most complete parameter set for slip-cast housings",
+   "details": "Housings: 2, 3 or 4 splits ('3/4 wrap further for deeper undercuts'). Clamp style: Ends (2 clamps) or Corners (4). Plaster thickness 20 mm. Shell wall 4 mm. Floor rim 20 mm. End margin 20 mm. Opening diameter 20 mm. Pour axis Auto/X/Y/Z. Pour style Funnel/Open rim/None, with an optional overfill ridge. Natch radius 9 mm, natch fit 0.60 mm play, natch draft 10°, natch position 50% (from cavity to wall). Clamp clearance 0.35 mm, housing seam fit 0.20 mm, clamp grip 0.25 mm. Clay shrinkage defaults to 0% (the page suggests about 13% for stoneware). Material: slipcast/plaster/concrete. The site recommends symmetric forms (vases, cups, bowls).",
+   "confidence": "high",
+   "sources": [
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "claim": "pdaoust/mug-generator (written entirely with Claude) produces 2- or 3-part case-mold forms with explicit defaults",
+   "details": "It is an Inkscape extension that writes OpenSCAD/BOSL2 files. Parameters (default, allowed range): plaster_thickness 30 mm (20–100); wall_thickness (case) 0.8 mm (0.4–5); alignment_type natches|keys; natch_radius 6.75 mm (3–20), which matches Digitalfire's 13.5 mm embed holes; key_tolerance 0.50 mm; funnel_style plastic|integrated; funnel_wall_angle 30°; funnel_wall 1.2 mm; flange_width 6 mm; funnel_shelf_width 7 mm (a plaster overhang acting as a knife edge for trimming); breather_hole_dia 1.0 mm × 6; filler_tube_height 15 mm; filler_tube_angle 20°; clay_shrinkage 10% (0–30); plus layer height and maker's-mark depth and draft. The SCAD comments say the mold construction parameters (plaster thickness, wall thickness, natch radius) are NOT scaled for shrinkage; only the ware is. The handle gets half the plaster thickness. A 3-part mold is generated automatically when a concave foot is detected, and the Z seam must clear the foot roof. Printing advice: 0.8 mm walls, 1–2 bottom layers, 0.4 mm top so the form can be heat-gunned and peeled, lightning infill. A 'plaster-efficient, peelable' variant uses less plaster. Limitations: no overhangs or indented handle profiles. The README says it was '100% AI vibe-coded with Claude Opus 4.6'.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/pdaoust/mug-generator",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/scad/case_mould_original.scad"
+   ]
+  },
+  {
+   "claim": "lisawong/plaster_mould_maker is a Claude Code skill plus Python package for STL → plaster mould → printable forms, with human review gates and a no-improvisation rule",
+   "details": "Release 1 handles two-part molds from one planar split. The four review gates (input, plaster, forms, export) are bound to file hashes and rerun downstream approvals when inputs change. Each run writes a versioned JSON result (mouldflow.result/1) with status strict_pass, conditional_finishing, inconclusive, fail or unsupported, unit-tagged metrics and a next_action. The PRD says the model explains results using questions the tool provides and does not improvise thresholds. Defaults: plaster margin/backing 12 mm, pour gate radius 5 mm, spherical keys radius 2.5 mm, finishing allowance 0.1 mm, form walls 3 mm, outward lips 20 mm, groove clearance 0.25 mm per side, walls 30 mm above the plaster block, fill-line deboss about 0.6 mm, tongue-and-groove slots with bulldog clips, printer bed 250×210×210 (Prusa MK3). Release check: penetration volume (tolerance 0.001 mm³) and a depth bound (spatial tolerance 0.02 mm) at sampled translations of 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16, 32 and 64 mm. It explicitly separates two release problems: plaster off the object, and plaster off its printed form ('the inverse geometry can trap'). Libraries: trimesh, manifold3d, Blender for review scenes. tools/groove_coupon.py prints 5 test clearances. Non-goals for Release 1: 3+ part or non-planar molds, shrinkage, clamp design, physical validation.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/lisawong/plaster_mould_maker",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+   ]
+  },
+  {
+   "claim": "A Fusion add-in (Lure Mold Generator, built on Fusion 2704) shows an automatic parting method and an architecture that suits our toolkit",
+   "details": "It fires a grid of rays down through the model and picks the split height that most of the model 'straddles'. On a turtle STL, a centred split released 62% of the model and the chosen split 93%. The halves are therefore usually unequal (11.9 mm lid over a 33.7 mm base). Orientation comes from area-weighted PCA because orientedMinimumBoundingBox reported 100×28.8×14.6 for a 100×30×12 part (17% too large). Defaults: walls 10 mm on each axis; 2 or 4 pegs of 5 mm diameter and height, 0.2 mm diametral clearance, 0.6 mm lead-in chamfer; 4 M4 bolts (4.2 mm holes) placed along the long edges because 'a long mold bows open in the middle'; README: 'Pegs locate the halves. They do nothing to hold them together.' Vents under 0.8 mm do not print on FDM. Everything is built with mesh booleans, which avoids needing the paid extension for converting mesh to solid. Tool bodies are consumed rather than deleted, because the parametric timeline will not let you delete bodies that features depend on. The geometry modules are pure Python with 304 standard-library tests. The entry point purges its modules from sys.modules so a restart really reloads the code. Settings are stored on the body.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+   ]
+  },
+  {
+   "claim": "Digitalfire (Tony Hansen) documents the practitioner-tested 3D-printed case-mold system: 0.8 mm shelled PLA, a natch-embed system, flanges and clamps, a printed spout, heat-gun removal",
+   "details": "Case molds have 0.8 mm walls (about 100 g, 'surprisingly strong'); rails are 1.2 mm. The v3 'shelled' method extrudes a solid block, cuts the mug geometry offset inward by 0.8 mm, then shells the back to 0.8 mm. Outer corners are chamfered, but not so much that there is too little thickness for natches. The PLA is softened with a heat gun and removed with needle-nose pliers. A printed PLA pouring spout absorbs no water, so the slip level does not need topping up, and it doubles as a trimming guide. An outward-flared rim keeps lips round. Natch system: case molds only need 13.5 mm holes. Embeds are cast into the plaster and natches or spacers are glued or friction-fitted into them. Start with a 0.1 mm allowance (a 4.8 mm nipple in a 4.9 mm space) and iterate the 'slack' parameter (ID/OD/slack). A standard 3/8 in (9.5 mm) natch needs a 9.8 mm hole. The all-in-one case mold was printed as 6 units with flanges clamped together and membranes carrying natch holes. Vertical flanges are about 5 mm. A thin base flexes so the plaster can be extracted.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/picture/3553",
+    "https://digitalfire.com/picture/3716",
+    "https://digitalfire.com/picture/3728",
+    "https://digitalfire.com/project/63",
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/glossary/mold+shell+flange",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "Generic mold-box generators (OpenSCAD, Blender, web tools) cover keys, sprue, box and split but are aimed at silicone or resin",
+   "details": "jpgreth OpenSCAD gist: margins 10 mm, sphere keys r = 4.0 positive and 4.1 negative (0.1 mm clearance), cone pour hole r1 = 2, r2 = 10, h = 10. printpal: wall 5 mm, clearance 1 mm, base 4 mm, split 50%, key diameter 6 / height 4 mm, spout 10 mm, vent 3 mm. Ruakij Blender add-on: finds the thickest Z cross-section, splits on YZ/XZ/XY, needs manifold meshes. FormArmor Pro ($49): shells, splits, keys, screw tabs, draft check, volume. Meshcast general tool: tongue-and-groove vs pins, pry pocket, minimum model about 30 mm. Akritio: has a ceramics/slip-casting mode, 2/4/6-part, flange keys and clamp holes. MoldStudio3D: ceramic case molds with natches, pour spout, dividing walls, mug mode, USG No. 1 plaster calculator (Pro $19/mo); its page gives no parameter values. Moldboxer: desktop app ($59–249) with per-split manual placement and clamping.",
+   "confidence": "high",
+   "sources": [
+    "https://gist.github.com/jpgreth/bb5b4b86934e40e5373e5d8704b41a40",
+    "https://printpal.io/tools/mold-box-generator",
+    "https://github.com/Ruakij/blender-mold-generator",
+    "https://superhivemarket.com/products/formarmorpro",
+    "https://meshcast.app/guides/stl-to-mold",
+    "https://akritio.com/",
+    "https://moldstudio3d.com/ceramic-slip-casting-mold/",
+    "https://meshcast.app/guides/moldboxer-alternative"
+   ]
+  },
+  {
+   "claim": "Rhino and Grasshopper offer parting-line analysis and one published slip-cast master-mould definition, but no maintained slip-cast plugin",
+   "details": "Rhino's DraftAngleAnalysis has a 'Create Draft Curves' option (Maximum/Middle/Minimum) for parting lines, and RibbonOffset builds parting surfaces. The Grasshopper add-ons Theta (multi-plane draft analysis) and Chromodoris (draft analysis) appear on Food4Rhino. Rod Laird's Grasshopper definition generates master or standard slip-cast moulds with wall thickness, spare, a parting plane, and natches placed on the 'most open mould surface'. It includes workarounds for solid-intersection edge cases and a later PLA+ABS two-material version.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.rhino3d.com/features/mold-making-tools/",
+    "https://www.grasshopper3d.com/forum/topics/example-master-and-standard-mould-generation",
+    "https://www.food4rhino.com/en/app/theta"
+   ]
+  },
+  {
+   "claim": "Practitioner material notes that affect casing design: PLA softens near 60 °C, release agents, curing",
+   "details": "Meshcast guides: PLA softens from around 60 °C, so warping during thick plaster pours is a known failure; use PETG, keep pours thinner, or cool with water. For printed forms, use thin mineral or vegetable oil buffed nearly dry, or a dried soap film, and never let it pool. FDM layer lines act as 'thousands of tiny mechanical keys'. Do not force-dry plaster with heat (it cracks). Plaster 'sets hard long before it is cured'. Old Forge used generic mould soap and compressed air to release, and scaled the ware to 112% for shrinkage. A beesbuzz practitioner note says molds need to be at least 2.5 cm thick.",
+   "confidence": "medium",
+   "sources": [
+    "https://meshcast.app/guides/plaster-cracking",
+    "https://meshcast.app/guides/mold-release-agents",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://beesbuzz.biz/blog/chatter/14199-Plaster-slip-casting-notes",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/"
+   ]
+  },
+  {
+   "claim": "Academic algorithms for parting direction and decomposition exist but target rigid or silicone casting, not plaster slip molds",
+   "details": "CoreCavity (SIGGRAPH 2018) splits thin shells into parts that each come out of a two-piece rigid mold, as two opposite height fields. Volume-aware composite molds (Alderighi 2019) combine plastic shells with silicone inserts. Accessibility-based methods for undercut-free parting directions also exist (CAD&A 2010, from search results only). Practical takeaway for v1: test candidate pull directions by visibility, using face-normal sign plus ray occlusion, rather than adopting these optimizers.",
+   "confidence": "medium",
+   "sources": [
+    "https://cdl.ethz.ch/publications/corecavity-interactive-shell-decomposition-for-fabrication-with-two-piece-rigid-molds/",
+    "https://dl.acm.org/doi/10.1145/3306346.3322981"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "clayShrinkagePct",
+   "recommended_value": "12 %",
+   "range": "0–20 % (typical 10–13)",
+   "rationale": "Shape Cast uses 13%, mug-generator 10%, Old Forge scaled to 112%, Meshcast suggests about 13% for stoneware. Apply it ONLY to the ware/cavity, never to mold-construction parameters (mug-generator does this explicitly). Record which formula is used: scale = 1+s or 1/(1−s).",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "parameter": "spareHeight (slip well above the rim)",
+   "recommended_value": "20 mm",
+   "range": "0 (None) – 40 mm (Tall)",
+   "rationale": "Shape Cast offers None/Regular/Tall. mug-generator's filler tube is 15 mm and its README says to draw a 15–20 mm spout. The well keeps rim thickness even as the slip level drops.",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "https://github.com/pdaoust/mug-generator",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "spareFlareAngle",
+   "recommended_value": "20°",
+   "range": "5–45° (integrated plaster funnel: 30°)",
+   "rationale": "mug-generator defaults: filler_tube_angle 20° (5–45), funnel_wall_angle 30° (10–60). The flare gives draft so the spare releases.",
+   "sources": [
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+   ]
+  },
+  {
+   "parameter": "spareKnifeShelfWidth",
+   "recommended_value": "7 mm (0 = off)",
+   "range": "0–20 mm",
+   "rationale": "mug-generator's funnel_shelf_width makes a plaster overhang at the rim that acts as a knife edge for trimming. Digitalfire's printed spout also works as a cutting guide.",
+   "sources": [
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/scad/case_mould_original.scad",
+    "https://digitalfire.com/picture/3728"
+   ]
+  },
+  {
+   "parameter": "spareStyle",
+   "recommended_value": "integratedPlaster | printedSpout",
+   "rationale": "Shape Cast and Meshcast cast the well in plaster. Digitalfire uses a separate printed PLA spout that absorbs no water, so the slip level stays flat and needs no topping up. mug-generator offers both (funnel_style plastic|integrated).",
+   "sources": [
+    "https://digitalfire.com/picture/3728",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+   ]
+  },
+  {
+   "parameter": "plasterThickness",
+   "recommended_value": "25 mm",
+   "range": "20–40 mm",
+   "rationale": "Shape Cast offsets 25 mm, mug-generator defaults to 30 (minimum 20), Meshcast to 20, and a practitioner says at least 2.5 cm. Build it as a uniform offset of the cavity rather than a block minus cavity: Shape Cast notes the block approach wastes plaster and makes heavy molds.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+    "https://meshcast.app/plaster-mold",
+    "https://beesbuzz.biz/blog/chatter/14199-Plaster-slip-casting-notes"
+   ]
+  },
+  {
+   "parameter": "appendagePlasterThickness (handles)",
+   "recommended_value": "0.5 × plasterThickness",
+   "rationale": "mug-generator puts half plaster thickness around the handle and fills the gap between mug and handle solid.",
+   "sources": [
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/scad/case_mould_original.scad"
+   ]
+  },
+  {
+   "parameter": "natchType",
+   "recommended_value": "castSphere (default) | embed13_5mm | cone",
+   "rationale": "Meshcast and mouldflow use cast ball-and-socket natches. Digitalfire uses 13.5 mm holes in the casing that take printed embeds, natches and clips; these are replaceable and allow flat, sandable seams. The Lure generator uses pegs with lead-in chamfers.",
+   "sources": [
+    "https://meshcast.app/plaster-mold",
+    "https://digitalfire.com/picture/3716",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+   ]
+  },
+  {
+   "parameter": "natchRadius",
+   "recommended_value": "6 mm",
+   "range": "4–9 mm",
+   "rationale": "Meshcast uses 9 mm, mug-generator 6.75 mm, the OpenSCAD gist 4 mm, mouldflow 2.5 mm (small). Keep the natch at least a radius plus a margin from the cavity and the outer edge.",
+   "sources": [
+    "https://meshcast.app/plaster-mold",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+    "https://gist.github.com/jpgreth/bb5b4b86934e40e5373e5d8704b41a40",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+   ]
+  },
+  {
+   "parameter": "natchClearance (play between bump and socket)",
+   "recommended_value": "0.5 mm",
+   "range": "0.1–0.6 mm",
+   "rationale": "Meshcast natch fit is 0.60 mm, mug-generator key_tolerance 0.50 mm, and the OpenSCAD gist 0.1 mm. Digitalfire starts printed embeds at 0.1 mm and iterates. Lower values locate better; higher values assemble more easily.",
+   "sources": [
+    "https://meshcast.app/plaster-mold",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+    "https://digitalfire.com/project/63"
+   ]
+  },
+  {
+   "parameter": "natchDraftAngle",
+   "recommended_value": "10°",
+   "range": "5–15°",
+   "rationale": "Meshcast default. Draft eases assembly and keeps the natch from locking or chipping.",
+   "sources": [
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "parameter": "natchPositionFraction",
+   "recommended_value": "0.5",
+   "range": "0.3–0.7",
+   "rationale": "Meshcast places natches at 50% of the way from the cavity to the outer wall.",
+   "sources": [
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "parameter": "natchesPerSeam",
+   "recommended_value": "2 (3 for long or asymmetric seams)",
+   "rationale": "mug-generator uses 2 natch sets per seam for a 2-part mold, and 3 for the A/B pieces plus 2 for the bottom in a 3-part mold. Digitalfire sells sets of 4 interlocks per mold.",
+   "sources": [
+    "https://github.com/pdaoust/mug-generator",
+    "https://digitalfire.com/project/63"
+   ]
+  },
+  {
+   "parameter": "casingStrategy",
+   "recommended_value": "reusable (rigid, flanged, clamped) | sacrificial (thin, heat-gun peel)",
+   "rationale": "There are two proven schools. Shape Cast, mouldflow and Meshcast print thicker walls with flanges and clips or bolts and reuse the casing. Digitalfire and mug-generator print 0.8 mm shells, peel them off with a heat gun, and use a 0.4 mm top and 1–2 bottom layers.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/picture/3728",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  },
+  {
+   "parameter": "printedMoldWallThickness (casing wall)",
+   "recommended_value": "3 mm for reusable; 0.8 mm for sacrificial",
+   "range": "0.8–5 mm",
+   "rationale": "Shape Cast uses 2.4 mm, mouldflow 3 mm, Meshcast 4 mm and printpal 5 mm (the user's current value is 5 mm). Digitalfire and mug-generator use 0.8 mm (2 × 0.4 nozzle) and 1.2 mm for rails.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/plaster-mold",
+    "https://digitalfire.com/picture/3553"
+   ]
+  },
+  {
+   "parameter": "casingSplitCount / casingSectorCount",
+   "recommended_value": "2 per plaster piece by default; 4 when the bed is too small",
+   "rationale": "Shape Cast splits the outer casing into 2 or 4 sectors for bed size and because removing plaster from a one-piece casing was 'extremely difficult'. Meshcast housings come in 2, 3 or 4.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "parameter": "casingFlangeWidth",
+   "recommended_value": "15 mm",
+   "range": "5–20 mm",
+   "rationale": "mouldflow uses 20 mm outward lips, Meshcast a 20 mm floor rim and end margin, Digitalfire about 5 mm vertical flanges, mug-generator a 6 mm funnel flange. The flange must fit the jaws of the chosen clip or clamp.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/plaster-mold",
+    "https://digitalfire.com/glossary/mold+shell+flange"
+   ]
+  },
+  {
+   "parameter": "casingSeamClearance (tongue/groove fit per side)",
+   "recommended_value": "0.25 mm",
+   "range": "0.15–0.35 mm",
+   "rationale": "mouldflow uses 0.25 mm per side and Meshcast a 0.20 mm housing seam fit. Validate with a printed coupon (mouldflow's groove_coupon tests 5 clearances).",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/plaster-mold",
+    "https://github.com/lisawong/plaster_mould_maker"
+   ]
+  },
+  {
+   "parameter": "casingSealing",
+   "recommended_value": "tongueGroove (+ optional gasketGap for foam tape)",
+   "rationale": "Shape Cast v1 used neoprene foam tape in designed compression pockets, then switched to ridges and grooves on the flanges. Clay or plasticine seals are the manual fallback.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://shapecastmolds.com/",
+    "https://claybucket.com/3d-printed-and-slipcast-cup/"
+   ]
+  },
+  {
+   "parameter": "clampStyle / clampCount / clampClearance / clampGrip",
+   "recommended_value": "printedClip | binderClip | M3/M4 bolt; 2 at the ends or 4 at the corners, more along long seams; clearance 0.35 mm; grip 0.25 mm",
+   "rationale": "Meshcast: Ends (2) or Corners (4), clamp clearance 0.35 mm, grip 0.25 mm. Lure generator: M4 bolts in 4.2 mm holes along the long edges, because molds bow open in the middle. Shape Cast used M3 bolts with heat-set inserts, then binder clips. mouldflow uses bulldog clips. Registration features do not clamp.",
+   "sources": [
+    "https://meshcast.app/plaster-mold",
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+   ]
+  },
+  {
+   "parameter": "casingFreeboard (wall height above the plaster fill line) and fillLineDeboss",
+   "recommended_value": "freeboard 10–30 mm; deboss 0.6 mm",
+   "rationale": "mouldflow puts walls 30 mm above the plaster block top and debosses the fill line about 0.6 mm deep, so the operator knows where to stop pouring.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+   ]
+  },
+  {
+   "parameter": "printerBedSize",
+   "recommended_value": "250 × 210 × 210 mm (user-overridable)",
+   "rationale": "mouldflow defaults to the Prusa MK3. The bed limit decides how many casing sectors are needed (Shape Cast).",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "minPrintableFeature (vents/holes)",
+   "recommended_value": "1.0 mm",
+   "range": "≥0.8 mm",
+   "rationale": "Lure generator: vents below 0.8 mm do not print on FDM. mug-generator breather holes default to 1.0 mm.",
+   "sources": [
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+   ]
+  },
+  {
+   "parameter": "finishingAllowance",
+   "recommended_value": "0.1 mm",
+   "range": "0–0.5 mm",
+   "rationale": "mouldflow's default; its teapot demo used 0.5 mm. This is material left for sanding or fit.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+   ]
+  },
+  {
+   "parameter": "releaseCheckTranslations / tolerance",
+   "recommended_value": "steps of 0.025, 0.05, 0.1, 0.2, 0.3, 0.4, 0.5, 0.75, 1, 1.5, 2, 3, 4, 8, 16, 32, 64 mm; spatial tolerance 0.02 mm",
+   "rationale": "mouldflow's release check (penetration volume and depth at sampled poses). Apply it twice: plaster piece vs. ware, and plaster piece vs. its casing parts.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+   ]
+  },
+  {
+   "parameter": "casingPrintMaterial",
+   "recommended_value": "PETG for thick or large pours; PLA acceptable for thin and sacrificial casings",
+   "rationale": "PLA softens from about 60 °C, and setting plaster can warp it. Digitalfire uses PLA with heat-gun removal.",
+   "sources": [
+    "https://meshcast.app/guides/plaster-cracking",
+    "https://digitalfire.com/picture/3728"
+   ]
+  },
+  {
+   "parameter": "printOrientation",
+   "recommended_value": "Plaster-forming face up or supported by walls, with no supports touching it",
+   "rationale": "Shape Cast prints the inner mold upside down so the critical surface has no support marks and bubbles rise during the plaster pour.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Silhouette Split's solid mode needs a planar parting line, and its shelled mode often fails on non-trivial shapes. Treat it as a proposal tool and have a fallback (Split Faces Only, or our own split planes and tool bodies).",
+  "Draft Analysis and Accessibility Analysis cannot be created or queried per face through the Fusion API (collections expose only count, item and itemByName). An agent cannot rely on them for automated undercut detection; it must compute visibility with face normals and Component.findBRepUsingRay.",
+  "Fusion has no API for Lip/Groove (the Plastic feature also requires a plastic rule). Tongue-and-groove and clamp features must be built from sketches and sweeps or from temporary B-Rep primitives.",
+  "Fusion's orientedMinimumBoundingBox is approximate (17% too large on a 100×30×12 test part). Do not use it for sizing or orientation; compute exact extents or PCA.",
+  "In a parametric timeline you cannot delete a body that features depend on. Consume tool bodies in combine operations, or rebuild the whole generated component on regeneration.",
+  "Fusion add-ins cache their Python modules. Purge their entries from sys.modules on start/stop, or edits will not take effect.",
+  "A one-piece outer casing makes set plaster very hard to remove (Shape Cast). Split every casing into at least 2 parts.",
+  "There are TWO release problems: the plaster piece must leave the ware, and each plaster piece must leave its printed casing. The casing's inverse geometry can trap plaster even when the mold itself releases from the ware (mouldflow).",
+  "Pegs, natches and grooves only locate parts. Without clamps, printed molds leak or flash along the seam, and long seams bow open in the middle.",
+  "Do not scale exported STLs or bodies afterwards to change size. That also scales the clearances and fits (Shape Cast warning). Apply shrinkage only to the ware before building the mold (mug-generator).",
+  "Naive offsetting of curves or surfaces self-intersects (Shape Cast had to use Clipper). In Fusion, Shell and Offset Faces can fail on small fillet radii or thin features, so check feature health and provide fallbacks (smaller offset, defeature, offset via sketch).",
+  "Block-minus-cavity molds waste plaster and are heavy (Shape Cast). Prefer a uniform offset shell, with plain block geometry only for flanges and seams.",
+  "Sampled release checks do not prove there is no collision between the samples (mouldflow). Report inconclusive results instead of a pass.",
+  "Do not let the agent improvise pass/fail thresholds. Keep them in parameters or tool output (mouldflow PRD). Use explicit status values such as strict_pass, conditional, inconclusive, fail, unsupported.",
+  "A mesh boolean against a bad mesh does not fail; it silently gives wrong geometry (Lure README). Validate watertightness and manifoldness before booleans.",
+  "PLA softens from about 60 °C. Thick plaster pours can warp PLA casings; use PETG or thinner pours.",
+  "Release agent that pools leaves pitted plaster. FDM layer lines act as mechanical keys, so apply a thin agent buffed nearly dry; sand or prime the plaster-forming surfaces.",
+  "Never force-dry plaster with heat; it cracks days later.",
+  "Features smaller than about 0.8 mm (vents, thin ribs) will not print reliably on FDM.",
+  "Profile-only tools (Shape Cast, mug-generator) are robust because they only handle revolved forms without undercuts. Arbitrary B-Rep input needs much more validation: closed solid, single body, minimum radii.",
+  "Natches too close to the cavity or edge break off. Digitalfire warns that chamfering corners can remove the thickness needed for natches."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast (Kent Lyons, Inovo Studio; CHI EA'24, CHI'25)",
+   "url": "https://shapecastmolds.com/",
+   "what_it_does": "Web app: a 2D SVG profile of a revolved pot becomes a design-proof STL, an inner mold with slip well (scaled for shrinkage), outer mold sectors (2 or 4) with flanges, a bottom ring, and plaster/water quantities for USG No. 1. Built with Inkscape + Clipper + Blender Python.",
+   "relevance": "The closest published end-to-end slip-cast casing generator, with documented numbers (25 mm plaster, 2.4 mm walls, 13% shrinkage) and lessons on bolts/gaskets vs ridges/clips. Paper: https://inovo.studio/pubs/shapecast-chi24.pdf"
+  },
+  {
+   "name": "lisawong/plaster_mould_maker (mouldflow + Claude Code skill stl-to-plaster-mould)",
+   "url": "https://github.com/lisawong/plaster_mould_maker",
+   "what_it_does": "Python CLI and Claude Code skill: STL → two-part plaster mould → printable casting forms, with hash-bound human review gates, versioned JSON results, penetration-based release checks, groove clearance coupons, trimesh/manifold3d booleans, and Blender review scenes.",
+   "relevance": "Direct precedent for an AI-agent workflow: gate structure, result schema, no-improvisation rule, and form defaults (3 mm walls, 20 mm lips, 0.25 mm groove clearance)."
+  },
+  {
+   "name": "pdaoust/mug-generator",
+   "url": "https://github.com/pdaoust/mug-generator",
+   "what_it_does": "Inkscape extension that writes OpenSCAD/BOSL2 files for a mug prototype, 2- or 3-part case-mold forms (original and plaster-efficient peelable), a pouring funnel, and hump/slump molds with ribs. Includes natch/key options and automatic 3-part detection for concave feet.",
+   "relevance": "A full parameter set with ranges and defaults (plaster 30 mm, wall 0.8 mm, natch radius 6.75 mm, tolerance 0.5 mm, funnel/filler-tube geometry). Built with Claude. Implements the Digitalfire case-mold design."
+  },
+  {
+   "name": "TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "url": "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "what_it_does": "Fusion add-in (built against 2704.1.53) that makes two-part injection molds: PCA orientation, ray-cast split height, pegs, sprues, vents, M4 bolts, parting-face relief, all with mesh booleans.",
+   "relevance": "The best Fusion-specific code and architecture reference: pure-Python tested geometry core, thin Fusion adapter, documented API pitfalls, settings stored on the body, ray-cast parting selection."
+  },
+  {
+   "name": "Meshcast Plaster Mold Generator",
+   "url": "https://meshcast.app/plaster-mold",
+   "what_it_does": "Browser tool: STL → multi-part 3D-printable master shells (housings) for plaster slip-cast molds, with natches, pour funnel or open rim, overfill ridge, clamps and shrinkage.",
+   "relevance": "The most complete exposed parameter list for slip-cast housings (plaster 20 mm, shell 4 mm, natch 9 mm / 0.6 mm / 10°, seam fit 0.2 mm, clamp clearance 0.35 mm)."
+  },
+  {
+   "name": "Digitalfire 3D-printed case molds and natch system (Tony Hansen)",
+   "url": "https://digitalfire.com/picture/3728",
+   "what_it_does": "Fusion/OnShape tutorials and downloadable designs: shelled 0.8 mm PLA case molds, all-in-one flanged block molds, a natch embed/clip/spacer system for 13.5 mm holes, printed pour spouts, heat-gun removal.",
+   "relevance": "Practitioner-validated details and the inspiration for mug-generator; very close to the user's shell-outward casing method. See also https://digitalfire.com/picture/3716 and https://digitalfire.com/picture/3553"
+  },
+  {
+   "name": "MoldStudio3D ceramic slip casting mold generator",
+   "url": "https://moldstudio3d.com/ceramic-slip-casting-mold/",
+   "what_it_does": "Commercial web tool: STL/3MF → printable case molds with natches, pour spout, 2-part or multi-part splits with dividing walls, mug mode, plaster calculator (USG No. 1).",
+   "relevance": "Confirms the feature set users expect (dividing walls, mug/handle mode, plaster calculator); no parameter values published."
+  },
+  {
+   "name": "Akritio mould generator",
+   "url": "https://akritio.com/",
+   "what_it_does": "Web tool with a ceramics/slip-casting mode, 2/4/6-part rigid molds, auto parting line with manual tuning, cone keys, sprue/vents, flange keys and clamp holes.",
+   "relevance": "Another example of automatic multi-part splits with flange clamping."
+  },
+  {
+   "name": "Fusion Silhouette Split + Draft/Accessibility Analysis",
+   "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+   "what_it_does": "Native Fusion tools: split a body along its silhouette from a view direction; color faces by draft angle or by accessibility from a plane.",
+   "relevance": "Silhouette Split can be created from the API. The analyses are UI-only for creation (the API only lists existing ones), useful for showing results to a human."
+  },
+  {
+   "name": "Mold Commands V4.2E (Fusion add-in)",
+   "url": "https://marketplace.autodesk.com/apps?id=44916951188326107&appLang=en&os=Win64",
+   "what_it_does": "$10 Fusion add-in: parting surface extrusion/offset/extraction/stitch, rectangular or cylindrical nesting box, parting split.",
+   "relevance": "Shows the injection-mold approach to parting surfaces; reports failures on complex parting surfaces; not slip-cast oriented."
+  },
+  {
+   "name": "jasonwebb / jpgreth OpenSCAD two-part mold generators",
+   "url": "https://gist.github.com/jpgreth/bb5b4b86934e40e5373e5d8704b41a40",
+   "what_it_does": "OpenSCAD: box minus STL, split at a seam, sphere keys at the corners (r 4.0/4.1), tapered pour cone.",
+   "relevance": "Minimal reference for key and sprue primitives and clearance conventions."
+  },
+  {
+   "name": "Rod Laird Grasshopper master-mould generator",
+   "url": "https://www.grasshopper3d.com/forum/topics/example-master-and-standard-mould-generation",
+   "what_it_does": "Grasshopper definition that generates master or standard slip-cast moulds with wall thickness, spare, parting plane and natch placement on the most open surface.",
+   "relevance": "Early parametric slip-cast generator; notes workarounds for solid-intersection edge cases."
+  },
+  {
+   "name": "Blender: Ruakij mold generator, FormArmor Pro, whatmakeart parting-line workflow",
+   "url": "https://github.com/Ruakij/blender-mold-generator",
+   "what_it_does": "Mesh-based mold shells, split planes, keys, screw tabs, draft checks; manual Shrinkwrap parting walls plus booleans.",
+   "relevance": "Mesh workflows for comparison; mostly silicone-oriented; 3D Print Toolbox used to find undercuts."
+  },
+  {
+   "name": "printpal Mold Box Generator",
+   "url": "https://printpal.io/tools/mold-box-generator",
+   "what_it_does": "Web mold box for silicone: wall 5, clearance 1, base 4, split 50%, keys 6×4, spout 10, vent 3 mm.",
+   "relevance": "A typical default set for generic mold boxes."
+  }
+ ],
+ "techniques": [
+  {
+   "name": "Uniform plaster shell by offsetting the cavity (instead of block minus cavity)",
+   "description": "Model the plaster as an offset of the ware plus spare by plasterThickness (Shape Cast: 25 mm). Add flat seam flanges and cut with split planes. In Fusion: Shell or Offset Faces on a copy of the ware body, or thicken the offset surfaces, then Combine.",
+   "pros": "Even wall thickness (even water absorption and drying), less plaster, lighter molds.",
+   "cons": "Offsets can self-intersect or fail on tight radii; concave regions need clean-up; flanges and seams still need block geometry.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/scad/case_mould_original.scad"
+   ]
+  },
+  {
+   "name": "Casing by shelling the plaster piece outward, or by a 'bucket' with the seam plane as floor",
+   "description": "Digitalfire v3: extrude a solid block, cut the ware geometry, then shell the back side to 0.8 mm so the hollow becomes the plaster pour cavity. mug-generator: each part is a bucket whose floor is the seam plane with the ware positive protruding, open on the opposite face for pouring. The user's current method (shell each plaster piece outward 5 mm) is the same family.",
+   "pros": "Few features; casing walls follow the plaster exactly; robust in parametric CAD.",
+   "cons": "A one-piece bucket is hard to remove (needs heat gun or sacrificial walls); needs a separate split for reusable casings.",
+   "sources": [
+    "https://digitalfire.com/picture/3728",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/scad/case_mould_original.scad"
+   ]
+  },
+  {
+   "name": "Profile-driven generation for revolved forms",
+   "description": "Use a 2D profile (from a sketch or a revolve feature) to derive the ware, spare, plaster and casing by 2D offsets and revolves (Shape Cast, mug-generator).",
+   "pros": "Very robust; offsets are easy in 2D; quick to regenerate; covers mugs, cups, vases.",
+   "cons": "Only revolved forms without undercuts; handles need special handling; arbitrary B-Rep needs a different path.",
+   "sources": [
+    "https://inovo.studio/pubs/shapecast-chi24.pdf",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  },
+  {
+   "name": "Ray-cast parting-plane selection",
+   "description": "Fire a grid of rays along a candidate pull axis (Component.findBRepUsingRay in Fusion). For each candidate plane height, score how many solid spans straddle it versus sit wholly on one side (wholly-one-side spans are trapped). Choose the best plane and report the releasable percentage.",
+   "pros": "Measurable, explainable score (62% vs 93% example); works on arbitrary bodies; no paid extension.",
+   "cons": "Planar splits only; sampling resolution limits accuracy; still needs a release check afterwards.",
+   "sources": [
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+   ]
+  },
+  {
+   "name": "Visibility / normal-sign undercut test per piece",
+   "description": "For each mold piece and its pull direction d: every ware face that the piece forms must have n·d > sin(minDraft), and no ray cast from that face along d may hit the ware again. This is the same idea as Fusion's Accessibility Analysis (inaccessible regions shown red) and draft analysis (colors by angle range), computed in our own code because the API cannot create these analyses.",
+   "pros": "Directly answers 'does this piece release?'; gives per-face results for the agent to report.",
+   "cons": "Sampling-based; curved faces need several sample points; tolerance choices matter.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-INSPECT-TOOLS.htm",
+    "https://github.com/AutodeskFusion360/FusionAPIReference"
+   ]
+  },
+  {
+   "name": "Penetration test at sampled translations",
+   "description": "Move each piece along its release direction by a series of small-to-large distances and measure overlap volume or depth with the fixed body (mouldflow: 0.025 to 64 mm). In Fusion: TemporaryBRepManager copies plus a boolean intersect, then measure volume.",
+   "pros": "Catches traps that normal tests miss (interlocking features); works for piece-vs-ware and piece-vs-casing.",
+   "cons": "Booleans are slow; cannot prove no collision between samples; zero-thickness contacts give false positives unless filtered.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+   ]
+  },
+  {
+   "name": "Silhouette Split for parting-line proposals",
+   "description": "Use Features.silhouetteSplitFeatures with FacesOnly to mark the widest outline from a pull direction, then build split tools from it.",
+   "pros": "Native, parametric, fast for convex or revolved forms.",
+   "cons": "Solid split needs a planar parting line; shelled split often fails; cannot be placed by hand.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+    "https://www.techandespresso.com/blog/fusion-360-silhouette-split-tool"
+   ]
+  },
+  {
+   "name": "Flanges with tongue-and-groove plus clips for reusable casings",
+   "description": "Add outward flanges along every casing seam, with a ridge on one side and a groove on the other (clearance about 0.2–0.25 mm per side), clamped by binder or bulldog clips, printed clamps or bolts with heat-set inserts.",
+   "pros": "Seals against leaks without gaskets; reusable; quick to assemble.",
+   "cons": "Adds print volume; clearances depend on the printer and need coupon testing.",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/plaster-mold"
+   ]
+  },
+  {
+   "name": "Sacrificial thin-wall casings with heat-gun removal",
+   "description": "Print casings with 0.8 mm walls, a 0.4 mm top and 1–2 bottom layers; soften with a heat gun and peel off with pliers after the plaster sets.",
+   "pros": "Very light and fast prints (about 100 g); no draft needed on the casing; excellent plaster surface.",
+   "cons": "Single use; risk of melting embeds; labor at demold.",
+   "sources": [
+    "https://digitalfire.com/picture/3728",
+    "https://github.com/pdaoust/mug-generator"
+   ]
+  },
+  {
+   "name": "Natch embed system (Digitalfire)",
+   "description": "Casings get 13.5 mm holes. Printed embeds are clipped in from outside and cast into the plaster; printed natches or spacers are glued or friction-fitted into the embeds afterwards. Tune with a 'slack' parameter (start at 0.1 mm).",
+   "pros": "Replaceable natches; flat, sandable seam faces; the casing only needs simple holes.",
+   "cons": "Extra printed parts and assembly; the user must print and tune them.",
+   "sources": [
+    "https://digitalfire.com/picture/3716",
+    "https://digitalfire.com/project/63"
+   ]
+  },
+  {
+   "name": "Human review gates and structured results for agent workflows",
+   "description": "Split the pipeline into stages (input, plaster, casings, export). After each stage, write a JSON result (status, metrics with units, limitations, next_action, screenshots) and require explicit human approval before continuing. Invalidate approvals when upstream inputs change.",
+   "pros": "Keeps agents honest; resumable; lets an expert check geometry visually before printing.",
+   "cons": "Slower; needs state tracking (hashes, or Fusion attributes and parameter snapshots).",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+   ]
+  },
+  {
+   "name": "Pure-Python geometry core plus thin Fusion adapter",
+   "description": "Keep planning math (layout, natch placement, parting scoring, clearances) in modules with no adsk import, unit-tested outside Fusion. Fusion-side modules only build features. Add a contract test that reads the adapter source and checks attribute names.",
+   "pros": "Fast tests without CAD; agents can verify logic before touching Fusion; catches renames.",
+   "cons": "Requires care to keep data structures in sync.",
+   "sources": [
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+   ]
+  },
+  {
+   "name": "Printed calibration coupons",
+   "description": "Generate small test prints for tongue/groove, natch and clamp fits at several clearances (mouldflow: 5 clearances) and record the winning value as a parameter.",
+   "pros": "Adapts to each printer; cheap.",
+   "cons": "An extra step before the first mold.",
+   "sources": [
+    "https://github.com/lisawong/plaster_mould_maker",
+    "https://digitalfire.com/picture/3716"
+   ]
+  }
+ ],
+ "open_questions_for_user": [
+  "Casing strategy: reusable rigid casings (about 2.4–5 mm walls, flanges, tongue/groove, clamps), sacrificial thin casings (0.8 mm, heat-gun peel, Digitalfire style), or both as an option? Your current 5 mm shell suggests reusable.",
+  "Printer and material: bed size (for example 250×210×210), nozzle size, and PLA or PETG? PLA softens around 60 °C, which matters for large plaster pours.",
+  "Natch preference: cast-in spherical natches (your current approach), the Digitalfire embed system with 13.5 mm holes and printed natches, or commercial 3/8 in plastic natches?",
+  "Clamp preference: printed C-clamps or clips designed by the toolkit, binder/bulldog clips (flange sized to fit), M3/M4 bolts with heat-set inserts, or rubber bands/straps?",
+  "Sealing: tongue-and-groove only, or also a gasket gap for foam tape, or clay/plasticine by hand?",
+  "Spare: integrated plaster spare (with knife-edge trim shelf?) or a separate printed pouring spout/funnel (Digitalfire style, non-absorbent)? What default spare height do you want?",
+  "Clay shrinkage of your casting slip (%), and should the toolkit apply it, or will you model at greenware size? Which convention: scale = 1+s or 1/(1−s)?",
+  "Scope for v1: only revolved forms (mugs, cups, vases, profile-driven like Shape Cast or mug-generator) first, or arbitrary B-Rep solids from day one? Handles: separate handle molds or in-mold?",
+  "Splits: planar parting planes only (your current 3-piece: bottom + 2 sides), or also stepped/non-planar parting lines? Maximum piece count?",
+  "Do you have a Fusion Product Design/Design Extension license? Some mesh and plastic features depend on it.",
+  "Which steps should stop for your visual approval (for example after the parting proposal, after the plaster pieces, before exporting casings)? Do you want a JSON or markdown report of checks for each run?",
+  "Target plaster thickness: 25 mm default, or something else based on your plaster brand and mold size? Plaster brand, so the toolkit can compute water/plaster weights?",
+  "Natch count and placement preference: 2 per seam, or 3 for asymmetric seams?",
+  "Output: STL or 3MF per casing part, pre-oriented for printing, plus an assembly/BOM sheet (clips, embeds, plaster volume)?"
+ ]
+}

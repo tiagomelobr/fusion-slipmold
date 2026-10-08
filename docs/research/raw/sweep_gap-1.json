@@ -1,0 +1,525 @@
+{
+ "topic": "gap-1",
+ "summary": "No source gives a complete recipe for splitting a per-piece casing, but the prior art agrees on one structure. Each plaster piece is poured into a container made of two kinds of parts. (1) One \"pattern\" or base-plate part carries the working face (a positive of the ware plus the spare) and the parting face. It is printed at fine resolution and the plaster lifts straight off it. (2) Several removable wall or shell parts form the back. Examples: mouldflow uses a positive pattern on a 4 mm base plus four butt-jointed 3 mm wall panels. hollow-idol uses a sliding bottom panel that carries the keys, plus two mirrored C-frame walls. Shape Cast uses a hi-res inner mold, an outer mold split into 2 or 4 sectors (180° or 90°) and a bottom ring. Old Forge uses a printed base plate that forms the detail surface, plus walls. Alderighi et al. (composite molds) build each container from a metamold carrying the parting surfaces plus a hard-shell prism aligned with the pour direction, and split the boundary by growing regions on normal alignment. The negative evidence is just as consistent. Shape Cast's one-piece outer mold was \"extremely difficult\" to get off set plaster. mug-generator's drafted one-piece forms still need their corners cut. USG No. 1 Pottery Plaster expands up to 0.21% on setting, which is about 0.3 mm over 150 mm, so any rigid part that wraps around the plaster, or has two walls facing each other across it, gets gripped. Draft alone does not free it. The user's current approach (each plaster piece shelled outward by 5 mm, one-piece) is the worst combination: too thick to peel off with a heat gun the way Digitalfire and mug-generator remove their 0.8 mm PLA, and a single closed part so it cannot be pulled off.\n\nProposed algorithm (my synthesis of the above). Pour every plaster piece with its release direction d_i pointing up. The working face then sits at the bottom of the pour, so bubbles rise away from it, and a working face that is undercut-free with respect to d_i has no downward-facing pattern surface that could trap air. Part 0, the base pattern plate, carries the working face plus every parting face whose plaster normal points down. It must release exactly along -d_i, so a seam face perpendicular to it can never be merged into it. Each perpendicular seam face becomes a separate flat end wall, pulled off along its own normal; it carries that seam's natches with their axes along the normal. The remaining back faces are clustered by normal. A face joins a part only if its normal lies within 90° minus θc of that part's pull direction (θc of at least 3°, ideally sectors of 120° or less). In practice that means at least 2 L-frames for a rectangle and 3 to 4 sectors for a full revolve; 2 halves work only by flexing. The top region, with normals within about 30° of up, stays open as the flat pour face. Each part gets a gate in Fusion: compute its minimum draft, then translate a copy of it 0.5, 2 and 10 mm along its pull direction and intersect it with the plaster piece; the intersection volume must be zero.\n\nJoints and clamps. The only measured joint geometry in the prior art is mouldflow's coupon (3 mm tongue in a slot between 2 mm rails, 5 mm deep, clearance 0.15–0.35 mm per side, default 0.25) and hollow-idol's (2×8 mm ledge, 4 mm wedge rail, 5 mm panel, 2 mm chamfer, 0.25 mm clearance). Meshcast gives 0.2 mm per side for a sliding fit, 0.3 mm on stepped walls and 0.1 mm on a tuned printer. Lure gives 0.1 mm per side with a 0.6 mm lead-in. My recommended flange defaults are therefore: flanges 3 mm thick and about 12 mm wide; a 2.0×2.0 mm ridge set 1.5 mm from the plaster face; a groove 2.5 mm wide and 2.4 mm deep, so the flange faces bear rather than the ridge bottoming out; 0.5 mm × 45° lead-ins. Calibrate with a clearance coupon. Practitioners clamp with commercial binder or bulldog clips (mouldflow, Shape Cast's current site, hollow-idol with 10×3 mm flanges, Digitalfire), M3 bolts with heat-set inserts (Shape Cast paper) or M4 bolts (Lure). Space clips at 50 mm or less, put them near seam ends and in the middle of long seams, and back them with tape or a band, because bands alone creep open 0.1–0.3 mm. Loads are small: the hydrostatic slurry pressure is about 1.7 kPa per 100 mm of depth, which works out to roughly 9 N per clip. Clamps therefore exist for sealing and stiffness, not strength. A printed alternative to binder clips is a PETG C-channel wedge clip with a 1:20 self-locking taper and 0.1–0.2 mm interference. For seals, use soft clay coils or tape outside all seams and around the base (CAN, Meshcast), or neoprene foam weatherstrip in a channel with hard stops (Shape Cast), and a base flange that runs under the walls to block leaks and stop the walls floating up (Digitalfire). Never put sealant or oil on surfaces that form the working face.",
+ "findings": [
+  {
+   "claim": "A rigid one-piece casing that wraps a closed contour of the plaster cannot practically be removed. Casings must be split into parts with flanges, or be thin enough to peel off.",
+   "details": "Shape Cast (CHI EA 2024): 'In early testing, we tried a one piece outer mold and removing the fully set plaster was extremely difficult.' The outer mold is split into 2 or 4 parts (revolved 180° or 90°) with flanges and M3 bolts in heat-set inserts. The current website uses binder clips with 'flange ridges'. Digitalfire: 'The vertical split enables opening the shell a little after the plaster has set, quickly releasing it.' In mug-generator's drafted 'efficient' forms, you must still 'cut the corners with a rotary tool' before they release. Its forms are 0.8 mm sacrificial shells removed with a heat gun. Mechanism: USG No. 1 Pottery Plaster has a maximum setting expansion of 0.21%. Over 150 mm that is about 0.32 mm of interference against any rigid part that encloses the plaster or has walls facing each other across it (derived). The user's current one-piece shell offset 5 mm outward falls into this failure mode, and 5 mm is far too thick for heat-gun peeling.",
+   "confidence": "high",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://shapecastmolds.com/",
+    "https://digitalfire.com/glossary/mold+shell+flange",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "claim": "All of the prior art splits each casing into one pattern/base part, which forms the working face and parting face, plus removable walls or shell parts that form the back.",
+   "details": "mouldflow PRD R6.1: 'Per plaster half: a positive pattern plus removable walls'. Patterns are complementary solids with extended 4 mm bases. Walls are separate 3 mm panels: 2 long (110.5×37×3 mm) and 2 short (61.6×37×3 mm), butt-jointed, extending 30 mm above the plaster, with 20 mm outward lips, tongue-and-groove seams and external bulldog clips. The walls are shared between masters. hollow-idol: each half has 3 PETG pieces, namely two mirrored C-frame walls plus a sliding bottom panel that carries the registration keys and forms the parting face. Shape Cast: the inner mold (working face, printed at high resolution and optionally primed and sanded), outer mold sectors (printed at draft quality, offset about 25 mm) and a bottom ring. Old Forge: a printed base plate that forms the detail surface (release agent applied to it) plus surrounding parts; it demolds by wiggling from the bottom corners toward the spout end, optionally helped by compressed air. Alderighi et al. 2019: each casting container = one metamold carrying the parting surfaces + one hard-shell piece, which is 'a prism aligned with the resin pouring direction'. The boundary is partitioned by greedy region growing on normal alignment with the parting directions.",
+   "confidence": "high",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/SCRATCHPAD.md",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf"
+   ]
+  },
+  {
+   "claim": "Proposed split rule for the step-6 script: base pattern plate, then perpendicular seam end walls, then back sectors clustered by normal, with the top left open as the pour face.",
+   "details": "Synthesis, not copied from any single source. (1) Rotate the piece so that its release direction d_i points +Z, which is the pour orientation. (2) Part 0, the base pattern plate, is built from the working faces plus every parting face whose outward plaster normal n satisfies n·(-Z) ≥ sin θc. It always pulls exactly along -Z. The step-4 undercut test already guarantees that the working face releases from it. (3) A planar seam face with n·Z ≈ 0 becomes its own flat end wall, pulled along n and carrying that seam's natches. Merging it into Part 0 would tilt the pull direction and make the pattern an undercut. (4) The remaining back faces are clustered by region growing on face adjacency. A face joins cluster k only if the angle between n and r_k is at most 90° − θc, where r_k is the cluster's mean normal. The minimum result is 2 L-frames for a rectangular block back and 3–4 sectors for a full revolve (Shape Cast offers 2 or 4; 2 halves have 0° draft at the seams and release only by flexing). Split boundaries are snapped to planes so that the flanges come out planar. (5) Back faces whose normals lie within about 30° of +Z are cut by a horizontal plane to form the open pour face, as in Shape Cast's auto-generated pour opening. (6) Gate each part: minimum draft against r_k must be ≥ θc. Move a copy 0.5, 2 and 10 mm along r_k and intersect it with the plaster body and the parts not yet removed; the volume must be 0. Worked example, the user's 3-piece mug. Side piece: base plate (x=0 seam plane + half-mug + spare positive + 3 natches), end wall at the foot seam (natches for the A–C seam), end wall at the mold top, and 2 back sectors of 60–90° each, or a block back with 4 flat walls; 5 parts either way. Bottom piece: base plate (foot pattern + z_foot seam plane + natches) plus 2 or 4 ring or wall parts. Its open top becomes the mold's standing face, screeded flat.",
+   "confidence": "medium",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "claim": "Pour each plaster piece with its working face at the bottom, facing up into the slurry, so that bubbles rise away from the working face.",
+   "details": "Old Forge: brushing all of the details on the base plate surface dislodges air bubbles, which float upward. mouldflow pours plaster 'into the cavity atop the pattern'. Meshcast's print guidance puts the cavity facing upward and the sealing face flat on the plate. Corollary (derived): with d_i pointing up, a working face that is undercut-free with respect to d_i has no downward-facing pattern surfaces, so it cannot trap air. The step-4 undercut test therefore doubles as the bubble test. The flat free surface collects bleed water and becomes the back of the piece, never a working face.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/guides/best-print-settings-for-molds"
+   ]
+  },
+  {
+   "claim": "Only two open projects publish measured tongue-and-groove geometry for plaster casings, and both point to a clearance of about 0.25 mm per side. FDM fit guidance spans 0.1 to 0.5 mm.",
+   "details": "mouldflow groove coupon: wall/tongue 3.0 mm; rails 2.0 mm thick and 5.0 mm high (groove depth 5 mm); slot width = 3 mm + 2c with c = 0.15/0.20/0.25/0.30/0.35 mm per side; tongue 30×20 mm; plus a 0.6 mm deep × 1.0 mm wide debossed fill line. Default c = 0.25 mm, 'to be confirmed with a physical test print'; the coupon result was still pending. hollow-idol: ledge 2.0 mm thick × 8.0 mm deep; top rail 4.0 mm high with 2.0 mm reach (a wedge capture); panel 5.0 mm with a 2.0 mm top chamfer; tongue_clearance 0.25 mm. Meshcast inlays: 0.2 mm per side for a sliding fit, 0.3 mm on stepped walls, 0.1 mm only on a tuned printer, 0.05 mm floor gap. Meshcast Fusion guide: pin offset 0.2–0.3 mm. Lure Mold Generator: pegs 0.1 mm per side with a 0.6 mm lead-in chamfer, '0.3–0.4 mm [on diameter] is more forgiving once you have test-printed', and a 4 mm flat sealing land around features. Hubs: 0.5 mm clearance for FDM snap-fits. Shape Cast's 'flange ridges' mesh but have no published dimensions.",
+   "confidence": "medium",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://meshcast.app/guides/3d-printed-inlays",
+    "https://meshcast.app/guides/fusion-360-mold",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/",
+    "https://shapecastmolds.com/"
+   ]
+  },
+  {
+   "claim": "Practitioners hold casings together with commercial binder, bulldog or paper clips, or with bolts. Clips should be no more than 50 mm apart and backed up, because bands creep.",
+   "details": "Binder/bulldog clips: mouldflow (20 mm lips), Shape Cast website ('Use binder clips to assemble the 3D printed mold'), hollow-idol (flanges 10 mm wide × 3 mm thick), Digitalfire (paper clamps and rubber bands). Bolts: Shape Cast paper (M3 with heat-set inserts); Lure (4 × M4 placed 'down the two long edges rather than at the corners' because 'a long mold bows open in the middle'). Meshcast: 'One printed clamp per 50 mm of seam, plus a band as backup'. Bands alone creep over 1–2 h and open seams by about 0.1–0.3 mm, and 'A strip of tape round the seam before clamping seals the last fraction of a millimetre'. Binder clip capacities (width → capacity): 13→4, 15→5, 19→7, 25→9, 32→13, 40→16, 50→20 mm. Two 3 mm flanges (6 mm) therefore fit a 19 mm clip tightly and a 25 mm clip comfortably.",
+   "confidence": "high",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://shapecastmolds.com/",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://digitalfire.com/glossary/mold+shell+flange",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://meshcast.app/guides/plaster",
+    "https://de.wikipedia.org/wiki/Foldback-Klammer"
+   ]
+  },
+  {
+   "claim": "Structural loads on a plaster casing are small. Clamps exist to keep seams closed (sealing, creep, stiffness), not for strength. Thin flat panels do bulge, though.",
+   "details": "Derived calculation, using a conservative slurry density of 1.7 g/cm³ (70-consistency slurry is about 1.6). Pressure p = ρgh ≈ 1.7 kPa per 100 mm of depth. Total force on a 150×150 mm wall = ρgWH²/2 ≈ 28 N. Hoop load on a 70 mm radius shell at 150 mm depth ≈ 0.18 N/mm, about 9 N per clip at 50 mm spacing. Deflection of a simply supported 100×100 mm flat PLA panel (E ≈ 3.5 GPa, q = 1.7 kPa): 0.8 mm thick ≈ 4 mm (outside linear theory, but clearly bulging), 1.2 mm ≈ 1.2 mm, 2.4 mm ≈ 0.16 mm, 3.0 mm ≈ 0.08 mm. Curved shells are far stiffer. This matches Digitalfire adding ribs or rails, or going to 1.2 mm 'where extra strength is needed', Shape Cast picking 2.4 mm as 'thick enough to be rigid and not let plaster leak', and Meshcast's '2 to 3 mm with 3 perimeters holds several kilos'. A domed back shell is also pushed upward by the slurry (a few N for a mug piece, derived), and Digitalfire's under-flange exists to stop plaster that would 'leak under and displace it upward'.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://digitalfire.com/glossary/0.8mm+thickness",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://meshcast.app/guides/mold-box-generator"
+   ]
+  },
+  {
+   "claim": "Sealing practice: put a clay coil or tape on the outside of every seam, a flange under or around the base, or a compressed foam gasket for reusable casings. Never put sealant on surfaces that form the working face.",
+   "details": "Ceramics Monthly 'Mold Making 101': 'Seal any seams between the boards with clay coils to prevent plaster leaks', soap the seals and the base, and remove the boards once the plaster has heated and cooled (a few hours). Meshcast: tape round the seam; hot glue along inside corners or tape outside (mold-box context); a smear of petroleum jelly or a wrap of tape (vase housing). Shape Cast paper: neoprene foam weatherstrip tape as a gasket, and 'the models have provisions for this (so it can be compressed and not deform the model)', i.e. hard stops. Digitalfire: side-rail flange 'fits under the mold' so that no plaster leaks under and displaces it upward; the v1 mug rails have a flange under the edge all the way around; the nursery-pot shell is stuck to the table with sticky slip. Meshcast vase housings: the housing feet have an internal groove that seats on a ridge running round the base plate. That is the same ridge-and-groove base seal recommended here between the shell foot and the pattern plate.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://meshcast.app/guides/plaster",
+    "https://meshcast.app/guides/mold-box-generator",
+    "https://meshcast.app/guides/vase-mold",
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/coffee+mug+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/project/nursery+plant+pot+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "Design basis for a printed clip: a C-channel wedge clip with a self-locking taper, dimensioned by snap-fit strain, printed flat in PETG.",
+   "details": "Bayer snap-fit guide. Rectangular cantilever: permissible deflection y = 0.67·ε·l²/h (Table 1, design 1). Permissible short-term strain is 2.5–4% for PC-type plastics; for frequent separation and rejoining use about 60% of that. Plastic-on-steel friction coefficients are 0.45–0.65 for PC/ABS, and higher (×1.2 and up) when the same plastic rubs on itself. Hubs: PLA is relatively brittle and less suitable than PETG or nylon for snap-fits; avoid cantilevers built in Z; clip width at least 5 mm; root fillet at least 0.5× base thickness; 0.5 mm FDM clearance. Derived: a taper of 1:20 (2.9°) or 1:10 (5.7°) is well below arctan(0.3) ≈ 17°, so a sliding wedge clip self-locks. Checking 0.2 mm interference per arm, 3 mm arm and 12 mm jaw depth gives ε ≈ 0.6%, safe for PETG on repeated use. No ceramic source publishes a printed clamp geometry. Meshcast mentions 'wing clamps' that 'slide down the ribs' but gives no dimensions. A cam clamp adds complexity with no evidence of benefit.",
+   "confidence": "low",
+   "sources": [
+    "https://fab.cba.mit.edu/classes/S62.12/people/vernelle.noel/Plastic_Snap_fit_design.pdf",
+    "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/",
+    "https://meshcast.app/guides/vase-mold"
+   ]
+  },
+  {
+   "claim": "There are two viable casing strategies, and the user's current 5 mm outward shell fits neither.",
+   "details": "Sacrificial: 0.8 mm PLA (1.2 mm where rigidity is needed; Digitalfire avoids 1.6 mm because of zig-zag infill). It may be one piece, including the pattern and seam wall in a single 'cup' (mug-generator's 'half-donut cup: its own floor ... its own seam wall ... its own half-shell skin'), and is removed with a heat gun and pliers. mug-generator prints the top at 0.4 mm and the bottom at 1–2 layers, and punches the bottom so heat can reach the plaster. Reusable: split and clamped, 2.4 mm (Shape Cast), 3 mm (mouldflow) or 2–3 mm with 3 perimeters (Meshcast). Meshcast recommends PETG for reuse because PLA softens around 55 °C and thick pours approach that. Shape Cast prints only the working-face part at high resolution; the outer mold 'can be printed on draft settings with no functional impact'. A 5 mm one-piece shell is too thick to heat-peel and too rigid and closed to pull off.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/0.8mm+thickness",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/main/inkscape-extension/scad/case_mould_efficient.scad",
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/guides/plaster",
+    "https://meshcast.app/guides/mold-box-generator"
+   ]
+  },
+  {
+   "claim": "Parting-face plates and natches: when pieces are poured independently, every seam face must come from a printed plate, and its natches must point along that plate's pull direction.",
+   "details": "Digitalfire seams are a '0.4mm membrane' integral with the model, with 9.4 mm holes for standard natch pairs. hollow-idol puts hemisphere keys (r 6 mm, h 3 mm, 4 keys, 15 mm from edges) on the bottom panel that forms the parting face. mug-generator keys are hemisphere bump/socket pairs sized natch_radius ∓ key_tolerance/2. Derived: a hemispherical natch releases only along its own axis, so its axis must be parallel to the pull direction of the casing part that forms it. That is -d_i for natches on the base plate and the wall normal for natches on end walls. Use the plaster-to-plaster clearance already reconciled (0.3–0.5 mm) because the two halves come from independent prints.",
+   "confidence": "medium",
+   "sources": [
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/main/inkscape-extension/scad/case_mould_efficient.scad",
+    "https://digitalfire.com/glossary/all-in-one+case+mold"
+   ]
+  },
+  {
+   "claim": "Demold order and timing for the casing: clips first, then walls and back sectors along their pull directions, then lift the plaster piece off the base plate. Do this only after the plaster has passed its heat peak and is cooling.",
+   "details": "USG No. 1 Pottery Plaster: Vicat set 14–24 min, 1-hour compressive strength 6.9 MPa. Ceramics Monthly: wait 'until the plaster has heated then cooled before removing the boards'. Meshcast: plaster can be opened at 30–60 min and should be handled carefully for 24 h. Old Forge: wiggle the plaster off the base plate starting at the bottom corners, optionally with compressed air, and use a release agent on the base plate. This supports the already-reconciled rule of at least 60 minutes and only once the block is cooling.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://meshcast.app/guides/plaster",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "casingStrategy",
+   "recommended_value": "reusable (split + clamped)",
+   "range": "reusable | sacrificial",
+   "rationale": "A rigid closed shell does not release (Shape Cast). Sacrificial shells must be 0.8–1.2 mm so a heat gun can peel them. Ask the user which strategy they want.",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://digitalfire.com/glossary/0.8mm+thickness"
+   ]
+  },
+  {
+   "parameter": "casingWall (reusable / sacrificial)",
+   "recommended_value": "2.4 mm / 0.8 mm",
+   "range": "2.0–3.0 mm / 0.8–1.2 mm",
+   "rationale": "Shape Cast 2.4, mouldflow 3, Meshcast 2–3 mm with 3 perimeters. A flat 100 mm panel deflects about 0.16 mm at 2.4 mm thickness but about 4 mm at 0.8 mm (derived), so a 0.8 mm wall needs ribs or rails.",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://meshcast.app/guides/mold-box-generator"
+   ]
+  },
+  {
+   "parameter": "casingPartsPerPiece / split rule",
+   "recommended_value": "1 base pattern plate (pulls along -d_i) + 1 flat end wall per seam face perpendicular to the plate + back sectors with every contact normal within 90° − θc of the sector's pull direction; top left open",
+   "range": "block back: plate + 4 walls (or 2 L-frames); contoured back: plate + 2–4 sectors + end walls",
+   "rationale": "Prevents expansion lock (0.21%) and pull-direction conflicts. This matches the pattern-plus-walls structure used by mouldflow, hollow-idol, Shape Cast and Alderighi et al. The rule itself is a synthesis.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "parameter": "casingReleaseDraft θc (casing part vs plaster)",
+   "recommended_value": "warn < 3°, fail < 0.5°; sector span ≤ 120° (min draft ≥ 30°) preferred; full revolve → 4 sectors default",
+   "range": "1–5° for flat walls; 2-sector halves allowed with a warning (zero draft at the seams, release depends on the casing flexing)",
+   "rationale": "Meshcast: 1–2° for smooth rigid molds, 3–5° when textured or deep (FDM layer lines grip). Shape Cast offers 2 or 4 sectors.",
+   "sources": [
+    "https://meshcast.app/guides/draft-angles-and-undercuts",
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "parameter": "pourFaceOpenCone",
+   "recommended_value": "30° (back faces with normals within 30° of up are replaced by a flat open pour face)",
+   "range": "20–45°",
+   "rationale": "Gives a flat screeded back and pour opening (Shape Cast auto-generates one). Every enclosed ceiling then slopes at least 30°, so air can escape (derived).",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "parameter": "basePlateThickness (under the pattern)",
+   "recommended_value": "4 mm",
+   "range": "3–5 mm",
+   "rationale": "mouldflow uses patterns with extended 4 mm bases. Print the working face up at 0.12–0.16 mm layers; other parts can be printed at draft quality.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md",
+    "https://meshcast.app/guides/best-print-settings-for-molds",
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "parameter": "flangeThickness",
+   "recommended_value": "3.0 mm",
+   "range": "2.4–4.0 mm",
+   "rationale": "hollow-idol uses 3 mm and mouldflow sets lip thickness equal to wall thickness (3 mm). Two flanges total 6 mm, which a 25 mm binder clip (9 mm capacity) holds comfortably and a 19 mm clip (7 mm) holds tightly.",
+   "sources": [
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/SCRATCHPAD.md",
+    "https://de.wikipedia.org/wiki/Foldback-Klammer"
+   ]
+  },
+  {
+   "parameter": "flangeWidth",
+   "recommended_value": "12 mm",
+   "range": "10–20 mm",
+   "rationale": "About 5 mm for the ridge zone plus the clip's jaw depth (measure the clips; 7–10 mm is assumed for 19–25 mm clips). hollow-idol uses 10 mm and mouldflow 20 mm. Digitalfire's 5 mm is for sacrificial shells.",
+   "sources": [
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://digitalfire.com/glossary/mold+shell+flange"
+   ]
+  },
+  {
+   "parameter": "flange ridge (tongue) profile",
+   "recommended_value": "width 2.0 mm, height 2.0 mm, inset 1.5 mm from the casing's plaster face",
+   "range": "width 1.6–2.4, height 1.5–3.0, inset 1.2–2.0 mm",
+   "rationale": "About 5 perimeters at 0.4 mm. mouldflow rails are 2 mm thick, and an inner land close to the cavity stops plaster early (Lure keeps a 4 mm sealing land). The profile is a synthesis; calibrate it with a coupon.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  },
+  {
+   "parameter": "groove profile",
+   "recommended_value": "width = ridge + 2×0.25 mm (2.5 mm); depth = ridge height + 0.4 mm (2.4 mm); walls ≥ 1.2 mm each side",
+   "range": "clearance 0.15–0.35 mm per side; bottom gap 0.3–0.5 mm",
+   "rationale": "The groove must be deeper than the ridge so the flange faces bear on each other; if the ridge bottoms out it holds the faces apart and opens a leak. Clearance defaults come from mouldflow and hollow-idol (0.25) and Meshcast (0.2 sliding, 0.3 stepped). Walls follow the 1.2 mm minimum solid perimeter.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://meshcast.app/guides/3d-printed-inlays",
+    "https://meshcast.app/guides/best-print-settings-for-molds"
+   ]
+  },
+  {
+   "parameter": "leadInChamfer",
+   "recommended_value": "0.5 mm × 45° on ridge tips and groove mouths; 45° chamfer on bed-side edges",
+   "range": "0.4–0.6 mm",
+   "rationale": "Lure pegs use a 0.6 mm lead-in. Hubs recommends a 45° chamfer at bed edges against elephant's foot.",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/"
+   ]
+  },
+  {
+   "parameter": "flat-wall slot joint (alternative to flange ridge for cottle-style walls)",
+   "recommended_value": "3 mm panel edge in a slot between 2 mm rails, 5 mm deep, 0.25 mm per side",
+   "range": "0.15–0.35 mm per side",
+   "rationale": "mouldflow groove coupon geometry.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py"
+   ]
+  },
+  {
+   "parameter": "clipSpacing",
+   "recommended_value": "≤ 50 mm, first clip ≤ 15 mm from each seam end, ≥ 2 per flange, always one at mid-span; n = ceil(L/50) + 1",
+   "range": "40–60 mm",
+   "rationale": "Meshcast: 1 clamp per 50 mm plus a backup band. Lure: seams bow open in the middle. Loads per clip are only about 9 N (derived), so spacing is driven by keeping the seam closed. The 15 mm end offset is an unsourced engineering default.",
+   "sources": [
+    "https://meshcast.app/guides/plaster",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  },
+  {
+   "parameter": "clipType",
+   "recommended_value": "commercial 25 mm binder clip (9 mm capacity); options: 19 mm clip, M3 bolt + heat-set insert, printed wedge clip",
+   "range": "binder 19–32 mm; M3–M4 bolts",
+   "rationale": "Commercial clips are what practitioners use (mouldflow, Shape Cast, hollow-idol, Digitalfire), and the capacities are standard.",
+   "sources": [
+    "https://shapecastmolds.com/",
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://de.wikipedia.org/wiki/Foldback-Klammer",
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "parameter": "printed wedge clip (optional)",
+   "recommended_value": "PETG C-channel; inner gap tapering 1:20 from 2·t_f + 0.4 mm at the mouth to 2·t_f − 0.2 mm when seated; arms 3–4 mm thick; jaw depth = flange bite (≈8–10 mm); width 15–20 mm; root fillet ≥ 0.5 × arm thickness; printed flat",
+   "range": "taper 1:10–1:30; interference 0.1–0.2 mm per arm",
+   "rationale": "Self-locking because the taper is far below arctan(μ ≈ 0.3) ≈ 17°. Strain is about 0.6% by y = 0.67εl²/h. PETG because PLA is brittle (Hubs). Use the 60% strain derating for repeated use (Bayer). Validate with a test print.",
+   "sources": [
+    "https://fab.cba.mit.edu/classes/S62.12/people/vernelle.noel/Plastic_Snap_fit_design.pdf",
+    "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/"
+   ]
+  },
+  {
+   "parameter": "sealMethod",
+   "recommended_value": "clay coil (or tape) outside every seam and around the base, plus the ridge/groove; option: closed-cell foam weatherstrip in a channel with hard stops",
+   "range": "clay | tape | foam gasket",
+   "rationale": "CAN uses clay coils, Meshcast tape, Shape Cast a neoprene foam gasket with compression provisions. Never put sealant, oil or hot glue on surfaces that form the working face. Channel depth for the gasket is unsourced and needs testing.",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://meshcast.app/guides/plaster",
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "parameter": "baseSeam",
+   "recommended_value": "a ridge round the base plate engaging a groove in the foot of each wall or sector, with foot flanges clipped to the plate flange",
+   "range": "—",
+   "rationale": "Meshcast seats housing feet on a ridge round the base plate. Digitalfire uses an under-flange to prevent leaks and to stop the walls being displaced upward (a domed shell is pushed up by the slurry).",
+   "sources": [
+    "https://meshcast.app/guides/vase-mold",
+    "https://digitalfire.com/glossary/side+rails"
+   ]
+  },
+  {
+   "parameter": "printOrientation",
+   "recommended_value": "base plate working face up; flange mating faces on the bed where possible; grooves (≤ 5 mm wide) on bed faces and ridges on top faces",
+   "range": "—",
+   "rationale": "Meshcast: sealing face flat on the plate, cavity up. Hubs: bridging up to 5 mm, and a 45° chamfer at the bed.",
+   "sources": [
+    "https://meshcast.app/guides/best-print-settings-for-molds",
+    "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/"
+   ]
+  },
+  {
+   "parameter": "casingMaterial",
+   "recommended_value": "PETG for reusable clamped casings and printed clips; PLA for sacrificial heat-peel shells",
+   "range": "—",
+   "rationale": "PLA softens around 55 °C, which thick pours approach (Meshcast), and PLA is brittle for clips. PLA peels cleanly with a heat gun (Digitalfire).",
+   "sources": [
+    "https://meshcast.app/guides/plaster",
+    "https://digitalfire.com/glossary/0.8mm+thickness",
+    "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/"
+   ]
+  },
+  {
+   "parameter": "releaseGate (per casing part)",
+   "recommended_value": "translate a copy 0.5/2/10 mm along the pull direction and intersect it with the plaster piece and the parts not yet removed → volume 0; plus min draft ≥ θc",
+   "range": "—",
+   "rationale": "A computable check in Fusion that the casing parts come off the plaster, separate from the cast-release check. It is a synthesis.",
+   "sources": [
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "A one-piece outward shell (the user's current 5 mm offset) cannot be pulled off set plaster (Shape Cast: 'extremely difficult'), and 5 mm is too thick to peel off with a heat gun.",
+  "Opposing walls in the same rigid part lock onto the plaster because of setting expansion (0.21%, about 0.3 mm over 150 mm). Draft does not fix this: mug-generator's drafted forms still need their corners cut. Examples are C-frames, trays and full rings.",
+  "Merging the base pattern plate with a perpendicular seam wall tilts its pull direction, which turns the working-face pattern into an undercut. The base plate must always pull exactly along -d_i.",
+  "Natches have to point along the pull direction of the casing part that forms them. A hemispherical natch releases only along its axis.",
+  "If the groove is not deeper than the ridge, the ridge bottoms out, holds the flange faces apart and opens a leak gap. Make the groove 0.3–0.5 mm deeper.",
+  "Gaps of 0.1–0.3 mm leak plaster. Rubber bands creep open by that much in 1–2 h (Meshcast). Clip at 50 mm or less and seal outside with clay or tape.",
+  "A domed back shell is pushed upward by the slurry and can leak under its foot. Clip the feet to the base-plate flange, or use an under-flange as Digitalfire does.",
+  "Air gets trapped under enclosed ceilings of a back shell. Leave the top open and keep ceilings sloped at least about 30°.",
+  "A ridge cannot be printed on a face that sits on the bed. Put grooves on bed faces (5 mm wide or less, so they can bridge) and ridges on top faces, and chamfer bed edges against elephant's foot.",
+  "Thin flat panels (0.8–1.2 mm) bulge under plaster pressure, by about 1–4 mm over a 100 mm span (derived). The result is wavy backs and seams that open between clips.",
+  "Clamp preload on PLA near the exotherm (about 55 °C in thick pours) can creep. Use PETG for clips and reusable casings.",
+  "Never put sealant, hot glue or oil on casing surfaces that form the plaster's working face, because it degrades absorbency and surface detail.",
+  "No source publishes validated ridge/groove or printed-clip dimensions for plaster casings. The mouldflow coupon result is still pending. Treat every joint number as a default to calibrate with a printed coupon.",
+  "Earlier research cited Shape Cast's flanges, but their joint changed over time. The CHI paper used M3 bolts, heat-set inserts and a foam gasket; the current website uses binder clips with 'flange ridges'. The ridge dimensions are unpublished.",
+  "Splits must be snapped to planes. Flanges, ridges and clip placement in Fusion need planar split faces, and free-form splits make flanges impossible."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast (Kent Lyons, CHI EA 2024)",
+   "url": "https://doi.org/10.1145/3613905.3651020",
+   "what_it_does": "Turns a 2D profile into printed parts for pouring a one-piece plaster mold: an inner mold (working face, inset 1.2 mm, 2.4 mm walls), an outer mold split into 2 or 4 revolved sectors about 25 mm out, and a bottom ring. The paper version used flanges with M3 bolts in heat-set inserts and a neoprene foam gasket.",
+   "relevance": "The most direct evidence on splitting the casing. A one-piece outer mold failed, and only the working-face part needs a fine print."
+  },
+  {
+   "name": "Shape Cast website",
+   "url": "https://shapecastmolds.com/",
+   "what_it_does": "Current product. Parts are held with binder clips, and 'flange ridges' (on by default) mesh to prevent leaks.",
+   "relevance": "Shows the move from bolts to binder clips plus ridge/groove flanges."
+  },
+  {
+   "name": "mouldflow (lisawong/plaster_mould_maker)",
+   "url": "https://github.com/lisawong/plaster_mould_maker",
+   "what_it_does": "STL to printable plaster-casting forms. Per plaster half: a positive pattern on a 4 mm base plus four 3 mm wall panels, 20 mm lips, bulldog clips, tongue-and-groove seams, and a groove clearance coupon testing 0.15–0.35 mm.",
+   "relevance": "The only published groove coupon. Its pattern-plus-walls decomposition matches the proposed split."
+  },
+  {
+   "name": "hollow-idol",
+   "url": "https://github.com/philote/hollow-idol",
+   "what_it_does": "Parametric build123d mold-case generator. Per half: two mirrored C-frame walls plus a sliding bottom panel with keys, 10×3 mm binder-clip flanges, 0.25 mm tongue clearance, a ledge and wedge rail, PETG.",
+   "relevance": "Concrete joint dimensions and a parting-face plate that carries the keys."
+  },
+  {
+   "name": "mug-generator (pdaoust)",
+   "url": "https://github.com/pdaoust/mug-generator",
+   "what_it_does": "Inkscape/OpenSCAD generator for sacrificial 0.8 mm case-mould forms. Each half is a one-piece cup (floor, seam wall, skin) removed with a heat gun. Key/natch tolerance pairs.",
+   "relevance": "Reference for the sacrificial strategy, and evidence that drafted one-piece forms still need their corners cut."
+  },
+  {
+   "name": "Digitalfire (Tony Hansen) mold shell flange, side rails, all-in-one case mold",
+   "url": "https://digitalfire.com/glossary/mold+shell+flange",
+   "what_it_does": "0.8–1.6 mm PLA shells with 5 mm vertical flanges, paper clamps or rubber bands, under-flanges against leaks and uplift, 0.4 mm membranes with natch holes, heat-gun removal.",
+   "relevance": "Practitioner data on flanges, clamps and sealing for printed plaster casings."
+  },
+  {
+   "name": "Old Forge Creations 3-part printed mould system",
+   "url": "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+   "what_it_does": "A printed base plate forms the detail face; release agent is applied to it; demold by wiggling from the corners, helped by compressed air.",
+   "relevance": "Confirms the base-plate-as-working-face structure and the demold order."
+  },
+  {
+   "name": "Meshcast guides",
+   "url": "https://meshcast.app/guides/plaster",
+   "what_it_does": "Printed mold housings: 1 clamp per 50 mm, data on band creep, tape seal, PETG vs PLA, fit clearances, draft for rigid molds, a ridge round the base plate seating in the housing foot.",
+   "relevance": "The only source for clamp spacing, and FDM fit numbers (generic, not specific to ceramics)."
+  },
+  {
+   "name": "Lure Mold Generator (Fusion add-in)",
+   "url": "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "what_it_does": "A Fusion add-in for two-part printed molds: pegs with 0.1 mm per side and a 0.6 mm lead-in, M4 bolts along the long edges, 4 mm sealing lands.",
+   "relevance": "A Fusion-native precedent for clamp placement and fit/lead-in parameters."
+  },
+  {
+   "name": "Volume-Aware Design of Composite Molds (Alderighi et al. 2019)",
+   "url": "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+   "what_it_does": "Each casting container is a printed metamold (parting surfaces) plus a hard-shell prism aligned with the pour direction. The boundary is split by greedy region growing on normal alignment.",
+   "relevance": "An algorithmic precedent for clustering the casing by normal direction."
+  },
+  {
+   "name": "Bayer 'Snap-Fit Joints for Plastics' design guide",
+   "url": "https://fab.cba.mit.edu/classes/S62.12/people/vernelle.noel/Plastic_Snap_fit_design.pdf",
+   "what_it_does": "Cantilever deflection and strain formulas, permissible strains, friction coefficients.",
+   "relevance": "Basis for sizing a printed C-clip or wedge clip."
+  }
+ ],
+ "open_questions_for_user": [
+  "Which casing strategy do you want: reusable (split into parts, about 2.4–3 mm PETG, flanges and clips) or sacrificial (0.8–1.2 mm PLA peeled off with a heat gun)? Why did you choose 5 mm for printedMoldWallThickness?",
+  "For the back of each plaster piece, which do you prefer? A block back is flat-walled, uses more plaster, and is cast against simple flat walls that can be reused across pieces. A contoured back has uniform wall thickness and less plaster, but needs 2–4 shaped shell sectors per piece.",
+  "Which clamping hardware do you have or prefer: binder clips (which sizes: 19, 25 or 32 mm), M3/M4 bolts with heat-set inserts, printed wedge clips, or rubber bands?",
+  "How do you want to seal seams and the base: clay coils, tape, foam weatherstrip gasket, or a mix?",
+  "What printer bed size and nozzle do you use, and PLA or PETG? Which layer height is acceptable for the working-face base plate?",
+  "How many times do you expect to reuse each casing set, and will you pour plaster pieces one at a time or several at once?",
+  "Are you willing to print a calibration coupon first? It would cover ridge/groove clearances of 0.15–0.35 mm, natch clearances of 0.3–0.5 mm, and printed-clip interference.",
+  "Is about 5 printed parts per plaster piece acceptable (base plate, 2 end walls, 2 back sectors), or would you rather have fewer parts in exchange for more plaster weight (block back)?"
+ ],
+ "techniques": [
+  {
+   "name": "Base pattern plate + walls (cottle-style block back)",
+   "description": "A per-piece printed base plate carries the working face, the parting face and the natches. Four flat walls, or two L-frames, form a prismatic block. The plaster's top surface is screeded flat as the back.",
+   "pros": "Every wall pulls straight off along its own normal. The walls can be generic and reused across pieces, and the geometry in Fusion is simple (planar).",
+   "cons": "More plaster and weight, and wall thickness is not uniform. Corners should be chamfered at 45° to save plaster.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+    "https://digitalfire.com/glossary/side+rails"
+   ]
+  },
+  {
+   "name": "Base pattern plate + contoured back sectors (uniform wall)",
+   "description": "The back follows the offset surface and is split into sectors by Gauss-map clustering. Each sector has planar flanges with a ridge or groove and binder clips. The top region is left open for pouring.",
+   "pros": "Uniform plaster wall, lighter molds, more even drying and absorption. Matches the user's goal of similar wall widths.",
+   "cons": "More parts and flanges, and the clustering and planar snapping take more script logic.",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf"
+   ]
+  },
+  {
+   "name": "Sacrificial one-piece thin shell",
+   "description": "An integrated cup of 0.8–1.2 mm PLA (pattern, seam wall and skin), peeled off with a heat gun after the plaster sets.",
+   "pros": "One print per piece, no flanges, no clamps and no splitting logic.",
+   "cons": "Single use. Heat-gun work risks damaging plaster edges, the bottom must be punched for heat access, and thin flat areas bulge.",
+   "sources": [
+    "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md",
+    "https://digitalfire.com/glossary/0.8mm+thickness"
+   ]
+  },
+  {
+   "name": "Flange ridge/groove + binder clips",
+   "description": "Flanges 3 mm thick and about 12 mm wide. A 2×2 mm ridge sits 1.5 mm from the plaster face; the groove is 2.5 mm wide and 2.4 mm deep, with 0.5 mm lead-ins. 25 mm binder clips at 50 mm or less, sealed outside with clay or tape.",
+   "pros": "Uses cheap off-the-shelf clamps with a known capacity. The labyrinth plus an external seal is robust.",
+   "cons": "Joint dimensions are a synthesis and must be calibrated with a coupon.",
+   "sources": [
+    "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+    "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+    "https://meshcast.app/guides/plaster",
+    "https://de.wikipedia.org/wiki/Foldback-Klammer"
+   ]
+  },
+  {
+   "name": "Bolted flanges + foam gasket",
+   "description": "M3 bolts in heat-set inserts through flanges, with neoprene weatherstrip foam in a channel that has hard stops.",
+   "pros": "Strong, repeatable seal for reusable casings.",
+   "cons": "Hardware, insert setting and slower assembly. Shape Cast later moved to binder clips.",
+   "sources": [
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "name": "Printed wedge C-clip",
+   "description": "A PETG C-channel with a 1:20 tapered gap that slides along paired flanges until it locks by friction.",
+   "pros": "No purchased hardware, and the clip can be generated parametrically to match the flange thickness.",
+   "cons": "Not validated anywhere in the ceramic sources. PLA versions are brittle, and the clip creeps if it gets warm.",
+   "sources": [
+    "https://fab.cba.mit.edu/classes/S62.12/people/vernelle.noel/Plastic_Snap_fit_design.pdf",
+    "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/"
+   ]
+  }
+ ]
+}

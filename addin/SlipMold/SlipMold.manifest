@@ -1,0 +1,13 @@
+{
+  "autodeskProduct": "Fusion",
+  "type": "addin",
+  "id": "fcab82cb-8ac6-4057-8098-6146426478ca",
+  "author": "fusion360-claude moldkit",
+  "description": {
+    "": "SlipMold: build plaster slip-casting molds and 3D-printed casings from a solid body (select model, parameters, regenerate step by step, approve gates, exports)."
+  },
+  "version": "0.2.0",
+  "runOnStartup": true,
+  "supportedOS": "windows|mac",
+  "editEnabled": true
+}

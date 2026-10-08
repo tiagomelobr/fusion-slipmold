@@ -1,0 +1,715 @@
+[
+ {
+  "verdicts": [
+   {
+    "id": "CER-01",
+    "verdict": "confirmed",
+    "evidence": "The formula is right: claybucket (Gilliatt) gives prototype = fired / (1 - s), with a 16% slip in that example and about 20% for another body. The 13% default matches the Shape Cast example clay (13%) and Meshcast's stoneware note (about 13%). Measured product values fall inside the range: Clay-King cone 6 porcelain slip 14.5%, Stoneleaf cone 06 slip 6% ±2%. Other values: mug-generator default 10% (0-30), digifab 'expect 5-10%', Digitalfire mug project 10%. 1/(1-0.13) = 1.149 is correct. Shape Cast scales the ware-derived cavity but keeps fixed offsets (25 mm plaster, 2.4 mm print wall). That supports scaling only the ware, not construction parameters.",
+    "sources": [
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://www.clay-king.com/product/standard-cone-6-porcelain-dry-slip/",
+     "https://stoneleafpottery.com/lacn401-white-star-cone-06-04-slip/",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+     "https://meshcast.app/plaster-mold",
+     "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+     "https://digitalfire.com/project/60",
+     "http://www.emmielyons.com/pubs/shapecast-chi24.pdf (direct fetch failed on a TLS cert error; read from a copy of the same paper fetched earlier this session)"
+    ]
+   },
+   {
+    "id": "CER-02",
+    "verdict": "confirmed",
+    "evidence": "The zero-undercut gate is supported for plaster and leather-hard clay. Arbuckle: the form 'must not have any undercuts'. digifab: draft 'can generally never be negative'. Sheffield: any area that curves back under itself traps the cast. Chen & McMains define moldability as each piece translating to infinity along d without collision, so the occlusion test is needed on top of n.d. Caveat: the parenthetical 'no source supports one' is overstated. Li et al. 2009 accept small undercuts through material compliance and use an angular tolerance (called 'not critical') plus a distance threshold. whatmakeart only warns against 'deep' undercuts. Keep residual area = 0 as the default, but drop the absolute claim; an optional user override could be exposed, though no published value exists for clay. The 0.5 deg value works as a numerical tolerance only.",
+    "sources": [
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+     "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+     "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf (read from a copy fetched earlier this session)",
+     "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf (read from a copy fetched earlier this session)"
+    ]
+   },
+   {
+    "id": "CER-03",
+    "verdict": "confirmed",
+    "evidence": "digifab: zero-degree draft is acceptable for slip-cast parts because of shrinkage. Sheffield is stricter: 'at least 1-2 degrees of draft' on mold walls and 1-3 deg taper on models. That supports warning below 1 deg rather than failing. The seam geometry checks out: for a vertical wall split into n sectors each pulled along its bisector, draft at the seam = 90 - 180/n, giving 0 deg (n=2), 30 deg (n=3) and 45 deg (n=4). The Hawkridge/SolidWorks parting-line example also uses a 1 deg draft analysis.",
+    "sources": [
+     "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+     "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+     "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve_them"
+    ]
+   },
+   {
+    "id": "CER-04",
+    "verdict": "unverifiable",
+    "evidence": "The direction is supported. Mehlman: clay 'compresses on to the core' and can crack or fail to demold, so release from the core side 'ASAP'. Arbuckle: clay on a hump mold can split while shrinking around the inflexible form. No source I read gives a numeric minimum draft for cores. The closest is Sheffield's general 1-3 deg taper on models, where 3 deg is the upper end. I could not run fresh searches (the session's WebSearch quota was used up), so the 3 deg default is unsourced.",
+    "sources": [
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/slipcasting-plates/",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+    ]
+   },
+   {
+    "id": "CER-05",
+    "verdict": "confirmed",
+    "evidence": "Gilliatt places seams 'to edges or places where planes and curves shift, rather than flat faces'. Ceramic Arts Network calls a seam that bisects the foot questionable design. ceramic-resource puts split lines where the model has minimal detail. Hawkridge: straddle faces 'transition from positive to negative draft without an edge' and are split at that transition before the parting line is built. The 2 mm snap tolerance is a CAD heuristic with no published value.",
+    "sources": [
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+     "https://hawkridgesys.com/blog/mold-making-parting-line-command-solidworks",
+     "https://ceramic-resource.com/mold-building-for-slip-casting-in-ceramics/"
+    ]
+   },
+   {
+    "id": "CER-06",
+    "verdict": "confirmed",
+    "evidence": "Shape Cast makes only one-piece molds, for cups and tumblers with near-straight walls. Ceramic Arts Network, for a 10 in vase with a cinched waist, lists 4 parts (2 sides + spare + bottom), 3 parts (2 sides each holding half the spare + bottom), or 2 sides plus a drop-out bottom, which it calls least bulky. Gilliatt and Gates use 4 parts (bottom, 2 sides, reservoir). Nuance to add: the bottom can be a full plate or an insert captured between the sides (Mehlman, CAN), so the sides2Bottom layout should offer both variants.",
+    "sources": [
+     "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+     "http://www.emmielyons.com/pubs/shapecast-chi24.pdf (read from a copy fetched earlier this session)"
+    ]
+   },
+   {
+    "id": "CER-07",
+    "verdict": "unverifiable",
+    "evidence": "Sources confirm that the foot needs its own section, either an insert between the sides or a full bottom plate (Mehlman), and that seams should not cross the foot (CAN). The height-field condition follows from the moldability definition (Chen & McMains). No source gives a numeric margin; the 3 mm and 2-5 mm values are unsourced. The 22 mm split in Digitalfire project 60 is a printed-prototype split and does not apply.",
+    "sources": [
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+     "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+     "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+    ]
+   },
+   {
+    "id": "CER-08",
+    "verdict": "confirmed",
+    "evidence": "PMI 'Slip-Cast Handles': two-part mold, parting line 'bisecting the handle lengthwise', registration keys, solid casting recommended. Digitalfire mug handle: mirror-image halves about a reflection plane, printed pour spouts or traditional spares, precast handles attached with slip. Mehlman: cast-in-place is simpler but leaves an interior dimple; a separately added handle needs two molds but gives a cleaner inside. Gates: handle attached after demolding, then covered for 24 h.",
+    "sources": [
+     "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles",
+     "https://digitalfire.com/project/mug+handle+casting",
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-the-handle/",
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+    ]
+   },
+   {
+    "id": "CER-09",
+    "verdict": "adjust",
+    "corrected_value": "plasterWall = 25-30 mm when the overall mold is under about 200 mm (ware up to about 150 mm); 38-50 mm for molds of 200-400 mm; 50-75 mm above 400 mm. Choose the band by overall mold size, not ware size. Range 20-75 mm.",
+    "evidence": "The small band is supported: MatEdu says at least 1 in (25 mm), Shape Cast offsets 25 mm, mug-generator defaults to 30 mm ('25 to 35 mm recommended'), Meshcast defaults to 20 mm. The middle and upper bands are too thin. Sheffield, by mold size: under 8 in, 1-1.5 in (25-38 mm); 8-16 in, 1.5-2 in (38-50 mm); 16-24 in, 2-2.5 in; over 24 in, 2.5-3 in. Ware of 150-300 mm with 30-40 mm walls makes a 230-380 mm mold, which falls in Sheffield's 38-50 mm band. USG IG526 adds that a 1-1/2 in minimum is 'usually appropriate' for casting molds, in a mechanized-production context.",
+    "sources": [
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+     "https://meshcast.app/plaster-mold",
+     "http://www.emmielyons.com/pubs/shapecast-chi24.pdf (read from a copy fetched earlier this session)"
+    ]
+   },
+   {
+    "id": "CER-10",
+    "verdict": "unverifiable",
+    "evidence": "The direction is supported. USG IG526 says to 'avoid thin mold edges' and to 'avoid significant variations in cross-sectional mold thickness'. The 0.8x / 0.6x ratios and the 15 mm absolute floor are not in any source I read. For comparison, the thinnest published nominal walls are Meshcast's 20 mm default and MatEdu's 1 in minimum. Fresh searches were unavailable (WebSearch quota exhausted).",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://meshcast.app/plaster-mold",
+     "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf"
+    ]
+   },
+   {
+    "id": "CER-11",
+    "verdict": "confirmed",
+    "evidence": "USG IG526: dry tensile strength about 290 psi, shear about 450 psi, dry compressive about 2000 psi, and wet compressive strength and abrasion resistance about half of dry. Wording fix: USG states the halving for compressive strength and abrasion, not tensile. USG No. 1 sheet: 1000 psi one hour after set versus 2400 psi dry. Arbuckle: round sharp edges with a rib or Surform so they don't flake plaster into the work. CAN: cut mold corners at 45 deg to save weight. The 3 mm chamfer value is unsourced but reasonable.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+    ]
+   },
+   {
+    "id": "CER-12",
+    "verdict": "adjust",
+    "corrected_value": "spareStyle integrated; spareHeight 20 mm (minimum 15 mm); spareStepOut 5 mm (unsourced); spareFlareAngle about 15-20 deg (minimum 5 deg); spareTopRound 3 mm. Treat the level-drop constant as uncalibrated.",
+    "evidence": "Height is supported: mug-generator's pouring tube is '15-20mm recommended' above the rim. Flare: mug-generator defaults to 20 deg from vertical (range 5-45), noting larger values make pouring easier, so the 5 deg default is at the bottom of its range. The other features are supported qualitatively. Mehlman describes the horizontal step-spare (trim ring) with the knife riding on the ledge. Shape Cast adds 'a small radius' to round the plaster at the slip well. Digitalfire supports printed non-absorbent spouts. Gates fills to halfway up the reservoir wall. The 0.24 constant is unsourced. A rough slip/cast solids balance (slip SG about 1.8, cast about 0.6-0.65 solids by volume) gives roughly 0.2-0.3 cm3 of water per cm3 of cast, so it is plausible but still needs calibration.",
+    "sources": [
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+     "https://digitalfire.com/glossary/pour+spout",
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "http://www.emmielyons.com/pubs/shapecast-chi24.pdf (read from a copy fetched earlier this session)"
+    ]
+   },
+   {
+    "id": "CER-13",
+    "verdict": "confirmed",
+    "evidence": "Gilliatt: 'Keep the blade flat on the top of the mold' when cutting away the pouring gate. Gates: hold the blade flush with the top of the mold and cut the interior wall first, then through to the exterior. Mehlman: on a horizontal step-spare a bent knife rides on the horizontal surface and gives a square cut regardless of wall thickness.",
+    "sources": [
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/"
+    ]
+   },
+   {
+    "id": "CER-14",
+    "verdict": "confirmed",
+    "evidence": "The geometry checks out. With R = 6 and h = 3.5 (h/R 0.583), the rim polar angle is 65.4 deg, the footprint is 2 x 6 x sin(65.4) = 10.9 mm, and the rim draft is 24.6 deg. Depth of 0.55-0.6 R gives 23.6-26.7 deg; draft stays at or above 20 deg up to h/R 0.658. The size fits published practice: mug-generator natch radius 6.75 mm, Meshcast 9 mm with 10 deg natch draft, commercial natch 9.5 mm nipple diameter (Digitalfire), coin-carved half spheres of about 9-12 mm radius (CM Mold Making 101). Count: CM says 'two or three locations', Sheffield '3-4 keys'. Asymmetric layout and the 5 mm margin are unsourced heuristics. Sheffield's larger hand-carved keys (1/2 in deep, 1 in wide) suit big molds.",
+    "sources": [
+     "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+     "https://digitalfire.com/glossary/mold+natches",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+     "https://meshcast.app/plaster-mold",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+     "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+    ]
+   },
+   {
+    "id": "CER-15",
+    "verdict": "adjust",
+    "corrected_value": "natchClearance 0.5 mm radial for keys formed by independently printed casings (calibrate in the 0.3-0.6 mm range); 0.1 mm for printed inserts. Drop the '9.8 mm hole for 3/8 in commercial natches' (unsourced); if the Digitalfire embed system is used, its case-mold hole is 13.5 mm.",
+    "evidence": "Tool defaults for plaster-to-plaster keys sit above 0.4 mm. Mug-generator key_tolerance defaults to 0.50 mm, split half off the bump and half onto the socket. Meshcast's 'Natch fit' defaults to 0.60 mm. Digitalfire supports 0.1 mm for printed natches: 'start with a 0.1mm allowance (e.g. 4.8mm nipple inside a 4.9mm space)'. The 9.8 mm hole is not supported. Digitalfire gives the commercial 3/8 in natch as a 9.5 mm nipple diameter, says these 'have not proven suitable' for its process, and uses 13.5 mm holes in printed case molds for its own embeds. Setting expansion is confirmed: USG gives about 0.17% (IG526) and 0.21% maximum (No. 1).",
+    "sources": [
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx",
+     "https://meshcast.app/plaster-mold",
+     "https://digitalfire.com/project/63",
+     "https://digitalfire.com/glossary/mold+natches",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+    ]
+   },
+   {
+    "id": "CER-16",
+    "verdict": "adjust",
+    "corrected_value": "disassemblyOrder = spare first (about 20 min after draining, once the sheen is gone; trim the rim). Compute the order of the remaining pieces with the collision check rather than fixing bottom before sides. Every piece pulls straight along its vector without rocking.",
+    "evidence": "Spare first is confirmed. Gates: once the sheen is gone (typically about 20 minutes), 'remove only the reservoir portion', trim, and leave the rest intact about an hour more. Gilliatt also removes the pouring-gate section first. Straight pulls are confirmed: Creative Paradise says lift the top half 'straight up' and not side-to-side. No source fixes bottom before sides. Creative Paradise says to lift off 'the last added section of mold first unless otherwise indicated'. The UMD multi-piece-mold report supports verifying that the assembly can be disassembled (global accessibility).",
+    "sources": [
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+     "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download"
+    ]
+   },
+   {
+    "id": "CER-17",
+    "verdict": "adjust",
+    "corrected_value": "plasterConsistency 70 (USG No. 1); mixWaterTempC 21 (70 F), acceptable 18-38 C; hard limit 38 C (100 F). Remove the 'about 1:1 exotherm peak' claim.",
+    "evidence": "Consistency and weighing are confirmed: USG No. 1 is 70 lb water per 100 lb plaster, weigh both, and USG IG526 gives 68-90 for ceramics. Digitalfire lists Puritan at 66. Temperature: the USG No. 1 sheet says use water 'between 70 F (21 C) and 100 F (38 C)', so 38 C, not 40 C, is the manufacturer limit. Digitalfire's 'not higher than 105 F' is a looser ceiling. Arbuckle: cold water increases expansion and slows set, 'Do not use water below 65 F' (18 C), 'About 70 is ideal'. That supports the 18 C note and points to 21 C rather than 20 C as the target. The 1:1 claim is not supported by the cited PMC data. PMC3965769: 40 C dip water gave peaks only 2-4 C hotter than 24 C. PMC2288595: 32 to 39 C raised peaks 2-3 C. These are thin orthopedic casts, so they neither support nor refute 1:1 for a thick mold block.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://digitalfire.com/material/1124",
+     "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC3965769/fullTextXML",
+     "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/"
+    ]
+   },
+   {
+    "id": "CER-18",
+    "verdict": "confirmed",
+    "evidence": "USG IG503: slurry at 70 consistency weighs about 1674 g/L, so 1674/1.70 = 985 g of plaster per litre. Arbuckle agrees: 2.85 lb plaster plus 1 quart water makes about 80 in3, about 0.986 g/cm3. The USG No. 1 wet density of 1586 kg/m3 implies about 0.93 g/cm3, which explains the 0.93-0.99 range; 0.985 is the conservative (more plaster) choice. USG No. 1: dry density 1105 kg/m3, wet 1586 kg/m3, matching 1.10 and 1.58. Arbuckle: mix 10-20% extra. Sheffield: small molds of 5-15 lb are one-handed, so a 6 kg wet-weight warning is plausible.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+    ]
+   },
+   {
+    "id": "CER-19",
+    "verdict": "confirmed",
+    "evidence": "USG IG503: sift or strew plaster into water, soak 2-4 min, mix 2-5 min, and size batches so pouring finishes 'no later than 5 minutes after the slurry has been mixed'. USG No. 1: machine-mix Vicat set 14-24 min (hand mix is longer). Pour 'in the deepest area' so slurry flows evenly; pouring directly on the case face causes a hard spot. Arbuckle: soak 2-3 min, mix by hand 3-5 min or with a drill 1-2.5 min.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+    ]
+   },
+   {
+    "id": "CER-20",
+    "verdict": "confirmed",
+    "evidence": "Arbuckle: plaster 'reaches maximum expansion in about 20 minutes, then contracts slightly', and per Richard Notkin wait 'at least an hour before taking molds apart'. CM Mold Making 101: remove cottles 2-3 hours after pouring the last section, or overnight. The PMI handles article uses about 45 min. Meshcast: a cast that is still warm is still reacting. The '35-65 min peak' comes only from the toolkit's own model; the 60 min + cooling gate is safe either way.",
+    "sources": [
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+     "https://meshcast.app/guides/plaster-cracking",
+     "https://ceramicartsnetwork.org/pottery-making-illustrated/pottery-making-illustrated-article/in-the-studio-slip-cast-handles"
+    ]
+   },
+   {
+    "id": "CER-21",
+    "verdict": "confirmed",
+    "evidence": "USG No. 1: 'Dry to a constant weight'; air at least 15-30 fps (4.6-9.1 m/s); calcination-safe maximum 120 F (49 C); higher temperature is acceptable with substantial free water; cool to ambient before removal. USG IG502: dryer at 110-120 F (43-49 C), entering air at or below 150 F (66 C), 15 fps, spacing about 1/2 in on small casts and 2 in on casts of 100 lb or more. USG IG526: cracks if suddenly cooled from over about 100 F (38 C). Sheffield: wait at least 48-72 hours, ideally a week. PMI handles article: 1-2 days.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/drying-plaster-casts-application-en-IG502.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+    ]
+   },
+   {
+    "id": "CER-22",
+    "verdict": "confirmed",
+    "evidence": "Digitalfire: 'PLA print filament produces a surface that plaster releases from so no parting agent is needed.' Industrial Plasters soft soap, for plaster-on-plaster: 'apply three coats', remove the excess after each, mixed 50/50 with boiling water. Arbuckle: Vaseline releases, but oils block pores and reduce absorbency. Conflicting evidence: Meshcast recommends a thin mineral or vegetable oil 'buffed nearly dry' for printed molds. The rule's conservative stance (bare PLA first, no oil on working faces) is supported by the first three sources.",
+    "sources": [
+     "https://digitalfire.com/glossary/side+rails",
+     "https://industrialplasters.com/products/soft-soap-release",
+     "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+     "https://meshcast.app/guides/mold-release-agents"
+    ]
+   },
+   {
+    "id": "CER-23",
+    "verdict": "confirmed",
+    "evidence": "Gates: band the parts with strong inner-tube bands and leave the mold 'inverted at an angle to drain' so clay stalactites don't form. Creative Paradise: strap in more than one direction on multi-piece molds. CM Mold Making 101 pours on a flat Plexiglas base. The 30 deg pour-opening value is unsourced; it only loosely matches mug-generator's funnel_wall_angle default of 30 deg.",
+    "sources": [
+     "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+     "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf",
+     "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/HEAD/inkscape-extension/mug_generator.inx"
+    ]
+   },
+   {
+    "id": "CER-24",
+    "verdict": "confirmed",
+    "evidence": "Digitalfire: thin walls of '2-3mm' for simple open shapes. Digitalfire project 60: 4-5 mm walls are achievable, 5 mm in 10-15 min with modern bodies. Sheffield: 1/8-3/16 in (3.2-4.8 mm) in 10 min. Creative Paradise hobby casts: about 1/4 in (6.4 mm). 4 mm sits inside the 2-6 mm range.",
+    "sources": [
+     "https://digitalfire.com/glossary/slip+casting",
+     "https://digitalfire.com/project/60",
+     "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+     "https://www.creativeparadiseceramics.com/v/vspfiles/InfoSheets/SlipCastingBasics.pdf"
+    ]
+   },
+   {
+    "id": "CER-25",
+    "verdict": "unverifiable",
+    "evidence": "I ran scratchpad plaster_heat.py. With both faces to air and T0 20 C, core peaks are 45.5 C at 20 mm (f = 0.77) and 50.5 C at 50 mm (f = 0.92), at 44-49 min. The surface runs 2 C below the core at 20 mm and 5 C below at 50 mm, so 'core - 3 K' is optimistic for thick sections. No source I read measures plaster mold-block exotherms or confirms the 33 K adiabatic rise; fresh searches were unavailable (WebSearch quota exhausted). Both cited PMC papers are thin orthopedic casts. They show 43-50 C peaks and only 2-4 C response to a 16 C change in dip water, so they do not validate the model. The material limits check out: makeitfrom PLA max mechanical temperature 50 C, Tg 60 C, HDT 65 C at 455 kPa; Prusament PLA 'temperature resistance 55 C'; Meshcast says PLA softens from about 60 C; Prusament PETG HDT 68 C at 0.45 MPa, consistent with a 63 C warning. Keep it as a provisional warning until the user's thermocouple data replaces it.",
+    "sources": [
+     "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+     "https://www.ebi.ac.uk/europepmc/webservices/rest/PMC3965769/fullTextXML",
+     "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+     "https://prusament.com/materials/pla/",
+     "https://meshcast.app/guides/plaster-cracking",
+     "local: C:/Users/tiago/AppData/Local/Temp/claude/D--Coding-fusion360-claude/a07cb48d-22ad-4482-8deb-e272c5d65144/scratchpad/plaster_heat.py",
+     "Prusament PETG technical datasheet (read from a copy fetched earlier this session)"
+    ]
+   }
+  ]
+ },
+ {
+  "verdicts": [
+   {
+    "id": "PRN-01",
+    "verdict": "confirmed",
+    "evidence": "USG IG526: pottery plaster expands about 0.17% in all directions when free, and 'if expansion is restricted in one direction, it will take place to a greater degree in another'. USG No.1 data sheet: maximum expansion 0.21%. 0.21% x 150 mm = 0.315 mm, so the ~0.3 mm figure is correct. Practitioners split rigid shells or use thin peelable ones: Digitalfire says the vertical split lets the shell open slightly after set, and Digitalfire and pdaoust both use 0.8 mm PLA (two 0.4 mm passes) peeled off with a heat gun. The pdaoust README also says a non-split ('efficient') variant can't be removed until its corners are cut. I could not read the ShapeCast paper (certificate error on emmielyons.com, ACM returned 403).",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://digitalfire.com/glossary/mold+shell+flange",
+     "https://digitalfire.com/glossary/0.8mm+thickness",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md"
+    ]
+   },
+   {
+    "id": "PRN-02",
+    "verdict": "confirmed",
+    "evidence": "Sacrificial: Digitalfire uses 0.8 mm (two passes of a 0.4 mm nozzle) and 1.2 mm (three passes) 'where extra strength is needed'. The medalta mug project went from 0.8 to 1.2 mm. pdaoust uses 0.8 mm walls with a 0.4 mm top so the shell can still be heat-gun peeled. Reusable: Meshcast says a printed box wall of '2 to 3 mm with 3 perimeters' holds kilos without bowing; lisawong uses 3 mm walls; shapecastmolds.com says one print yields 'dozens of plaster casts', clipped with binder clips. Both whole-line-width walls and the 2.0-3.0 mm range are supported.",
+    "sources": [
+     "https://digitalfire.com/glossary/0.8mm+thickness",
+     "https://digitalfire.com/project/15",
+     "https://raw.githubusercontent.com/pdaoust/mug-generator/main/README.md",
+     "https://meshcast.app/guides/mold-box-generator",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+     "https://shapecastmolds.com/"
+    ]
+   },
+   {
+    "id": "PRN-03",
+    "verdict": "confirmed",
+    "evidence": "0.0443 is the Timoshenko simply-supported square-plate coefficient (0.00406 x 12 x (1 - 0.3^2)). My recomputation: q = 1670 x 9.81 x 0.1 = 1638 Pa gives a = 103 mm for t = 2.4 mm, E = 3 GPa, w = 0.2 mm; H = 250 mm gives 82 mm. t = 0.8 mm gives 45/36 mm and t = 5 mm gives 179/143 mm. All stated numbers check out. The Prusament PETG TDS gives printed tensile modulus 1.5-1.6 GPa (flexural 1.6-1.7), so E = 1.6 GPa is right, and (3.0/1.6)^(1/3) = 1.233. makeitfrom lists bulk PLA at 3.5 GPa, so 3.0 GPa is a modest derating. The USG No.1 wet density is 1586 kg/m3 at consistency 70, so 1670 is about 5% conservative (+1.3% on a_max if replaced). Simply supported edges are also conservative compared with walls joined at their edges.",
+    "sources": [
+     "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+     "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+    ]
+   },
+   {
+    "id": "PRN-04",
+    "verdict": "adjust",
+    "corrected_value": "casingMaterial PLA conditional is OK as a default (Digitalfire uses PLA routinely). Replace 'mix water <= 22 C' with 'mix water at the 21 C lower end of USG's 21-38 C range; never warm water'. Mark the room <= 24 C and section <= 50 mm thresholds as unvalidated heuristics. Expect PETG to be needed often, because USG's minimum casting-mold wall is 38 mm and corners will exceed 50 mm.",
+    "evidence": "The direction holds. Meshcast: PLA 'softens around 55 °C, and a thick plaster pour can get close', and it recommends PETG for plaster molds. Prusament PETG HDT is 68 C. PMC2288595 (orthopedic plaster) measured peaks of 33.5-46.5 C that rise with thickness, faster plaster and warmer dip water, and a cast on a pillow 'exceeded 50 degrees Celsius for over 20 minutes'. That supports 'never cure on foam or stacked'. However, the USG No.1 data sheet specifies mix water between 21 C and 38 C, so a <=22 C limit leaves a 1 C window, and colder water is outside spec. None of my sources give the 22 C / 24 C / 50 mm numbers. IG526 recommends a 1-1/2 in (38 mm) minimum casting-mold wall. Digitalfire uses PLA shells successfully (heat-gun removal). Nothing I read supports 'clips always PETG' beyond Hubs preferring PETG over brittle PLA for snap fits.",
+    "sources": [
+     "https://meshcast.app/guides/plaster",
+     "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+     "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+     "https://digitalfire.com/project/15"
+    ]
+   },
+   {
+    "id": "PRN-05",
+    "verdict": "unverifiable",
+    "evidence": "No practitioner or academic source I read describes the plate + sector + end-wall decomposition with a 90° - thetaC contact-normal criterion. hollow-idol splits each half into two C-shaped wall frames plus a sliding floor panel. lisawong uses pattern bases with separate 3 mm panels. Digitalfire uses vertically split shells with flanges and 'side rails' that wrap under the mold. Meshcast uses housing halves on a ridged base plate. The rule is geometrically coherent but is an original design, not established practice. The ShapeCast paper was unreadable.",
+    "sources": [
+     "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/mold_case.py",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md",
+     "https://digitalfire.com/glossary/side+rails",
+     "https://meshcast.app/guides/vase-mold"
+    ]
+   },
+   {
+    "id": "PRN-06",
+    "verdict": "adjust",
+    "corrected_value": "casingDraftWarnDeg 3, casingDraftFailDeg 1.0 (not 0.5), casingRingSectors 4",
+    "evidence": "Meshcast draft guide: rigid molds need 1-2° when 'polished / coated' and 3-5° for 'Textured surface or raw layer lines' or deep cavities. Raw printed layer lines are the default case, so warning below 3° is supported. Meshcast's smallest recommendation for any rigid mold is 1°; nothing supports 0.5° as a pass threshold. Four ring sectors (at most 45° off the pull) is reasonable but unsourced. Digitalfire shows that 2-piece thin shells release by springing open after set, which matches the 'release only by flexing' warning.",
+    "sources": [
+     "https://meshcast.app/guides/draft-angles-and-undercuts",
+     "https://digitalfire.com/glossary/mold+shell+flange"
+    ]
+   },
+   {
+    "id": "PRN-07",
+    "verdict": "adjust",
+    "corrected_value": "Keep steps 0.05, 0.2, 1.0 cm (optionally add 0.0025 cm). Change the tolerance to 1e-5 cm3 (0.01 mm3), or make it relative to the part volume, instead of 0.001 cm3.",
+    "evidence": "The cited lisawong TECHNICAL-REFERENCE uses many poses from 0.025 mm to 64 mm, and its 'strict numerical tolerance was 0.001 mm³'. That is 1e-6 cm3, 1000x tighter than the rule's 0.001 cm3 (= 1 mm3). At the 0.5 mm step, a 2 mm2 undercut sweeps only 1 mm3 and would pass. The larger steps (2 and 10 mm) reduce but do not remove this risk for thin lips. After translation there are no coincident faces, so a tight BRep tolerance is feasible.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+    ]
+   },
+   {
+    "id": "PRN-08",
+    "verdict": "confirmed",
+    "evidence": "lisawong uses 'extended 4 mm bases' for its pattern parts. Meshcast print settings: '0.12–0.16 mm' layers for molds (0.16 mm listed for plaster/jesmonite), with the cavity facing up, and 'Never put supports inside the cavity' because interface marks print onto every cast. 0.12 mm is at the fine end of that range; a draft layer for non-working walls is reasonable.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md",
+     "https://meshcast.app/guides/best-print-settings-for-molds"
+    ]
+   },
+   {
+    "id": "PRN-09",
+    "verdict": "confirmed",
+    "evidence": "hollow-idol config: flange_thickness 3.0 mm, flange_width 10.0 mm ('clip grip surface'). lisawong uses 3 mm walls and lips with outward lips defaulting to 20 mm. Digitalfire uses a '5mm wide vertical flange' on 0.8 mm shells, clamped with paper clamps. Foldback clip capacities from de.wikipedia: 19 mm clip = 7 mm, 25 mm = 9 mm, 32 mm = 13 mm, so two 3 mm flanges (6 mm) fit a 19 mm clip. All defaults fall inside the stated ranges.",
+    "sources": [
+     "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+     "https://digitalfire.com/glossary/mold+shell+flange",
+     "https://de.wikipedia.org/wiki/Foldback-Klammer"
+    ]
+   },
+   {
+    "id": "PRN-10",
+    "verdict": "confirmed",
+    "evidence": "Two independent codebases default to 0.25 mm per side: lisawong groove clearance and hollow-idol tongue_clearance. The lisawong groove coupon tests (0.15, 0.20, 0.25, 0.30, 0.35) mm per side, matching the stated range. The geometry is internally consistent: groove 2.5 = 2.0 + 2 x 0.25, depth 2.4 = 2.0 + 0.4 bottom gap, and 1.2 mm walls = 3 lines. The exact ridge size and 1.5 mm inset are not sourced. Meshcast notes a 0.2-0.3 mm flash line is normal, so the labyrinth plus a seal is sensible.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+     "https://raw.githubusercontent.com/philote/hollow-idol/main/hollow_idol/config.py",
+     "https://meshcast.app/guides/plaster"
+    ]
+   },
+   {
+    "id": "PRN-11",
+    "verdict": "confirmed",
+    "evidence": "The LureMoldGenerator README gives pin and hole 'a lead-in chamfer so they find each other' with a 0.6 mm default. Hubs says to 'include a 45° chamfer or radius on all edges touching the build plate' against elephant's foot. A 0.5 mm default inside 0.4-0.6 mm is consistent.",
+    "sources": [
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+     "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/"
+    ]
+   },
+   {
+    "id": "PRN-12",
+    "verdict": "confirmed",
+    "evidence": "Meshcast: 'One printed clamp per 50 mm of seam, plus a band as backup'. It says bands relax over one to two hours so the seam 'opens a fraction of a millimetre' (the 0.1-0.3 mm figure is not stated) and advises clamps 'low down where the pressure is highest'. Head pressure with USG wet density 1586 kg/m3 is about 1.56 kPa per 100 mm, so the rule's 1.7 kPa is slightly conservative. The 15 mm end offset is unsourced. LureMoldGenerator uses 4 bolts along the long edges, not a spacing rule. Consider an explicit clamp near the bottom of vertical seams.",
+    "sources": [
+     "https://meshcast.app/guides/plaster",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+    ]
+   },
+   {
+    "id": "PRN-13",
+    "verdict": "unverifiable",
+    "evidence": "Hubs supports the generic parts: root fillet 'at least 0.5 times the cantilever base thickness', ductile PETG preferred over brittle PLA, avoid cantilevers built vertically in Z (print flat), and minimum 5 mm width. I found no source for the wedge-clip concept or the 1:20 taper and 0.15 mm interference values. The rule already labels them unvalidated.",
+    "sources": [
+     "https://www.hubs.com/knowledge-base/how-design-snap-fit-joints-3d-printing/"
+    ]
+   },
+   {
+    "id": "PRN-14",
+    "verdict": "confirmed",
+    "evidence": "Ceramics Monthly Mold Making 101: 'Seal any seams between the boards with clay coils to prevent plaster leaks', with a 50/50 Murphy's Oil Soap release that is later removed from the casting area with vinegar. Meshcast suggests a strip of tape round the seam before clamping. Digitalfire notes PLA releases from plaster without parting agents, which supports keeping oils and sealants off working-face-forming surfaces. I did not verify the foam-gasket compression range.",
+    "sources": [
+     "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+     "https://meshcast.app/guides/plaster",
+     "https://digitalfire.com/glossary/side+rails"
+    ]
+   },
+   {
+    "id": "PRN-15",
+    "verdict": "confirmed",
+    "evidence": "Meshcast vase mold: housing halves close so 'the ridge round the plate sits in the groove inside their foot', and clamps anchor them, since a model floating off its plate ruins the pour. Digitalfire side rails: 'The flange at the bottom fits under the mold and assures that no plaster will leak under and displace it upward'.",
+    "sources": [
+     "https://meshcast.app/guides/vase-mold",
+     "https://digitalfire.com/glossary/side+rails"
+    ]
+   },
+   {
+    "id": "PRN-16",
+    "verdict": "confirmed",
+    "evidence": "USG No.1: slurry 'should be poured carefully in the deepest area', and pouring directly on the case face causes a densified 'hard spot' with uneven absorption. lisawong debosses a '~0.6 mm' fill line on every inner wall face and sets walls 30 mm above the plaster block top. Meshcast mold boxes use 10-20 mm headroom. Digitalfire fills to the printed rim, below the rails. 10 mm minimum freeboard within a 10-30 mm range is consistent.",
+    "sources": [
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+     "https://meshcast.app/guides/mold-box-generator",
+     "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+    ]
+   },
+   {
+    "id": "PRN-17",
+    "verdict": "confirmed",
+    "evidence": "Hubs: overhangs 'up to 45°' and bridges 'less than 5mm'. Digitalfire prints shells upside down so no supports are needed, with 'no angles steeper than 45 degrees'. Digitalfire mug v3 halves 'printed flat' gave poured halves that fit without sanding. Meshcast: put the sealing surface flat on the plate and never put supports in the cavity.",
+    "sources": [
+     "https://www.hubs.com/knowledge-base/how-design-parts-fdm-3d-printing/",
+     "https://digitalfire.com/glossary/all-in-one+case+mold",
+     "https://digitalfire.com/project/60",
+     "https://digitalfire.com/project/33",
+     "https://meshcast.app/guides/best-print-settings-for-molds"
+    ]
+   },
+   {
+    "id": "PRN-18",
+    "verdict": "adjust",
+    "corrected_value": "seam 0.15/0.20/0.25/0.30/0.35 mm per side (unchanged); natch 0.1/0.2/0.3/0.4/0.5 mm, stated explicitly as per side",
+    "evidence": "The seam set exactly matches the lisawong groove coupon (per side). For natches, Digitalfire recommends 'starting with a 0.1mm allowance (e.g. 4.8mm nipple inside a 4.9mm space)' and test-printing before adjusting. LureMoldGenerator defaults to 0.1 mm per side and recommends 0.3-0.4 mm on the diameter for FDM reliability. The rule's natch set starts at 0.2 mm and does not say per side or diametral, so the 0.1 mm per-side practitioner value cannot be tested.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/tools/groove_coupon.py",
+     "https://digitalfire.com/project/63",
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+    ]
+   },
+   {
+    "id": "PRN-19",
+    "verdict": "confirmed",
+    "evidence": "Digitalfire ball pitcher: 'Cut it up into smaller pieces and print each of them at the best orientation', with four pieces of 10+ h each. The beer bottle project split into six pieces with flanges for a consumer printer, and the all-in-one case mold glues flanged pieces. lisawong's printer default is a Prusa MK3 at 250 x 210 x 210 mm.",
+    "sources": [
+     "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+     "https://digitalfire.com/project/33",
+     "https://digitalfire.com/glossary/all-in-one+case+mold",
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+    ]
+   },
+   {
+    "id": "PRN-20",
+    "verdict": "confirmed",
+    "evidence": "LureMoldGenerator README: 'Vents below 0.8 mm will not print on FDM -- the hole closes up.' A 1.0 mm default with a >= 0.8 mm floor is consistent. Two 0.4 mm lines = 0.8 mm is also the Digitalfire minimum wall.",
+    "sources": [
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+     "https://digitalfire.com/glossary/0.8mm+thickness"
+    ]
+   },
+   {
+    "id": "PRN-21",
+    "verdict": "adjust",
+    "corrected_value": "casingWorkflow independent; drop the '0.3-0.5 mm step' estimate; list sanding of plaster mating faces on glass as a conditional step after a dry-fit check; keep sequential workflow as an option",
+    "evidence": "No source quantifies a 0.3-0.5 mm step, and practitioner evidence points to better fit. Digitalfire mug v3 halves printed flat 'fit, without the need for sanding', though sanding when dry is 'greatly improving the fit'. Digitalfire ball pitcher: 'The two parts mate perfectly, the slight seam is easy to remove'. Ceramics Monthly: check interior seams line up and re-sand if necessary. USG IG526 confirms expansion compounds through each casting generation (block, then case), which supports offering the sequential workflow.",
+    "sources": [
+     "https://digitalfire.com/project/60",
+     "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+     "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+     "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+    ]
+   },
+   {
+    "id": "SW-01",
+    "verdict": "confirmed",
+    "evidence": "Autodesk Units_UM: Design internal units are Length 'Centimeters (cm)', Angle 'Radians (rad)', Mass 'Kilograms (kg)'. createByReal values 'are assumed to be in database units'.",
+    "sources": [
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm"
+    ]
+   },
+   {
+    "id": "SW-02",
+    "verdict": "adjust",
+    "corrected_value": "Same rule, but text parameters must pass units 'Text' AND a single-quoted literal expression (e.g. UserParameters.add('layout', ValueInput.createByString(\"'auto'\"), 'Text', '')), or use Parameter.textValue. Booleans: unitless '' with 'true'/'false' or 0/1 (ValueInput.createByBoolean is rejected).",
+    "evidence": "UserParameters.add(name, value, units, comment) is confirmed. The doc says 'If the units argument is Text then a text parameter will be created', and the expression must be a quoted literal. With empty units the call creates a numeric parameter, so the rule as written would fail for text. The doc also says boolean ValueInputs are not supported and 'true'/'false' in a unitless parameter evaluate to 1/0. Parameter.value: 'Setting this property will set/reset the expression', which confirms that .value drops the expression.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation UserParameters.add",
+     "local: fusion_mcp_read apiDocumentation Parameter.value / Parameter.expression",
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm"
+    ]
+   },
+   {
+    "id": "SW-03",
+    "verdict": "confirmed",
+    "evidence": "CustomFeatures_UM says the API is 'provided as a preview of intended future API capabilities', and its examples are add-ins with command definitions and event handlers, which supports avoiding Custom Features in an MCP-script workflow. LureMoldGenerator likewise regenerates by re-running its generator rather than using parametric custom features.",
+    "sources": [
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomFeatures_UM.htm",
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+    ]
+   },
+   {
+    "id": "SW-04",
+    "verdict": "confirmed",
+    "evidence": "Claude Code MCP docs: for HTTP/SSE servers a per-request timer up to the first response byte is set to 'the greatest of three values: 60 seconds, the tool timeout..., and MCP_TIMEOUT'. That matches the ~60 s timeout, and a 30/40 s budget keeps margin. The claims that a timed-out call is not cancelled and later calls queue behind it, and the doEvents crash, rest only on local probes and logs I could not check independently. Keep them as observed-behavior notes.",
+    "sources": [
+     "https://code.claude.com/docs/en/mcp",
+     "local: gap-2 MCP timing probes (not independently verified)"
+    ]
+   },
+   {
+    "id": "SW-05",
+    "verdict": "confirmed",
+    "evidence": "Commands_UM: without a command, 'every API call that causes a change within Fusion will show up as a separate operation in the undo list'. Timeline.markerPosition is documented as get/set (0 to count), and Timeline.deleteAllAfterMarker() 'Deletes all objects in the timeline that are after the current position of the marker'.",
+    "sources": [
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+     "local: fusion_mcp_read apiDocumentation Timeline.markerPosition / deleteAllAfterMarker"
+    ]
+   },
+   {
+    "id": "SW-06",
+    "verdict": "confirmed",
+    "evidence": "Design.computeAll docs: returns true if the compute completed, but 'This doesn't indicate if all the items in the timeline successfully computed or not. You need to check the health state of each item'. TimelineObject.errorOrWarningMessage is populated for Warning/Error health states. healthState returns Unknown for TimelineGroups, so check features, not groups.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation Design.computeAll / TimelineObject.healthState / errorOrWarningMessage"
+    ]
+   },
+   {
+    "id": "SW-07",
+    "verdict": "confirmed",
+    "evidence": "BRepFace.tempId is 'only good while the document remains open and as long as the owning BRepBody is not modified in any way'. BRepFace.entityToken: 'you should never compare entity tokens'; use findEntityByToken. findEntityByToken can return several faces after a split.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation BRepFace.tempId / entityToken / Design.findEntityByToken"
+    ]
+   },
+   {
+    "id": "SW-08",
+    "verdict": "adjust",
+    "corrected_value": "Keep group 'moldgen' and re-tag after every split or combine, but because fragments inherit duplicate stale tags (check Attribute.otherParents and overwrite or delete per fragment), not because the tag stays on only one fragment",
+    "evidence": "The Attribute.parent and otherParents docs say that when the entity an attribute was placed on is split, 'the attribute is available from each face'. parent returns an arbitrary 'primary' entity and otherParents returns the rest. So the danger is duplicated tags carrying the same pieceId on every fragment, not tags lost on all but one. Attributes_UM adds that B-Rep attributes are never auto-deleted and their parent can become null when the entity is consumed. Body-level split behavior is not documented, so re-tagging is still needed.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation Attribute.parent / Attribute.otherParents",
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Attributes_UM.htm"
+    ]
+   },
+   {
+    "id": "SW-09",
+    "verdict": "confirmed",
+    "evidence": "SplitBodyFeatures.createInput(splitBodies, splittingTool, isSplittingToolExtended): the splitting tool 'is a single entity' (body, construction plane, profile or face), and the extend flag extends it to fully intersect. So one tool per feature is required by the API. Diffing body sets is a sound practice; the claim about Feature.bodies is from local docs I did not re-test.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation SplitBodyFeatures.createInput"
+    ]
+   },
+   {
+    "id": "SW-10",
+    "verdict": "confirmed",
+    "evidence": "Component.findBRepUsingRay docs: 'If an entity is hit more than once, the entity is returned once for the first intersection', which confirms single hit per face and supports using it only for spot checks. TriangleMeshCalculator exposes surfaceTolerance and maxSideLength in cm, plus setQuality LOD levels. The timing numbers are local. For contrast, LureMoldGenerator reports 25k triangles taking 13.5 s per cavity with its own method, so the per-direction bucketed approach should be benchmarked as claimed.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation Component.findBRepUsingRay / TriangleMeshCalculator",
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md"
+    ]
+   },
+   {
+    "id": "SW-11",
+    "verdict": "unverifiable",
+    "evidence": "I did not obtain the cited papers (IST Austria, UTS, McMains), and no source I read gives a 2° step or 200-500 Fibonacci-direction recommendation. The approach of precomputing accessibility and scoring by lookup is plausible but unconfirmed.",
+    "sources": []
+   },
+   {
+    "id": "SW-12",
+    "verdict": "confirmed",
+    "evidence": "Geometric check: for a revolve with full-disc slices (single-valued r(z) reaching the axis), the outward normal is proportional to (cos φ, sin φ, -r'(z)), so every point on the half with cos φ >= 0 has a non-negative component along the pull normal to the split plane. Horizontal rays stay at constant z and leave the convex disc, so there is no occlusion. Any axial split is therefore valid. Annular slices have inward-facing surfaces that horizontal pulls cannot reach. Non-decreasing r(z) allows an upward drop-out. Consistent with shapecastmolds.com, which generates one-part molds for simple revolved profiles and split molds for undercuts.",
+    "sources": [
+     "https://shapecastmolds.com/"
+    ]
+   },
+   {
+    "id": "SW-13",
+    "verdict": "adjust",
+    "corrected_value": "moldLayout auto, maxPlasterPieces 5. Add a hard penalty for seams that cross the foot or bottom surface, so sides2 is not chosen when it bisects the foot (prefer sides2Bottom or a drop-out spare). Include the 'two side pieces + drop-out spare' layout.",
+    "evidence": "In 'Mastering Mold Design', Kaplan calls the 2-part vertical mold 'poor mold design' because 'the seam bisects the foot and will require extra trimming'. The article recommends a 3-part mold (two sides plus bottom) or two sides with a drop-out spare. Picking the 'simplest zero-undercut layout' by piece count and seam length would choose sides2 for a mug, which contradicts that advice; scoring must include where seams fall. The user's own example also uses bottom + 2 sides.",
+    "sources": [
+     "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms"
+    ]
+   },
+   {
+    "id": "SW-14",
+    "verdict": "adjust",
+    "corrected_value": "Steps 0.01/0.1/1.0 cm OK; tolerance 1e-5 cm3 (0.01 mm3) or relative to piece volume, not 0.001 cm3; keep removal-order search and the natch-parallel requirement",
+    "evidence": "The cited lisawong reference uses a strict tolerance of 0.001 mm3 (1e-6 cm3) over steps from 0.025 mm to 64 mm. The rule's 0.001 cm3 is 1000x looser and can pass a small undercut at the 0.1 mm step: 1 mm3 of overlap at 0.1 mm displacement corresponds to 10 mm2 of undercut area. Natches must be parallel to the relative motion of their two pieces; that follows directly from the geometry.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/TECHNICAL-REFERENCE.md"
+    ]
+   },
+   {
+    "id": "SW-15",
+    "verdict": "confirmed",
+    "evidence": "Design.createInterferenceInput(entities) and analyzeInterference(input) exist. InterferenceInput.areCoincidentFacesIncluded 'defaults to False', so coincident mating faces are excluded by default as the rule assumes. The 0.1% volume balance is a design threshold.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation Design.analyzeInterference / InterferenceInput.areCoincidentFacesIncluded"
+    ]
+   },
+   {
+    "id": "SW-16",
+    "verdict": "confirmed",
+    "evidence": "ShellFeatures.createInput(inputEntities, isTangentChain=True) exists. ShellFeatureInput has outsideThickness and shellType, with RoundedOffsetShellType available; the default is SharpOffsetShellType (marked Legacy), so RoundedOffset must be set explicitly. isTangentChain defaults to true, so passing False is meaningful. A disc-union (Minkowski) envelope of the profile is the correct construction for a uniform rounded offset. Shell hollows its input, so run it on a copy, which matches 'the cast comes from exact geometry'.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation ShellFeatures.createInput / ShellFeatureInput / ShellTypes"
+    ]
+   },
+   {
+    "id": "SW-17",
+    "verdict": "adjust",
+    "corrected_value": "Keep the conventions, but cap stdout at about 40 KB (~10k tokens), not 1 MiB",
+    "evidence": "Claude Code MCP docs: a warning 'when any MCP tool output exceeds 10,000 tokens', and 'the default maximum is 25,000 tokens'. 1 MiB is roughly 250k tokens, about 10x over the default cap, so large outputs would be truncated or persisted. fusion-mcp-client shows scripts as def run(_context) and says execute_script is 'read-only by default' unless read_only=False.",
+    "sources": [
+     "https://code.claude.com/docs/en/mcp",
+     "https://github.com/hitsmaxft/fusion-mcp-client"
+    ]
+   },
+   {
+    "id": "SW-18",
+    "verdict": "adjust",
+    "corrected_value": "Keep the pure-Python moldkit/ core plus moldkit/fusion/ adapters. In the stub, use a uniquely named top-level package and remove the inserted sys.path entry after import (or load via importlib.util.spec_from_file_location), and reload only moldkit.* modules.",
+    "evidence": "LureMoldGenerator confirms the pattern: core modules 'import nothing from Fusion', backed by 304 tests and a test that enforces no Fusion import. Autodesk PythonSpecific_UM, however, advises 'Instead of installing or adding the module to sys.path we recommend that you have a local copy of the module for your script', because add-ins share one interpreter. Permanently inserting the repo on sys.path can shadow other add-ins' modules. The Python 3.14 / no-numpy environment facts are local and unverified.",
+    "sources": [
+     "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/HEAD/README.md",
+     "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm"
+    ]
+   },
+   {
+    "id": "SW-19",
+    "verdict": "confirmed",
+    "evidence": "The cited lisawong PRD uses the same pattern: statuses 'strict_pass, conditional_finishing, inconclusive, fail, unsupported' and human review gates (four of them: input, plaster, forms, final export). The rule's three gates and 'conditional' status are a reasonable simplification. This is a process design, not a physical fact.",
+    "sources": [
+     "https://raw.githubusercontent.com/lisawong/plaster_mould_maker/main/PRD.md"
+    ]
+   },
+   {
+    "id": "SW-20",
+    "verdict": "confirmed",
+    "evidence": "STLExportOptions and C3MFExportOptions both expose surfaceDeviation (cm) and normalDeviation, and setting either 'will automatically set the meshRefinement to MeshRefinementCustom'. normalDeviation is defined in radians, so 10° must be passed as 0.1745. isBinaryFormat defaults to true and isOneFilePerBody exists. ShapeCast offers STL Default, STL High and STEP exports.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation STLExportOptions / C3MFExportOptions",
+     "https://shapecastmolds.com/"
+    ]
+   },
+   {
+    "id": "SW-21",
+    "verdict": "confirmed",
+    "evidence": "Documents.add docs: 'Currently, documents can only be created visibly so this argument must always be true', and creating documents is not supported inside command events. That confirms Documents.add cannot be hidden. Single-writer and no-edit-while-user-is-editing are sound process rules backed by local incident notes.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation Documents.add"
+    ]
+   },
+   {
+    "id": "SW-22",
+    "verdict": "confirmed",
+    "evidence": "BoundaryFillFeatureInput.cancel docs: not calling add leaves 'Fusion in a bad state' with undo problems and possibly a crash unless cancel is called, which confirms the try/finally. Ekins Solutions: 'A base feature is a special feature that acts as a non-parametric island', so bodies added through it are non-parametric. The createTorus 'ignores center' bug is not documented; the API signature takes a center. That part rests only on the local probe, but creating at the origin and then transforming is harmless.",
+    "sources": [
+     "local: fusion_mcp_read apiDocumentation BoundaryFillFeatureInput.cancel / TemporaryBRepManager.createTorus",
+     "https://ekinssolutions.com/using-temporary-b-rep-in-fusion-360/"
+    ]
+   }
+  ]
+ }
+]

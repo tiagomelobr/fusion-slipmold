@@ -1,0 +1,273 @@
+{
+ "topic": "claude-code-asset-conventions-for-slip-cast-molds",
+ "summary": "This research provides a foundation for an AI-driven plaster slip-casting mold toolkit. Technically, slip-casting success hinges on three factors: eliminating undercuts via careful parting-line design (often 3+ mold sections), maintaining plaster mold walls at 38–51 mm (thick enough for absorbency and strength), and ensuring precise registration between sections (spherical notches work well). Casting time is 15–25 minutes per section; final cast walls can be as thin as 2–3 mm. The toolkit must parameterize shrinkage (10% default), wall thickness, registration key geometry, and casing design so geometries regenerate when parameters change. For Claude Code structure, this workspace enforces cost discipline through a workflow-cost skill that mandates explicit model/effort per agent, read-only scouts for research (Sonnet, medium), and Opus for geometry implementation. Key assets include: (1) a comprehensive CLAUDE.md documenting slip-casting design rules and Fusion API conventions; (2) a /mold-research skill (scout subagent + Fusion API reference) for analyzing undercuts and parting lines; (3) a /mold-geometry skill bundling Python scripts for Boolean mold splitting, registration key generation, and casing design; (4) a /mold-verify skill (verification agent) that measures walls, detects undercuts, and checks seam alignment; and (5) a workflow script that chains research → design → verification → export steps. All scripts should write bulk results to scratchpad files, not inline. Before proposing the full asset set, clarify your answers to the 10 open questions about parting-line automation, shrinkage handling, wall-thickness enforcement, and visual verification checkpoints.",
+ "findings": [
+  {
+   "claim": "Plaster mold walls for slip-casting must be 1.5–2 inches (38–51 mm) thick",
+   "details": "Aluminum flashing cottle boards are wrapped around prototypes leaving a 1.5–2 inch gap, which becomes the plaster mold wall thickness. This thickness ensures structural integrity and sufficient absorbency to pull water from the slip effectively.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting"
+   ]
+  },
+  {
+   "claim": "Cast clay pieces can be extremely thin: 2–3 mm walls, down to 89 g for a 130 mm × 85 mm bowl",
+   "details": "Slip-cast porcelain bowls measuring 130 mm diameter and 85 mm deep can weigh only 89 grams with 2–3 mm walls due to the absorbent nature of plaster. Casting time is typically minutes (e.g., 20 minutes) before removal.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting"
+   ]
+  },
+  {
+   "claim": "Undercuts are the primary technical barrier and require parting lines and multi-piece molds",
+   "details": "Complex pieces with multiple undercuts need careful parting-line planning and often split into multiple sections. One technique is to use oil clay to mock each mold section, freeze it to test fit, and verify no sections hang up on undercuts. The split line of the mold must be set precisely.",
+   "confidence": "high",
+   "sources": [
+    "https://community.ceramicartsdaily.org/topic/25821-plaster-mold-making-for-complex-pieces/",
+    "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting"
+   ]
+  },
+  {
+   "claim": "Leaking molds and seams are caused by misaligned parts, warped molds, or flawed registration",
+   "details": "Primary remedies include ensuring molds are strapped during drying, verifying precise registration between mold sections (especially the parting line alignment), and applying parting compound (Murphy Oil Soap) to prevent sticking. Non-functioning sliding keys indicate reversed profiles or insufficient parting compound.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/10-Slip-Casting-Problems-and-How-to-Solve-Them"
+   ]
+  },
+  {
+   "claim": "Shrinkage accommodation: design prototypes 10% larger to account for firing shrinkage",
+   "details": "When casting tile and other forms that will be fired, designs must be enlarged by approximately 10% to accommodate cone-6 firing shrinkage. This parameter should be user-adjustable.",
+   "confidence": "high",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting"
+   ]
+  },
+  {
+   "claim": "Plaster absorbency is fundamental—the mold pulls water from slip over 15–25 minutes per section",
+   "details": "Absorbent plaster is the mechanism that builds up a layer of stiffened clay against the mold wall. Water absorption rate depends on plaster quality, age, and casting-slip viscosity/specific gravity. Casting too long retains excess water (a common problem).",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://ceramicartsnetwork.org/daily/article/10-Slip-Casting-Problems-and-How-to-Solve-Them"
+   ]
+  },
+  {
+   "claim": "3D-printed casings for plaster are disassembled after plaster cures; they need registration grooves and clamps",
+   "details": "A 3D-printed mother mold (casing) holds plaster during casting. Multiple casing pieces are assembled, plaster poured inside, and after curing the casing is disassembled. Registration features (tongue/groove) minimize seams and leaks. Printed clamps hold casing parts while plaster hardens.",
+   "confidence": "high",
+   "sources": [
+    "user's stated workflow and example (3-piece revolved mug mold with spherical notches and printed casings)"
+   ]
+  },
+  {
+   "claim": "Your workspace enforces cost discipline: read-only scouts for research, Sonnet for small tasks, Opus for geometry, one design-change agent at a time",
+   "details": "The workflow-cost skill in .claude/skills/workflow-cost/SKILL.md mandates: (1) scouts (Sonnet, medium, read-only, no CLAUDE.md) for research and Fusion API lookups; (2) explicit model and effort on every agent call; (3) 40–60 tool calls and 150–250k context per agent; (4) bulk results written to scratchpad files, not inline; (5) only one agent changes the design at a time; (6) reviewers measure the design themselves, not from implementer reports.",
+   "confidence": "high",
+   "sources": [
+    "D:\\Coding\\fusion360-claude\\.claude\\skills\\workflow-cost\\SKILL.md (lines 14–80)"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "plaster_mold_wall_thickness_mm",
+   "recommended_value": "38–51 mm (1.5–2 inches)",
+   "rationale": "Provides structural integrity and sufficient absorbency to pull water from slip. Wrapping aluminum flashing around prototype with 1.5–2 inch gap is the industry standard.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting"
+   ]
+  },
+  {
+   "parameter": "cast_clay_minimum_wall_thickness_mm",
+   "recommended_value": "2–3 mm",
+   "rationale": "Slip-casting enables thin-walled pieces. This is the practical minimum for most ceramics; thinner walls are fragile and harder to extract.",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting"
+   ]
+  },
+  {
+   "parameter": "casting_time_per_section_minutes",
+   "recommended_value": "15–25 minutes",
+   "rationale": "Time for plaster to absorb water and build up the desired clay layer against mold walls. Longer times can retain excess water (a casting defect).",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://ceramicartsnetwork.org/daily/article/10-Slip-Casting-Problems-and-How-to-Solve-Them"
+   ]
+  },
+  {
+   "parameter": "shrinkage_compensation_percent",
+   "recommended_value": "10%",
+   "rationale": "Cone-6 porcelain and stoneware shrink ~10% when fired. Design prototypes 10% larger to achieve target final dimensions.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting"
+   ]
+  },
+  {
+   "parameter": "printed_mold_casing_wall_thickness_mm",
+   "recommended_value": "5 mm (user's example: printedMoldWallThickness=5mm)",
+   "rationale": "Structural thickness for 3D-printed mother molds. Must resist plaster pressure during curing. User example: baseMoldHeight=5 mm, cutCount=3 pieces.",
+   "sources": [
+    "user's example mug mold: 3 pieces + printed casings"
+   ]
+  },
+  {
+   "parameter": "registration_key_spherical_radius_mm",
+   "recommended_value": "5–10 mm (user example: spherical notches on revolved mug)",
+   "rationale": "Prevents mold sections from sliding during casting. Spherical or hemispherical keys are easier to machine and 3D-print than sharp undercuts.",
+   "sources": [
+    "user's example mug: spherical notches for alignment"
+   ]
+  },
+  {
+   "parameter": "parting_line_location_rule",
+   "recommended_value": "Place on a plane parallel to the pour opening; avoid undercuts in the parting direction",
+   "rationale": "Ensures mold sections can be separated without damaging the cast or hanging up on the plaster piece. Multi-piece molds may split on a vertical plane (user example) or more complex surfaces.",
+   "sources": [
+    "https://community.ceramicartsdaily.org/topic/25821-plaster-mold-making-for-complex-pieces/"
+   ]
+  },
+  {
+   "parameter": "claude_code_subagent_model_research",
+   "recommended_value": "agentType: 'scout' (Sonnet 5, medium, read-only, no CLAUDE.md)",
+   "rationale": "Minimizes cost for research, Fusion API lookups, and web searches. Scout starts without CLAUDE.md to reduce context; delegation prompt carries all rules.",
+   "sources": [
+    "D:\\Coding\\fusion360-claude\\.claude\\skills\\workflow-cost\\SKILL.md (lines 20–31)"
+   ]
+  },
+  {
+   "parameter": "claude_code_subagent_model_geometry",
+   "recommended_value": "effort: 'high' (inherits Opus 5.5)",
+   "rationale": "For mold-generation geometry, Fusion API scripts, and design-decision verification. One agent at a time modifies the design.",
+   "sources": [
+    "D:\\Coding\\fusion360-claude\\.claude\\skills\\workflow-cost\\SKILL.md (line 22)"
+   ]
+  },
+  {
+   "parameter": "claude_code_skill_frontmatter_required_fields",
+   "recommended_value": "name, description, (optional: allowed-tools, other metadata)",
+   "rationale": "SKILL.md frontmatter is YAML. name and description are required; allowed-tools can restrict MCP or built-in tool access. Replaces @file imports for modularity.",
+   "sources": [
+    "workspace example: .claude/skills/workflow-cost/SKILL.md (lines 1–4); scout.md agent (line 4 tools field)"
+   ]
+  }
+ ],
+ "techniques": [
+  {
+   "name": "Parting-line and undercut analysis via plane sweep",
+   "description": "Sweep a plane perpendicular to the proposed pour direction through the 3D geometry to detect faces with negative slopes (undercuts). For each undercut zone, design a parting line that isolates it into a separate mold section. Multi-piece molds (user's example: 3-piece revolved mug with vertical plane split) are common.",
+   "pros": "Mathematically deterministic; can be automated by Fusion API scripts to test multiple parting planes.",
+   "cons": "Complex geometries may require 4+ pieces, increasing assembly complexity and seam count.",
+   "sources": [
+    "https://community.ceramicartsdaily.org/topic/25821-plaster-mold-making-for-complex-pieces/"
+   ]
+  },
+  {
+   "name": "Oil-clay mockup and freeze test",
+   "description": "Hand-sculpt each proposed mold section in oil-clay, freeze the assembly to harden it, then physically test whether sections can be separated without hanging up on undercuts. Visual and tactile verification before committing to plaster.",
+   "pros": "Fast, hands-on, catches design flaws early.",
+   "cons": "Labor-intensive; difficult to automate or verify with AI; only works for already-designed sections.",
+   "sources": [
+    "https://community.ceramicartsdaily.org/topic/25821-plaster-mold-making-for-complex-pieces/"
+   ]
+  },
+  {
+   "name": "Plaster mold splitting via Boolean operations (Fusion API)",
+   "description": "Build a solid around the prototype (cutter body), then subtract it from a larger block to create the mold. Split mold along parting planes using Boolean subtract operations. Sections are negative imprints of the prototype and mold walls.",
+   "pros": "Fully automatable in Fusion; parameter-driven; regenerates when prototype changes.",
+   "cons": "Requires careful Boolean geometry to avoid failures; must verify fit before 3D printing casing.",
+   "sources": [
+    "implied by user's stated workflow"
+   ]
+  },
+  {
+   "name": "Registration keys via spherical notches",
+   "description": "Add hemispherical or spherical holes/bumps to mold section faces to align parts during casting. User example: spherical notches on 3-piece mug mold. Keys should be at least 5–10 mm radius for adequate grip and 3D-printability.",
+   "pros": "Prevents mold sections from sliding; easier to 3D-print than sharp undercut keys.",
+   "cons": "Must not conflict with the clay cavity; sphere radius limits precision.",
+   "sources": [
+    "user's example mug: spherical notches"
+   ]
+  },
+  {
+   "name": "3D-printed mother molds (casings) for plaster casting",
+   "description": "For each plaster mold section, design a negative shell (casing) that holds plaster during pouring and curing. Casings are assembled, plaster poured, dried, then disassembled. Casings are 3D-printed, typically at 5 mm wall thickness (user's parameter: printedMoldWallThickness=5 mm).",
+   "pros": "Enables complex multi-piece plaster molds; casings are reusable; printed clamps hold pieces during cure.",
+   "cons": "Adds CAD design step; FDM 3D printing requires support removal; curing plaster can warp prints if not strapped.",
+   "sources": [
+    "user's stated workflow: 3-piece mug with printed casings"
+   ]
+  },
+  {
+   "name": "Plaster mold strapping and curing under load",
+   "description": "During plaster cure (hours to days), wrap mold sections tightly with plaster bandages or strapping tape, or load them with weight, to minimize warping. Parting compound (Murphy Oil Soap) applied before joining sections prevents bonding.",
+   "pros": "Reduces warp and seam leaks; critical for multi-piece molds.",
+   "cons": "Requires monitoring; improper strapping causes uneven curing and cracks.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/10-Slip-Casting-Problems-and-How-to-Solve-Them"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Undercuts in the parting direction: If a mold section has a face pointing 'backward' (toward the pour opening), the cast clay will hang up and cannot be extracted without damage. This is the most common fatal flaw; design parting lines to eliminate undercuts in each section's release direction.",
+  "Leaking seams between mold sections: Caused by misaligned parting lines, warped molds, or insufficient parting compound. Poor alignment adds seams that allow slip to escape, producing hollow or malformed casts. Strapping during cure and precise registration keys are essential.",
+  "Mold weight and structural failure: Thicker plaster walls mean heavier molds. Rule of thumb: taper walls proportionally or cut 45° corner angles to reduce weight. Heavy molds warp under their own weight if not strapped.",
+  "Casting time too long: Leaving slip in the mold longer than 20–25 minutes can cause water to be retained in the cast, leading to cracks during drying or firing. Slip viscosity and plaster absorbency control the time; must be tested per recipe.",
+  "Plaster quality and aging: Old plaster absorbs moisture and loses absorbency. Crumbly or weak plaster indicates old material, improper mixing (incorrect water ratio), or bad storage. Always use fresh plaster and measure water precisely.",
+  "Inadequate parting compound: If Murphy Oil Soap or equivalent is not applied thickly between mold sections, they bond together and cannot be separated. The compound must coat all contact faces before assembly.",
+  "3D-printed casing under-design: If the casing is too thin or lacks bracing, it deforms under plaster weight and curing pressure, distorting the mold. Minimum wall thickness 5 mm; internal braces or ribs recommended for large casings.",
+  "Underestimating shrinkage: Forgetting to scale prototypes 10% larger leads to undersized final pieces after firing. This must be a user parameter in the toolkit and clearly documented.",
+  "Ignoring draft angles on mold sections: If a mold section is too complex or has sharp vertical walls, it may be impossible to extract from the 3D-printed casing or to remove the casing from the plaster. Draft angles (slight taper) aid release.",
+  "AI geometry generation without visual verification: Automated geometry (wall thickness, parting lines, registration keys) must be visually inspected in Fusion 360 before 3D printing. A Fusion screenshot step should be mandatory before any print job."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast: Automating 3D Design for Plaster Molds in Ceramic Slip Casting",
+   "url": "https://dl.acm.org/doi/10.1145/3613905.3651020",
+   "what_it_does": "Academic research on automated mold design for slip-casting. Likely addresses parting-line generation, undercut detection, and multi-piece mold decomposition using computational geometry. Directly relevant to the toolkit's core algorithms.",
+   "relevance": "High—this is the most relevant prior art for automated mold design. The toolkit should cite or reference this work for undercut detection and parting-line algorithms."
+  },
+  {
+   "name": "Ceramic Arts Network: How to Make a Plaster Mold for Slip Casting",
+   "url": "https://ceramicartsnetwork.org/daily/article/How-to-Make-a-Plaster-Mold-for-Slip-Casting",
+   "what_it_does": "Industry-standard practical guide covering prototype preparation, cottle-board setup (1.5–2 inch walls), registration-key design, parting compound application, and multi-section mold assembly.",
+   "relevance": "High—establishes the baseline manual workflow the toolkit automates. Dimensions and procedures should be parameterized."
+  },
+  {
+   "name": "Ceramic Arts Network: 10 Slip-Casting Problems and How to Solve Them",
+   "url": "https://ceramicartsnetwork.org/daily/article/10-Slip-Casting-Problems-and-How-to-Solve-Them",
+   "what_it_does": "Comprehensive troubleshooting guide: leaking molds, seam issues, mold weight, casting time, plaster quality, parting-compound application, and release problems. Critical for validation rules in the toolkit.",
+   "relevance": "High—toolkit verification scripts should check for these pitfalls (seam alignment, wall thickness, curing load, etc.)"
+  },
+  {
+   "name": "Digitalfire: Slip Casting Glossary",
+   "url": "https://digitalfire.com/glossary/slip+casting",
+   "what_it_does": "Technical reference on slip-casting process, plaster absorbency, water absorption rates, casting times, and thin-wall limits (2–3 mm). Defines material properties.",
+   "relevance": "Medium—provides baseline process parameters (timing, physics) for toolkit defaults."
+  },
+  {
+   "name": "Ceramic Arts Daily Community: Plaster Mold Making for Complex Pieces",
+   "url": "https://community.ceramicartsdaily.org/topic/25821-plaster-mold-making-for-complex-pieces/",
+   "what_it_does": "Discussion of multi-piece mold strategies, parting-line placement, undercut avoidance, and oil-clay mockup testing. Practitioner advice on real-world complexity.",
+   "relevance": "High—documents the iterative design process for complex geometries; toolkit should support parting-line iteration."
+  },
+  {
+   "name": "Autodesk Fusion 360 Embedded Python API",
+   "url": "https://help.autodesk.com/view/fusion360/ENU/",
+   "what_it_does": "Official API documentation for scripting within Fusion 360 (Python 3.14 in this workspace). Required for all geometry generation, parameter plumbing, and Boolean operations.",
+   "relevance": "Essential—toolkit implementation entirely depends on Fusion API. Scripts must use the API correctly for bodies, sketches, features, parameters, and design validation."
+  }
+ ],
+ "open_questions_for_user": [
+  "Parting-line automation: Should the toolkit propose parting lines (automatically, via plane sweep), or should the user specify them in Fusion parameters? Your example mug uses a vertical plane split—is that the target model?",
+  "Prototype input: Do agents receive a finished, undercut-free prototype as input, or should the toolkit detect and suggest undercuts before mold design? Should it guide the user through prototype refinement?",
+  "Shrinkage parameterization: Should the Fusion model include a user parameter 'shrinkage_percent' (default 10%) that scales the prototype upward before mold design? Or is that outside the toolkit's scope (pre-design step)?",
+  "Well/reservoir design: How should the 'well' (spare/overflow chamber for liquid slip) be sized? Should it be a user parameter (e.g., well_height_mm, well_margin_mm)? Your draft mentions this but doesn't specify the rule.",
+  "Wall-thickness uniformity: Your draft says 'ideally with roughly uniform wall thickness.' Should the toolkit compute and enforce a target wall thickness (e.g., 40 mm everywhere), or detect non-uniformity and warn the user?",
+  "3D-printing casing design: Should the toolkit auto-generate casings for each mold section, or should the user specify casing parameters (wall thickness, braces, clamp attachment points)? Does the user want a library of casing templates?",
+  "Registration key style: Your example uses spherical notches. Should the toolkit support multiple key types (hemispheres, alignment pins, tongue-and-groove grooves), or standardize on one?",
+  "Validation workflow: Should agents print Fusion screenshots of critical steps (parting lines, undercut detection, wall thickness verification) for manual review before 3D printing? Your cost-policy skill emphasizes 'screenshots only where the step needs a visual check'—which steps qualify?",
+  "Multi-platform/multi-user: Is this toolkit for you alone (your workspace), or should it support other ceramicists' projects? Should CLAUDE.md include best-practice examples and a troubleshooting guide for common mold failures?",
+  "Iteration and feedback loops: When an agent detects a problem (e.g., too-thin walls, undercuts in parting direction), should it propose a fix autonomously, or return to you for decision-making?"
+ ]
+}

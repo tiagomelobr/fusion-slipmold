@@ -1,0 +1,121 @@
+{
+  "version": 1,
+  "prefix": "mold_",
+  "comment": "Fusion user parameters (geometry) and mold.json settings (analysis/process/export). tier input = a mold_* user parameter S1 creates; auto = the engine's value (constant expr, or the derive rule in moldkit/core/resolve.py); profile = the printer profile (expr, overridden by the user config \"printer\"). Any auto or profile value is overridden for one mold by creating its mold_* user parameter. Values are research defaults; see docs/research/design-rules.md.",
+  "fusion": [
+    {"name": "shrinkagePct", "expr": "0", "units": "", "group": "ware", "desc": "Linear shrinkage % the plug is scaled up for, by 1/(1-s). 0 = model already at greenware size (no scale feature)", "rule": "CER-01", "tier": "input"},
+    {"name": "spareHeight", "expr": "20 mm", "units": "mm", "group": "spare", "desc": "Slip well height above the rim", "rule": "CER-12", "tier": "input"},
+    {"name": "spareStepOut", "expr": "10 mm", "units": "mm", "group": "spare", "desc": "Outward step at rim height = flat plaster knife ledge for trimming", "rule": "CER-12", "tier": "input"},
+    {"name": "spareFlare", "expr": "15 deg", "units": "deg", "group": "spare", "desc": "Outward flare of the well walls", "rule": "CER-12", "tier": "auto"},
+    {"name": "plasterWall", "expr": "25 mm", "units": "mm", "group": "plaster", "desc": "Nominal plaster wall around the cast plug", "rule": "CER-09", "tier": "input"},
+    {"name": "plasterBase", "expr": "25 mm", "units": "mm", "group": "plaster", "desc": "Plaster thickness under the foot", "rule": "CER-09", "tier": "auto", "derive": "= plasterWall"},
+    {"name": "plasterEdgeChamfer", "expr": "3 mm", "units": "mm", "group": "plaster", "desc": "Chamfer on outer plaster edges", "rule": "CER-11", "tier": "auto"},
+    {"name": "plasterOuterShape", "expr": "'tapered'", "units": "Text", "group": "plaster", "desc": "Outer plaster shape: tapered (straight tapered side around any plug, eases casing release; frustum = alias) | contoured (follows a revolved plug)", "rule": "PRN-06", "choices": ["tapered", "contoured"], "aliases": ["frustum"], "tier": "auto"},
+    {"name": "plasterOuterDraft", "expr": "3 deg", "units": "deg", "group": "plaster", "desc": "Minimum draft of the tapered side (casing release); warn < 3 deg, fail < 1 deg", "rule": "PRN-06", "tier": "auto"},
+    {"name": "plasterOuterDraftMax", "expr": "8 deg", "units": "deg", "group": "plaster", "desc": "Maximum draft searched for the smallest blank; = plasterOuterDraft for a fixed draft", "rule": "PRN-06", "tier": "auto", "derive": "= the larger of 8 deg and plasterOuterDraft"},
+    {"name": "plasterOuterTaper", "expr": "'auto'", "units": "Text", "group": "plaster", "desc": "Wide end of the tapered blank: auto (smaller blank) | wideTop | wideBottom", "rule": "PRN-06", "choices": ["auto", "wideTop", "wideBottom"], "aliases": ["widerTop", "widerBottom"], "tier": "auto"},
+    {"name": "layout", "expr": "'auto'", "units": "Text", "group": "layout", "desc": "Plaster piece layout: auto (S3 picks the best) | dropOut | sides2 | sides2Bottom | sides3Bottom | sides4Bottom", "rule": "SW-13", "choices": ["auto", "dropOut", "sides2", "sides2Bottom", "sides3Bottom", "sides4Bottom"], "tier": "input"},
+    {"name": "maxPieces", "expr": "5", "units": "", "group": "layout", "desc": "Hard cap on plaster pieces", "rule": "SW-13", "tier": "auto"},
+    {"name": "splitAzimuth", "expr": "0 deg", "units": "deg", "group": "layout", "desc": "Azimuth of the first vertical split plane, used with a fixed layout or a turned (revolved) ware; with layout auto on any other ware S3 searches the azimuth itself", "rule": "CER-06", "tier": "input"},
+    {"name": "bottomSplitMargin", "expr": "3 mm", "units": "mm", "group": "layout", "desc": "Margin above the highest annular slice for the bottom/side split", "rule": "CER-07", "tier": "auto"},
+    {"name": "bottomSplitHeight", "expr": "0 mm", "units": "mm", "group": "layout", "desc": "Manual bottom split height above the foot plane; 0 = auto", "rule": "CER-07", "tier": "auto"},
+    {"name": "natchRadius", "expr": "6 mm", "units": "mm", "group": "natches", "desc": "Sphere radius of the cap key", "rule": "CER-14", "tier": "auto", "derive": "0.24 x plasterWall to 0.5 mm, within 3-10 mm, lowered until the socket and natchEdgeMargin fit across the wall"},
+    {"name": "natchDepth", "expr": "3.5 mm", "units": "mm", "group": "natches", "desc": "Cap depth (about 0.58 x radius)", "rule": "CER-14", "tier": "auto", "derive": "= 0.58 x natchRadius, to 0.1 mm"},
+    {"name": "natchClearance", "expr": "0.5 mm", "units": "mm", "group": "natches", "desc": "Radial play between plaster bump and socket (independent casings); plaster to plaster, so it does not follow the printer fit (printed dome and cup errors both loosen it)", "rule": "CER-15", "tier": "auto"},
+    {"name": "natchesPerSeam", "expr": "3", "units": "", "group": "natches", "desc": "Keys per seam, asymmetric", "rule": "CER-14", "tier": "auto"},
+    {"name": "natchEdgeMargin", "expr": "5 mm", "units": "mm", "group": "natches", "desc": "Min distance from a key to the cast (measured in 3D) and from its footprint to the seam edges", "rule": "CER-14", "tier": "auto"},
+    {"name": "natchGender", "expr": "'mixed'", "units": "Text", "group": "natches", "desc": "Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) | single (all bumps of an interface on one piece)", "rule": "CER-14", "choices": ["mixed", "single"], "ignoreCase": true, "tier": "auto"},
+    {"name": "casingWall", "expr": "2.4 mm", "units": "mm", "group": "casing", "desc": "Reusable casing wall", "rule": "PRN-02", "tier": "auto", "derive": "2.4 mm rounded up to whole nozzle lines"},
+    {"name": "casingBasePlate", "expr": "4.8 mm", "units": "mm", "group": "casing", "desc": "Base pattern plate thickness; keep it 0.8 mm over flangeThickness", "rule": "PRN-05", "tier": "auto", "derive": "flangeThickness + 0.8 mm, rounded up to whole nozzle lines"},
+    {"name": "casingRingSectors", "expr": "4", "units": "", "group": "casing", "desc": "Sectors for full-ring casing backs", "rule": "PRN-06", "tier": "auto"},
+    {"name": "casingFreeboard", "expr": "10 mm", "units": "mm", "group": "casing", "desc": "Casing wall height above the plaster fill line", "rule": "PRN-10", "tier": "auto"},
+    {"name": "fillLineDepth", "expr": "0.6 mm", "units": "mm", "group": "casing", "desc": "Fill-line deboss depth", "rule": "PRN-10", "tier": "profile"},
+    {"name": "casingMaterial", "expr": "'PETG'", "units": "Text", "group": "casing", "desc": "Casing print material, the prefix of every casing part name: PETG (recommended: heat deflection about 75 C; setting plaster warms the casing to 40-55 C) | PLA (58 C)", "rule": "PRN-04", "choices": ["PETG", "PLA"], "ignoreCase": true, "tier": "input"},
+    {"name": "flangeThickness", "expr": "4 mm", "units": "mm", "group": "seams", "desc": "Flange thickness; leaves a 2.5 mm floor under the 1.5 mm ridge grooves", "rule": "PRN-08", "tier": "auto"},
+    {"name": "flangeWidth", "expr": "15 mm", "units": "mm", "group": "seams", "desc": "Flange width: the ridge zone (3 ridges: 14.6 mm) + a land at the edge; the clip beads sit over the outer grooves", "rule": "PRN-08", "tier": "auto", "derive": "the ridge zone (ridgeCount, ridgeWidth, ridgeHeight, ridgeInset, seamClearance) + the 1.2 mm edge land, rounded up to whole mm"},
+    {"name": "ridgeCount", "expr": "3", "units": "", "group": "seams", "desc": "Sealing ridges per seam (same offsets on every seam, so the ridge lines turn the corners)", "rule": "PRN-09", "tier": "auto"},
+    {"name": "ridgeWidth", "expr": "0.8 mm", "units": "mm", "group": "seams", "desc": "Ridge top width (2 nozzle lines; 45-degree flanks below)", "rule": "PRN-09", "tier": "auto", "derive": "= 2 x nozzle"},
+    {"name": "ridgeHeight", "expr": "1 mm", "units": "mm", "group": "seams", "desc": "Ridge height", "rule": "PRN-09", "tier": "auto"},
+    {"name": "ridgeInset", "expr": "1.5 mm", "units": "mm", "group": "seams", "desc": "Casing wall outer face to the first ridge", "rule": "PRN-09", "tier": "auto"},
+    {"name": "footGrooveInnerClear", "expr": "0.51 mm", "units": "mm", "group": "seams", "desc": "Cavity-side clearance of the first foot groove (room for the plaster's setting expansion)", "rule": "PRN-09", "tier": "auto", "derive": "= seamClearance + 0.35 mm (plaster setting expansion about 0.17 mm + 0.2 mm print error)"},
+    {"name": "seamClearance", "expr": "0.16 mm", "units": "mm", "group": "seams", "desc": "Ridge/groove clearance per flank; follows the nozzle and the fit offset. To change only the ridges (the fit offset also moves the clips), add a mold_seamClearance user parameter (this mold) or set seamClearance under printer in config.json (every mold)", "rule": "PRN-22", "tier": "profile", "derive": "0.16 mm (PETG, 0.4 mm nozzle) + the fit allowance (fitOffset + 0.125 x (nozzle - 0.4 mm)); PLA 0.05 mm less; never below 0.1 mm"},
+    {"name": "grooveBottomGap", "expr": "0.5 mm", "units": "mm", "group": "seams", "desc": "Extra groove depth so flange faces bear (the sector foot grooves print on the bed face in draft layers)", "rule": "PRN-22", "tier": "profile", "derive": "the larger of 0.4 mm and 2 draft layers (layerDraft x nozzle / 0.4), rounded up to 0.05 mm"},
+    {"name": "clipSpacingMax", "expr": "25 mm", "units": "mm", "group": "clips", "desc": "Max centre spacing of the short snap clips along a foot seam (force: about 5.8 N per clip)", "rule": "PRN-12", "tier": "auto", "derive": "one short clip's arm force / the seam's force demand, to whole mm (never below clipWidth)"},
+    {"name": "clipEndOffset", "expr": "10 mm", "units": "mm", "group": "clips", "desc": "Foot bead run and clips kept this far from a crossing flange's outer face", "rule": "PRN-12", "tier": "auto"},
+    {"name": "clipArm", "expr": "2.4 mm", "units": "mm", "group": "clips", "desc": "Clip arm thickness (PETG; 20 mm free length)", "rule": "PRN-13", "tier": "auto", "derive": "the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip material's limit"},
+    {"name": "clipWidth", "expr": "16 mm", "units": "mm", "group": "clips", "desc": "Short snap clip width along the seam", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipPreload", "expr": "0.7 mm", "units": "mm", "group": "clips", "desc": "Short clip preload per arm; spares at 0.5 and 0.9 mm are printed to compare in the leak test", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipRailPreload", "expr": "0.8 mm", "units": "mm", "group": "clips", "desc": "Rail clip preload per arm (vertical seams)", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipRailMax", "expr": "60 mm", "units": "mm", "group": "clips", "desc": "Longest rail clip; longer vertical seams get several stacked rails", "rule": "PRN-13", "tier": "auto"},
+    {"name": "lugHeight", "expr": "3 mm", "units": "mm", "group": "clips", "desc": "Stop lugs on the vertical flanges above the foot; the lowest rail clip rests on them", "rule": "PRN-13", "tier": "auto"},
+    {"name": "standHeight", "expr": "5 mm", "units": "mm", "group": "clips", "desc": "Printed stand under the base part, so the foot clips' flat arm wraps under its back", "rule": "PRN-13", "tier": "auto"},
+    {"name": "standWall", "expr": "4 mm", "units": "mm", "group": "clips", "desc": "Stand ring wall width", "rule": "PRN-13", "tier": "auto"},
+    {"name": "bedX", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer bed X", "rule": "PRN-15", "tier": "profile"},
+    {"name": "bedY", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer bed Y", "rule": "PRN-15", "tier": "profile"},
+    {"name": "bedZ", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer height", "rule": "PRN-15", "tier": "profile"},
+    {"name": "bedMargin", "expr": "5 mm", "units": "mm", "group": "printer", "desc": "Safety margin inside the bed limits", "rule": "PRN-15", "tier": "profile"},
+    {"name": "nozzle", "expr": "0.4 mm", "units": "mm", "group": "printer", "desc": "Nozzle diameter (the Make mold dialog asks for it): walls and ridges snap to whole lines, layer heights scale with it, printed clearances open 0.125 mm per mm over 0.4", "rule": "PRN-16", "tier": "profile"},
+    {"name": "fitOffset", "expr": "0 mm", "units": "mm", "group": "printer", "desc": "Per-side fit correction from your tolerance test: + loosens every printed fit (ridge grooves, clip openings and barbs), - tightens; 0 for a calibrated printer", "rule": "PRN-22", "tier": "profile"}
+  ],
+  "stageGroups": {
+    "s1_params": [
+      "ware",
+      "spare",
+      "layout",
+      "plaster",
+      "natches",
+      "casing",
+      "seams",
+      "clips",
+      "printer"
+    ]
+  },
+  "materials": {
+    "PETG": {
+      "modulusMPa": [
+        1000.0,
+        1200.0,
+        1500.0
+      ],
+      "strainMaxPct": 1.5,
+      "desc": "Clip arm material: elastic modulus low / mid / high and the bending strain it takes without whitening"
+    }
+  },
+  "settings": {
+    "analysis": {
+      "undercutTolDeg": 0.5,
+      "draftWarnDeg": 1.0,
+      "coreDraftMinDeg": 3.0,
+      "analysisDirStepDeg": 2.0,
+      "analysisTargetTriangles": 20000,
+      "plasterWallWarnRatio": 0.8,
+      "plasterWallFailRatio": 0.6,
+      "plasterWallMinAbsMm": 15.0,
+      "releaseToleranceCm3": 1e-05,
+      "casingDraftWarnDeg": 3.0,
+      "casingDraftFailDeg": 1.0
+    },
+    "process": {
+      "plaster": "USG No. 1 Pottery Plaster",
+      "consistency": 70,
+      "dryPlasterGPerCm3": 0.985,
+      "overagePct": 15,
+      "wetDensityGPerCm3": 1.58,
+      "mixWaterTempC": 21,
+      "shopTempMaxC": 24,
+      "wetPieceWeightWarnKg": 6.0,
+      "casingMaterialDefault": "PETG",
+      "clipMaterial": "PETG",
+      "layerFine": 0.12,
+      "layerDraft": 0.24,
+      "plaDensity": 1.24,
+      "petgDensity": 1.27
+    },
+    "export": {
+      "format": "3mf",
+      "surfaceDeviationMm": 0.01,
+      "normalDeviationDeg": 10,
+      "maxTriangles": 150000
+    }
+  }
+}

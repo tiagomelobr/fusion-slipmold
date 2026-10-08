@@ -1,0 +1,530 @@
+[
+ {
+  "name": "moldSourceBody",
+  "default": "'Mug' (text)",
+  "description": "Name of the source body the mold is generated from; the intake stage resolves it in the named document.",
+  "stage": "S0 intake"
+ },
+ {
+  "name": "moldUpAxis",
+  "default": "'Z' (text)",
+  "description": "Direction of the pour opening (rim up) in the source design.",
+  "stage": "S0 intake"
+ },
+ {
+  "name": "clayShrinkagePct",
+  "default": "13 (unitless, %)",
+  "description": "Measured wet-to-fired linear shrinkage of the slip.",
+  "stage": "S2 ware"
+ },
+ {
+  "name": "applyShrinkage",
+  "default": "1 (unitless boolean)",
+  "description": "1 if the Fusion model is at fired size and must be scaled up; 0 if already greenware size.",
+  "stage": "S2 ware"
+ },
+ {
+  "name": "wareScale",
+  "default": "1.149 (derived: 1 / (1 - clayShrinkagePct/100) when applyShrinkage = 1)",
+  "description": "Uniform scale applied to the ware only, never to mold or casing parameters.",
+  "stage": "S2 ware"
+ },
+ {
+  "name": "castWallTarget",
+  "default": "4 mm",
+  "description": "Intended cast wall; used for spare level-drop check and documentation.",
+  "stage": "S2 ware"
+ },
+ {
+  "name": "spareStyle",
+  "default": "'integrated' (text: integrated | ring | printedSpout)",
+  "description": "Spare split with the side pieces, a separate plaster ring piece removed first, or a non-absorbent printed spout.",
+  "stage": "S2 spare"
+ },
+ {
+  "name": "spareHeight",
+  "default": "20 mm",
+  "description": "Height of the slip well above the rim; checked against max(15 mm, 2 x predicted drop + 5 mm).",
+  "stage": "S2 spare"
+ },
+ {
+  "name": "spareStepOut",
+  "default": "5 mm",
+  "description": "Outward step at rim height forming a flat plaster knife ledge (0 = straight extrusion of the rim).",
+  "stage": "S2 spare"
+ },
+ {
+  "name": "spareFlareAngle",
+  "default": "5 deg",
+  "description": "Outward flare of the spare walls for release.",
+  "stage": "S2 spare"
+ },
+ {
+  "name": "spareTopRound",
+  "default": "3 mm",
+  "description": "Round on the plaster edge at the top of the well.",
+  "stage": "S2 spare"
+ },
+ {
+  "name": "plasterWall",
+  "default": "25 mm",
+  "description": "Nominal plaster offset from the cast plug (30-40 mm for 150-300 mm ware).",
+  "stage": "S4 plaster"
+ },
+ {
+  "name": "plasterBase",
+  "default": "25 mm",
+  "description": "Plaster thickness under the foot (bottom piece).",
+  "stage": "S4 plaster"
+ },
+ {
+  "name": "plasterEdgeChamfer",
+  "default": "3 mm",
+  "description": "Chamfer on outer plaster edges.",
+  "stage": "S4 plaster"
+ },
+ {
+  "name": "plasterWallWarnRatio",
+  "default": "0.8 (unitless)",
+  "description": "Warn where local plaster thickness is below this fraction of plasterWall.",
+  "stage": "S6 verify"
+ },
+ {
+  "name": "plasterWallFailRatio",
+  "default": "0.6 (unitless)",
+  "description": "Fail where local plaster thickness is below this fraction of plasterWall.",
+  "stage": "S6 verify"
+ },
+ {
+  "name": "plasterWallMinAbs",
+  "default": "15 mm",
+  "description": "Absolute minimum local plaster thickness.",
+  "stage": "S6 verify"
+ },
+ {
+  "name": "plasterConsistency",
+  "default": "70 (unitless)",
+  "description": "Water parts per 100 plaster by weight (USG No. 1); brand-specific.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "plasterDryPerCm3",
+  "default": "0.985 (unitless, g per cm3 of slurry)",
+  "description": "Dry plaster mass per cm3 of plaster body at consistency 70.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "plasterOveragePct",
+  "default": "15 (unitless, %)",
+  "description": "Extra plaster mixed for spills and leaks.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "wetPieceWeightWarn",
+  "default": "6 kg",
+  "description": "Warn when a wet plaster piece (V x 1.58 g/cm3) exceeds this.",
+  "stage": "S6 verify"
+ },
+ {
+  "name": "moldLayout",
+  "default": "'auto' (text: auto | dropOut | sides2 | sides2Bottom | sides3Bottom | sides4Bottom)",
+  "description": "Piece layout; auto picks the simplest zero-undercut layout and asks for approval.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "sidePieceCount",
+  "default": "2 (unitless)",
+  "description": "Number of side sectors when the layout is set manually.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "splitAzimuth",
+  "default": "0 deg",
+  "description": "Azimuth of the first axial split plane (irrelevant for pure revolves; set for handles or bed fit).",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "bottomSplitMargin",
+  "default": "3 mm",
+  "description": "Margin above the highest annular slice (foot recess) for the bottom/side split.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "bottomSplitHeightOverride",
+  "default": "0 mm (0 = auto)",
+  "description": "Manual bottom split height above the foot plane.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "allowDropOut",
+  "default": "1 (unitless boolean)",
+  "description": "Allow a one-piece drop-out mold when the profile permits.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "maxPlasterPieces",
+  "default": "5 (unitless)",
+  "description": "Hard cap on plaster pieces; beyond it the toolkit reports and stops.",
+  "stage": "S3 parting"
+ },
+ {
+  "name": "disassemblyOrder",
+  "default": "'spare,bottom,sides' (text)",
+  "description": "Planned opening order; verified collision-free including natches.",
+  "stage": "S6 verify"
+ },
+ {
+  "name": "undercutTolDeg",
+  "default": "0.5 deg",
+  "description": "Numerical tolerance: fail if n.d < -sin(undercutTolDeg) or occluded.",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "draftWarnDeg",
+  "default": "1 deg",
+  "description": "Warn on cast-contact faces with less draft than this.",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "coreDraftMinDeg",
+  "default": "3 deg",
+  "description": "Minimum draft on convex plaster cores the cast shrinks onto.",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "analysisDirStepDeg",
+  "default": "2 deg",
+  "description": "Angular step of horizontal candidate pull directions.",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "analysisTargetTriangles",
+  "default": "20000 (unitless)",
+  "description": "Target mesh size for pure-Python analysis (keeps each call well under 30 s).",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "analysisSurfaceTol",
+  "default": "0.05 mm",
+  "description": "TriangleMeshCalculator surface tolerance for analysis meshes.",
+  "stage": "S3 analysis"
+ },
+ {
+  "name": "natchStyle",
+  "default": "'sphereCap' (text: sphereCap | cone | embed13_5 | commercial9_8)",
+  "description": "Registration key type.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchRadius",
+  "default": "6 mm",
+  "description": "Sphere radius of the cap key.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchDepth",
+  "default": "3.5 mm",
+  "description": "Cap depth (about 0.58 x radius gives about 25 deg rim draft).",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchClearance",
+  "default": "0.4 mm",
+  "description": "Radial play between plaster bump and socket formed by independent casings; calibrate by coupon (0.1 mm for printed inserts).",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchesPerSeam",
+  "default": "3 (unitless)",
+  "description": "Keys per seam, asymmetric layout.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchesShortSeam",
+  "default": "2 (unitless)",
+  "description": "Keys on seams shorter than 100 mm.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchEdgeMargin",
+  "default": "5 mm",
+  "description": "Minimum distance from key footprint to cavity edge and to the chamfered outer edge.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "natchAsymmetric",
+  "default": "1 (unitless boolean)",
+  "description": "Offset key positions so pieces cannot be assembled the wrong way round.",
+  "stage": "S5 natches"
+ },
+ {
+  "name": "casingStrategy",
+  "default": "'reusable' (text: reusable | sacrificial)",
+  "description": "Split, flanged and clamped casings, or thin one-piece shells peeled with a heat gun.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingWorkflow",
+  "default": "'independent' (text: independent | sequential)",
+  "description": "Pour each piece in its own casing, or use a soaped finished piece as the wall for the next.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingWall",
+  "default": "2.4 mm",
+  "description": "Reusable casing wall (replaces printedMoldWallThickness = 5 mm).",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingWallSacrificial",
+  "default": "0.8 mm",
+  "description": "Sacrificial shell wall (1.2 mm on flat areas).",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingBackStyle",
+  "default": "'contoured' (text: contoured | block)",
+  "description": "Back follows the plaster offset in sectors, or a flat-walled block (more plaster, simpler parts).",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingBasePlate",
+  "default": "4 mm",
+  "description": "Thickness of the base pattern plate under the working-face positive.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingRingSectors",
+  "default": "4 (unitless)",
+  "description": "Sectors for full-revolve casing rings (2 allowed with a warning).",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingDraftWarnDeg",
+  "default": "3 deg",
+  "description": "Warn if any casing part has less release draft against the plaster.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingDraftFailDeg",
+  "default": "0.5 deg",
+  "description": "Fail below this casing release draft.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "pourOpenConeDeg",
+  "default": "30 deg",
+  "description": "Back faces within this angle of up are left open as the screeded pour face.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingFreeboard",
+  "default": "10 mm",
+  "description": "Casing wall height above the plaster fill line.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "fillLineDepth",
+  "default": "0.6 mm",
+  "description": "Deboss depth of the fill line inside the walls.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingPanelDeflectionMax",
+  "default": "0.2 mm",
+  "description": "Allowed panel bulge under slurry head; drives the span check and rib insertion.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "casingMaterial",
+  "default": "'PLA' (text: PLA | PETG)",
+  "description": "Casing filament; switched to PETG by the thermal rule.",
+  "stage": "S7 casing"
+ },
+ {
+  "name": "flangeThickness",
+  "default": "3 mm",
+  "description": "Flange thickness (two flanges = 6 mm fits 25 mm binder clips or the printed clip).",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "flangeWidth",
+  "default": "12 mm",
+  "description": "Flange width: ridge zone plus clamp jaw depth.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "ridgeWidth",
+  "default": "2 mm",
+  "description": "Flange ridge (tongue) width.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "ridgeHeight",
+  "default": "2 mm",
+  "description": "Flange ridge height.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "ridgeInset",
+  "default": "1.5 mm",
+  "description": "Distance from the plaster-facing edge to the ridge.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "seamClearance",
+  "default": "0.25 mm",
+  "description": "Ridge/groove clearance per side; calibrate by coupon.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "grooveBottomGap",
+  "default": "0.4 mm",
+  "description": "Extra groove depth so flange faces bear instead of the ridge.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "leadInChamfer",
+  "default": "0.5 mm",
+  "description": "45 deg lead-in on ridges, grooves and bed edges.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "sealMethod",
+  "default": "'clay' (text: clay | tape | foamGasket)",
+  "description": "External seam seal; foamGasket adds a channel with hard stops.",
+  "stage": "S7 seams"
+ },
+ {
+  "name": "clampStyle",
+  "default": "'printedWedge' (text: printedWedge | binderClip | boltM3)",
+  "description": "Clamp type; printed wedge clips are generated as bodies.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clampSpacingMax",
+  "default": "50 mm",
+  "description": "Maximum spacing between clamps along a seam.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clampEndOffset",
+  "default": "15 mm",
+  "description": "Maximum distance from a seam end to the first clamp.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clipTaper",
+  "default": "0.05 (unitless, 1:20)",
+  "description": "Wedge taper of the printed C-clip (self-locking).",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clipInterference",
+  "default": "0.15 mm",
+  "description": "Interference per arm when the clip is seated.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clipArmThickness",
+  "default": "3.5 mm",
+  "description": "Arm thickness of the printed clip.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "clipWidth",
+  "default": "18 mm",
+  "description": "Width of the printed clip along the seam.",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "binderClipSize",
+  "default": "25 mm",
+  "description": "Commercial binder clip size when clampStyle = binderClip (9 mm capacity).",
+  "stage": "S8 clamps"
+ },
+ {
+  "name": "mixWaterTempC",
+  "default": "20 (unitless, C)",
+  "description": "Planned mix-water temperature; drives the thermal check.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "shopTempMaxC",
+  "default": "24 (unitless, C)",
+  "description": "Highest expected room temperature during pours.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "plasterPeakMeasuredC",
+  "default": "0 (unitless, 0 = not measured)",
+  "description": "Measured peak from the first thermocouple log; overrides the model.",
+  "stage": "S9 process"
+ },
+ {
+  "name": "bedX",
+  "default": "250 mm",
+  "description": "Printer bed X limit.",
+  "stage": "S9 print"
+ },
+ {
+  "name": "bedY",
+  "default": "210 mm",
+  "description": "Printer bed Y limit.",
+  "stage": "S9 print"
+ },
+ {
+  "name": "bedZ",
+  "default": "210 mm",
+  "description": "Printer height limit.",
+  "stage": "S9 print"
+ },
+ {
+  "name": "nozzleDiameter",
+  "default": "0.4 mm",
+  "description": "Nozzle width; walls are snapped to multiples of it.",
+  "stage": "S9 print"
+ },
+ {
+  "name": "layerFine",
+  "default": "0.12 mm",
+  "description": "Layer height for working-face parts (base plates).",
+  "stage": "S9 print"
+ },
+ {
+  "name": "layerDraft",
+  "default": "0.24 mm",
+  "description": "Layer height for walls, sectors and clips.",
+  "stage": "S9 print"
+ },
+ {
+  "name": "exportFormat",
+  "default": "'stl' (text: stl | 3mf)",
+  "description": "Export format, one file per body.",
+  "stage": "S9 export"
+ },
+ {
+  "name": "exportSurfaceDeviation",
+  "default": "0.01 mm",
+  "description": "Mesh surface deviation for export.",
+  "stage": "S9 export"
+ },
+ {
+  "name": "exportNormalDeviation",
+  "default": "10 deg",
+  "description": "Mesh normal deviation for export.",
+  "stage": "S9 export"
+ },
+ {
+  "name": "seamCouponClearances",
+  "default": "'0.15,0.20,0.25,0.30,0.35' (text)",
+  "description": "Clearances printed on the groove calibration coupon (mm per side).",
+  "stage": "calibration"
+ },
+ {
+  "name": "natchCouponClearances",
+  "default": "'0.2,0.3,0.4,0.5,0.6' (text)",
+  "description": "Natch clearances tested with two mini-casings (mm radial).",
+  "stage": "calibration"
+ }
+]

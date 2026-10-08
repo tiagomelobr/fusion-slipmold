@@ -1,0 +1,290 @@
+{
+ "topic": "gap-3",
+ "summary": "LIMITATION: the session's WebSearch budget was already used up (200 of 200) when this task began. Every search call was refused. I respected the cap and did not route searches through other engines. Instead I fetched known URLs directly and followed their links and identifiers (PMC, Europe PMC and NCBI lookups by PMID or DOI, Digitalfire project pages, Prusa and Prusament data sheets, MakeItFrom, Wikipedia). I found no published thermocouple data for pottery plaster at consistency 70 in 20–50 mm sections. The answer below therefore combines (a) measured exotherm data from the orthopaedic literature, which is still thin (7–14 mm plaster casts on a heated tube), (b) documented practice by Digitalfire, and (c) a 1-D transient heat model I wrote and ran, calibrated with standard thermochemistry. All model numbers are labelled as derived. They should be checked with one thermocouple log on the user's first pour.\n\nTEMPERATURE: Measured plaster casts 7–14 mm thick (16–34 ply) on a 37 °C tube peaked below 48 °C with 24 °C dip water. With 40 °C water they peaked at about 49.5–54 °C. Peak rose 1–4 °C from 16 to 34 ply and 2–4 °C with the warmer water (Burghardt 2014). Insulated casts (on a pillow) reached 54 °C (Hutchinson 2008) and 63–68 °C (Lavalette and Pope, as reported by Burghardt). A bucket of setting plaster exceeded 60 °C in the Lincolnshire burn case (Wikipedia). Halanski 2007 found the outer surface of a cast 2.7 ± 1.9 °C cooler than the inside. Adiabatic thermochemistry for consistency 70 gives a rise of about 31–37 K. My model of a 20–50 mm slab in a casing exposed to still air predicts peak core temperatures of: about 42–54 °C at 20 °C start, 47–60 °C at 25 °C, and 53–65 °C at 30 °C. The casing-contact face runs 2–6 K below the core. Peak comes 35–65 min after mixing. Two conclusions follow. First, going from 20 to 50 mm adds only about 3–6 K. Second, the starting temperature passes through almost 1:1. So the earlier figure of 45–50 °C is plausible as the typical peak at 18–22 °C, but it is low as an adiabatic bound. A '40–50 mm maximum single pour in PLA' rule controls the wrong variable. The temperature of the mix water and the room is the real lever.\n\nDEFORMATION: PLA softens at about 50–60 °C. The figures are: Prusament 'temperature resistance' 55 °C; MakeItFrom Tg 60 °C, HDT at 455 kPa 65 °C, mechanical maximum 50 °C; Prusa 'deforms over 60 °C'. Prusament PETG has an HDT of 68 °C at 0.45 MPa (ISO 75). Printed PETG has only about half the stiffness of PLA (about 1.5–1.7 GPa against about 3–3.5 GPa). The key point is timing. Hydrostatic load (about 1.6 kPa per 100 mm of slurry head) acts only while the slurry is fluid, before most of the heat is released. By the time the plaster is hot it has set and holds its own shape. As a result: bulging in the cold fluid phase depends on stiffness × thickness³ and on unsupported span, so PLA is better here and PETG needs about 1.23× the wall thickness to bulge equally. Softening in the hot phase is harmless for sacrificial casings (Digitalfire even peels 0.8 mm PLA with a heat gun) but can permanently warp reusable casings. Plate-bending screening says flat 0.8–1.2 mm walls are fine only below spans of about 40–60 mm, or on curved, low-profile shells. That matches Digitalfire's 'low profile, no bulging' remark. For a 100–250 mm head: a 2.4–3 mm wall can span about 80–120 mm, and a 5 mm wall about 145–180 mm. Setting expansion of about 0.15–0.3% pushes outward on surrounding casings, about 0.2 mm per 100 mm. It wedges one-piece cups and loosens convex cores. Recommendations: PLA by default for sacrificial casings, and for reusable ones when water and room are at or below about 22–24 °C. PETG, or cooling (a fan, or a cool-water bath, which in the model holds the casing face near 33 °C), for reusable casings in warm shops or sections over 50 mm. Log a thermocouple on the first pour.",
+ "findings": [
+  {
+   "claim": "Measured setting temperatures of plaster 7–14 mm thick (16–34 ply) stayed below 48 °C with 24 °C dip water. With 40 °C dip water they peaked at about 49.5 °C (16 ply), about 52 °C (30 ply) and about 54 °C (34 ply), 4–6 min after application.",
+   "details": "Burghardt et al. 2014, J Child Orthop. Setup: J&J Extra-Fast plaster on a 7.5 cm Pyrex tube with water circulating at 37.2 °C, room at 19–22 °C. Measured thickness: 16 ply = 7–8 mm, 30 ply = 12–13 mm, 34 ply = 13–14 mm. Peak was 'directly proportional' to thickness, but going from 16 to 34 ply added only 1–4 °C. 40 °C water gave peaks 2–4 °C higher and about 2 min earlier than 24 °C water. The authors say their glass tube conducts heat away and probably underestimates risk. These are the thickest plaster sections with thermocouple-grade data that I could find. They are about half the thickness of a mold wall and use an extra-fast plaster at a lower water ratio than consistency 70.",
+   "confidence": "high",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:24554128%20OR%20EXT_ID:30083507%20OR%20EXT_ID:26403547%20OR%20EXT_ID:23672893%20OR%20EXT_ID:17655634%20OR%20EXT_ID:21323290%20OR%20EXT_ID:33512858&resultType=core&format=json"
+   ]
+  },
+  {
+   "claim": "Insulation and warm water drive plaster well past 50 °C. A 20-layer cast on a pillow with 39 °C dip water reached 54 °C and stayed above 50 °C for over 20 min. Earlier work (Lavalette and Pope) recorded peaks of 63–68 °C.",
+   "details": "Hutchinson & Hutchinson 2008, Table 1, ambient 25–27 °C: extra-fast plaster with 32 °C water peaked at 41 °C (12 and 16 layers) and 46.5 °C (20 layers). Fast plaster, 20 layers, 39 °C water, on a pillow: 54 °C. With 3–5 layers of padding instead of the pillow: 44 °C. Lavalette 1982: burn-level temperatures occurred when dip water was above 24 °C or the cast was thicker than 8 ply, with a pillow restricting heat loss. Burghardt quotes Lavalette and Pope's peaks as 63–68 °C. Gannaway & Hunter 1983 rank plaster type, cast thickness and externally applied insulating materials as the most important variables. For mold making, this means that casings stacked, placed on foam or wrapped act like the 'pillow' case.",
+   "confidence": "high",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+    "https://www.ebi.ac.uk/europepmc/webservices/rest/search?query=EXT_ID:7085719%20OR%20EXT_ID:6641053%20OR%20EXT_ID:7217133&resultType=core&format=json",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/"
+   ]
+  },
+  {
+   "claim": "The outer surface of setting plaster runs a few degrees below its interior. Keeping water below 24 °C avoided injurious temperatures even in 24-ply casts.",
+   "details": "Halanski et al. 2007 (JBJS Am 89:2369): plaster cast exteriors averaged 2.7 ± 1.9 °C cooler than the interior, with larger differences in thick 24-ply casts. Dip water below 24 °C avoided temperatures that cause thermal injury. Risk factors were folding material back on itself, curing on pillows, and over-wrapping. Conroy 2007: 10- and 15-ply slabs with 25–50 °C water had mean maximum temperatures of 31.9–41.7 °C, rising with both water temperature and thickness. Ahmed 2011: 5–10 layers reached at most 39.5 °C in vivo. For casings, this means the PLA face sees roughly the plaster core temperature minus 2–6 K.",
+   "confidence": "high",
+   "sources": [
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17974878,3968119,23672893,17655634&rettype=abstract&retmode=text",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=8804296,21323290,3968119&rettype=abstract&retmode=text"
+   ]
+  },
+  {
+   "claim": "Bulk setting plaster can exceed 60 °C.",
+   "details": "Wikipedia's Plaster article, citing BBC News of 23 March 2007, says setting plaster can exceed 60 °C. In that case a student who encased her hands in a bucket of plaster suffered third-degree burns and amputations. A 2018 plastic-surgery review (Chauhan & Mir) also cites up to 60 °C and warns that enclosing body parts is dangerous once thickness exceeds a few millimetres. It notes that more water gives more cooling because water's specific heat is high (4,190 J/kg·K). This is the upper bound for large, poorly cooled masses such as leftover plaster in a bucket, not for 20–50 mm walls.",
+   "confidence": "medium",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Plaster",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC6066717/"
+   ]
+  },
+  {
+   "claim": "DERIVED (not measured): peak temperature in a 20–50 mm pottery-plaster section (C = 70) is about T0 + 22–34 K in the core and about T0 + 20–28 K at the casing face. Starting temperature passes through almost 1:1, while thickness from 20 to 50 mm adds only about 3–6 K.",
+   "details": "Adiabatic rise: ΔT_ad = P·ΔH/c_mix. I used literature hydration enthalpies of about 17–19 kJ/mol (118–133 J/g of hemihydrate, a textbook value I could not re-verify online this session), purity P = 0.90–0.95, and heat capacities for gypsum (1.08 J/g·K) and free water. Result for C = 70: about 31–37 K (c ≈ 2.03 J/g·K of slurry). Thinner mixes run cooler: C = 80 gives 27–33 K, C = 100 gives 23–27 K. Model: a 1-D finite-difference slab with k = 0.5 W/m·K (also tested 0.3 and 0.7), ρc = 3.39 MJ/m³·K, logistic heat release with t50 = 22–40 min, PLA wall 1.2 mm, h = 10 W/m²·K on both faces. Script saved at C:\\Users\\tiago\\AppData\\Local\\Temp\\claude\\D--Coding-fusion360-claude\\a07cb48d-22ad-4482-8deb-e272c5d65144\\scratchpad\\plaster_heat.py. Results (core / casing face) for 20, 25, 38 and 50 mm, central ΔT_ad = 33 K: T0 = 18 °C gives 42–48 / 40–43; T0 = 20 °C gives 46–51 / 43–45; T0 = 25 °C gives 51–56 / 49–50; T0 = 30 °C gives 57–61 / 54–56. The full ΔT_ad range of 28–37 K gives core 39–52 at 18 °C and 53–65 at 30 °C. If one face is insulated (against a heavy model or another casing), the core gains about 2–4 K. Peak comes 35–67 min after mixing. The earlier '45–50 °C' estimate fits the typical peak at 18–22 °C, but is low as an adiabatic bound (about 51–57 °C from 20 °C).",
+   "confidence": "medium",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC6066717/",
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide"
+   ]
+  },
+  {
+   "claim": "PLA starts to lose stiffness at about 50–60 °C. PETG keeps about 10–15 K more margin (HDT 68 °C at 0.45 MPa).",
+   "details": "Prusament PLA product page: 'temperature resistance' 55 °C. Prusa KB: PLA 'gets soft and deforms at temperatures over 60 °C'. MakeItFrom PLA: Tg 60 °C, HDT at 455 kPa 65 °C, mechanical maximum 50 °C, E 3.5 GPa, flexural modulus 4.0 GPa, k 0.13 W/m·K. Wikipedia: Tg 60–65 °C, standard HDT about 60 °C. Prusament PETG data sheet: HDT (0.45 MPa, ISO 75) 68 °C; printed tensile modulus about 1.5–1.6 GPa and flexural modulus about 1.7 GPa (the PDF table layout is garbled, so read these to about ±0.1 GPa). Prusament PETG page: 68 °C resistance. Prusa KB PETG: suitable below 80 °C. Because PLA's modulus drops steeply near Tg, the safe temperature depends mostly on Tg, not on stress level. Treat about 50 °C at the casing face as PLA's practical limit for reusable casings, and about 63 °C for PETG.",
+   "confidence": "high",
+   "sources": [
+    "https://prusament.com/materials/pla/",
+    "https://help.prusa3d.com/article/pla_2062",
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+    "https://en.wikipedia.org/wiki/Polylactic_acid",
+    "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+    "https://prusament.com/materials/prusament-petg/",
+    "https://help.prusa3d.com/article/petg_2059"
+   ]
+  },
+  {
+   "claim": "Hydrostatic load and the exotherm happen at largely different times. Slurry pressure acts while the plaster is cold and fluid; the heat peaks after set, when the plaster already holds its own shape. So PLA softening matters for reusable casings and clamped joints, not for the shape of the plaster piece.",
+   "details": "Plaster casts begin setting about 10 min after mixing and finish in about 45 min (Wikipedia, Orthopedic cast). My model places the temperature peak 35–67 min after mixing, after the fluid phase. The orthopaedic studies likewise show peaks only after application, once the material has started setting. Consequences: (1) bulging of the casing during the fluid phase sets in permanently, and it depends on cold stiffness (E·t³) and span. Here PLA (about 3–3.5 GPa) beats PETG (about 1.5–1.7 GPa). (2) In the hot phase, a softening PLA casing cannot change the shape of plaster that has already set. That is why Digitalfire's 0.8 mm PLA shells work, and why softness then helps heat-gun peeling. (3) Reusable casings can still warp permanently: residual print stresses relax near Tg and clamp forces act on softened flanges. This is inferred from the timing and is not directly measured, so it should be confirmed on the first pour.",
+   "confidence": "medium",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Orthopedic_cast",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/project/15"
+   ]
+  },
+  {
+   "claim": "Digitalfire pours pottery plaster routinely into 0.8–1.6 mm PLA shells. Success depends on a low profile and curved shells, not on PLA resisting heat.",
+   "details": "Mug project (project/15): 0.8 mm walls, twice the 0.4 mm nozzle width, were 'rigid enough' that hardly any deformation occurred when full of plaster. The author later moved to 1.2 mm and found 1.6 mm 'too thick for fast printing'. Shells were held by rubber bands and paper clamps, and peeled with a heat gun. Ball-pitcher project (piece about 250 mm tall): walls 'only 0.8mm'. The low profile is credited for avoiding any bulging from the plaster's weight. No parting agent was needed on those prints, the PLA was removed with a heat gun, and the plaster surface was soaped afterwards. Other Digitalfire projects did use Murphy's Oil Soap on PLA. The 3D-printing glossary warns not to wash PLA prints in hot water or they could deform. None of these pages reports heat distortion during set.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/project/15",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/glossary/3d-printing"
+   ]
+  },
+  {
+   "claim": "DERIVED: under plaster slurry head, flat casing panels need wall thickness matched to unsupported span. Flat 0.8–1.2 mm walls only work below spans of about 40–60 mm. For a 100–250 mm head, 2.4–3 mm walls can span about 80–120 mm and 5 mm walls about 145–180 mm.",
+   "details": "Slurry density is about 1.67 g/cm³, giving pressure of 0.82 / 1.64 / 2.46 / 3.28 / 4.10 kPa at 50 / 100 / 150 / 200 / 250 mm head. A simply supported square plate deflects w = 0.0443·q·a⁴/(E·t³), with peak stress σ ≈ 0.29·q·a²/t² (standard small-deflection theory; this overestimates w once w is larger than about t). PLA, E = 3 GPa, 100 mm span, 100 mm head: w = 4.7 mm (0.8 mm wall), 1.4 mm (1.2), 0.17 mm (2.4), 0.09 mm (3.0), 0.02 mm (5.0). Matching peak stresses are 7.4, 3.3, 0.8, 0.5 and 0.2 MPa. Allowed span for w ≤ 0.2 mm, PLA, head 100–250 mm: 0.8 mm wall about 45–36 mm; 1.2 mm about 61–49 mm; 2.4 mm about 103–82 mm; 3.0 mm about 122–97 mm; 5.0 mm about 179–143 mm. PETG (E about 1.6 GPa) allows about 14% shorter spans, so it needs about 1.23× the wall thickness for equal stiffness. Curved shells carry the pressure as hoop membrane stress (σ = p·r/t ≈ 0.12 MPa for r = 60 mm, t = 0.8 mm), which is negligible. That explains the Digitalfire result.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+    "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "claim": "Restrained setting expansion (about 0.15–0.3% linear) loads casings that surround the plaster, roughly 0.2 mm per 100 mm. It wedges one-piece cups or closed rings and tends to loosen convex cores.",
+   "details": "German Wikipedia (Gips, citing EN ISO 6873) lists dental gypsum setting expansion of 0.15% for Type I and 0.3% for Type II. Pottery plaster is generally quoted at about 0.2%; I did not re-verify the USG No. 1 data sheet this session. Expansion overlaps the temperature peak. With E·ε as an upper bound, a fully rigid PLA ring would see about 6 MPa of hoop stress at 0.2% strain (3 GPa × 0.002). In practice the casing creeps or flexes, and clamps and flange fasteners take the load. Design implication: split every casing that wraps plaster on more than 180°, and give casing-to-plaster release faces draft. Expect convex cores enclosed by plaster to release more easily. One-piece cups gripped by expanding plaster will be hard to remove, especially from a stiff PETG casing.",
+   "confidence": "medium",
+   "sources": [
+    "https://de.wikipedia.org/wiki/Gips"
+   ]
+  },
+  {
+   "claim": "Mix-water temperature is the main controllable lever, and practitioners cap it.",
+   "details": "Digitalfire's plaster page: plaster is 'normally mixed at a 70 consistency' and should not be mixed above 105 °F (about 40.5 °C) for a proper set. Sheffield Pottery's guide for USG No. 1 gives 70 parts water to 100 plaster, i.e. 4.17 US gal of water per 50 lb (consistency about 69.6). Orthopaedic data show warmer water raises the peak and brings it earlier: 40 °C versus 24 °C gave +2–4 °C on thin casts on a heated substrate, and below 24 °C was the safe threshold. In my model each 1 K of starting temperature adds about 1 K to the peak, and warmer water also shortens the reaction, which adds a little more.",
+   "confidence": "medium",
+   "sources": [
+    "https://digitalfire.com/material/1124",
+    "https://www.sheffield-pottery.com/collections/us-gypsum-usg-plaster-information",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17974878,3968119,23672893,17655634&rettype=abstract&retmode=text"
+   ]
+  },
+  {
+   "claim": "External cooling works through plaster. Forced air or a cool-water bath can keep a PLA casing face well below the softening temperature.",
+   "details": "Crushed ice packs on the outside of plaster casts lowered skin temperature underneath by an average of 11 °C, to a minimum of 18.7 °C, over about 64 min (Metzman 1996). In my model at T0 = 25 °C, forced air (h ≈ 30 W/m²·K) cuts the casing-face peak from about 50 °C to about 43–44 °C. A water bath at 20 °C (h ≈ 300 W/m²·K) with a 2.4 mm PLA wall holds the plaster–PLA interface at about 32–34 °C for 25–50 mm sections. The core still reaches 40–48 °C. A bath needs watertight casings and adds handling, so reserve it for warm shops or thick reusable PLA casings.",
+   "confidence": "medium",
+   "sources": [
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=8804296,21323290,3968119&rettype=abstract&retmode=text"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "casingMaterial",
+   "recommended_value": "PLA when casingStrategy = sacrificial. PLA for reusable casings when mixWaterTempC ≤ 22 and roomTempC ≤ 24 and maxPlasterSection ≤ 50 mm. Otherwise PETG, or PLA plus forced-air or water-bath cooling.",
+   "range": "PLA | PETG",
+   "rationale": "Predicted casing-face peaks are about 40–48 °C at 18–20 °C start, about 49–54 °C at 25 °C, and about 54–59 °C at 30 °C. PLA's practical limit is about 50–55 °C (Prusament 55 °C, MakeItFrom mechanical maximum 50 °C); PETG's HDT is 68 °C. Sacrificial casings do not care, because the plaster has set before it gets hot, and softening helps heat-gun peeling.",
+   "sources": [
+    "https://prusament.com/materials/pla/",
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+    "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing"
+   ]
+  },
+  {
+   "parameter": "mixWaterTempC",
+   "recommended_value": "20 °C (aim for 18–22 °C)",
+   "range": "Warn above 24 °C with reusable PLA casings. Hard fail above 40 °C.",
+   "rationale": "Starting temperature passes through almost 1:1 to the peak. Orthopaedic data put the safe threshold at water below 24 °C. Digitalfire: do not mix above 105 °F (40.5 °C) for a proper set. Very cold water slows the set, so keep it consistent rather than as cold as possible.",
+   "sources": [
+    "https://digitalfire.com/material/1124",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17974878,3968119,23672893,17655634&rettype=abstract&retmode=text",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/"
+   ]
+  },
+  {
+   "parameter": "predictedPlasterPeak (toolkit check)",
+   "recommended_value": "T_core ≈ T0 + f·ΔT_ad, with ΔT_ad = 33 K at C = 70 (28–37 K), f = 0.75 (20 mm) to 0.9 (50 mm). T_casingFace ≈ T_core − 3 K (range 2–6 K). Warn when T_casingFace > 50 °C (PLA reusable) or > 63 °C (PETG).",
+   "range": "ΔT_ad ≈ 27–33 K at C = 80; 23–27 K at C = 100",
+   "rationale": "This is the derived 1-D model, consistent with the measured 2.7 ± 1.9 K surface-to-core gap and with the trends in thin-cast data. Replace it with the user's measured peak once logged (plasterPeakMeasuredC).",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17974878,3968119,23672893,17655634&rettype=abstract&retmode=text"
+   ]
+  },
+  {
+   "parameter": "maxUnsupportedPanelSpan (as a function of casingWallThickness and pour head H)",
+   "recommended_value": "a_max = (w_allow·E·t³ / (0.0443·ρ·g·H))^(1/4), with w_allow = 0.2 mm, ρ = 1,670 kg/m³, E = 3.0 GPa (PLA) or 1.6 GPa (PETG). PLA at H = 100–250 mm: t = 0.8 mm gives about 45–36 mm; 1.2 mm about 61–49 mm; 2.4 mm about 103–82 mm; 3.0 mm about 122–97 mm; 5.0 mm about 179–143 mm.",
+   "range": "Add ribs or curvature when the panel span exceeds a_max",
+   "rationale": "Hydrostatic load acts while the slurry is cold and fluid, so bulging sets in permanently. Curved, low-profile shells carry the load as membrane stress, which is why 0.8 mm works for Digitalfire.",
+   "sources": [
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+    "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+    "https://digitalfire.com/project/15"
+   ]
+  },
+  {
+   "parameter": "casingWallThickness",
+   "recommended_value": "Sacrificial: 0.8–1.2 mm PLA on curved or low-profile shells. Reusable: 2.4–3 mm with ribs at spacing ≤ a_max. The current 5 mm is only needed for unribbed flat spans of about 145–180 mm.",
+   "range": "0.8–5 mm. Multiply by 1.23 for PETG to match PLA stiffness.",
+   "rationale": "Stiffness scales with E·t³. Printed PETG is about 1.5–1.7 GPa against PLA at about 3–3.5 GPa, so (3.0/1.6)^(1/3) ≈ 1.23.",
+   "sources": [
+    "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+    "https://www.makeitfrom.com/material-properties/Polylactic-Acid-PLA-Polylactide",
+    "https://digitalfire.com/project/15"
+   ]
+  },
+  {
+   "parameter": "maxSinglePourSection",
+   "recommended_value": "50 mm for reusable PLA casings at T0 ≤ 22 °C. Up to 75 mm with PETG or with cooling.",
+   "range": "20–75 mm",
+   "rationale": "Thickness is a weak lever: 20 → 50 mm adds only about 3–6 K to the peak. Above 50 mm, or with one face insulated, the core passes about 52 °C at a 20 °C start. Do not treat '40–50 mm' as a hard physical limit.",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/"
+   ]
+  },
+  {
+   "parameter": "demoldFromCasing",
+   "recommended_value": "Not before 60 min, and only once a probe or touch shows the block is past its peak and cooling. Expect the peak 35–65 min after mixing at 18–25 °C.",
+   "range": "60–120 min",
+   "rationale": "The model's time to peak is 35–67 min. Thin casts with fast plaster peak at 4–10 min, but pottery plaster sets much more slowly (setting complete in about 45 min).",
+   "sources": [
+    "https://en.wikipedia.org/wiki/Orthopedic_cast",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/"
+   ]
+  },
+  {
+   "parameter": "coolingMode",
+   "recommended_value": "Default 'none' (open rack, at least 50 mm air gap, never on foam or stacked). Use 'fan' when T0 is 24–27 °C. Use 'waterBath' (watertight casing, bath about 20 °C) when T0 > 27 °C or sections exceed 50 mm in reusable PLA.",
+   "range": "none | fan | waterBath",
+   "rationale": "Insulation (pillows) raised orthopaedic peaks to 54 °C and above, and ice packs on the outside cut the temperature beneath by about 11 °C. In the model, a fan lowers the casing-face peak by about 6 K and a bath holds the face near 33 °C.",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=8804296,21323290,3968119&rettype=abstract&retmode=text"
+   ]
+  },
+  {
+   "parameter": "casingSplitAndDraftVsPlaster",
+   "recommended_value": "Split every casing that surrounds plaster on more than 180°. Give casing-to-plaster faces positive draft. Allow about 0.2 mm per 100 mm of outward push at clamps and flanges.",
+   "range": "Setting expansion 0.15–0.3%",
+   "rationale": "Restrained setting expansion overlaps the temperature peak and wedges one-piece cups, especially stiff PETG ones. Convex cores tend to loosen.",
+   "sources": [
+    "https://de.wikipedia.org/wiki/Gips"
+   ]
+  },
+  {
+   "parameter": "plasterPeakMeasuredC (calibration record)",
+   "recommended_value": "On the first pour, log a thermocouple at mid-thickness of the thickest section, plus one taped to the inside of the casing face, every 30 s for 2 h. Record mix-water, plaster and room temperatures and consistency.",
+   "range": "n/a",
+   "rationale": "No published measured data exists for pottery plaster at C = 70 in 20–50 mm sections. This log replaces the derived model and settles the PLA versus PETG choice for the user's shop.",
+   "sources": [
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+    "https://eutils.ncbi.nlm.nih.gov/entrez/eutils/efetch.fcgi?db=pubmed&id=17974878,3968119,23672893,17655634&rettype=abstract&retmode=text"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Treating PETG as better in every way. Printed PETG has about half PLA's stiffness at room temperature, so the same wall bulges about twice as much under slurry head, during the cold fluid phase when bulging matters. PETG only wins once the plaster is hot, and then only for reusable casings.",
+  "Using pour thickness as the main heat control. Starting temperature (mix water and room) moves the peak about 1:1, while 20 → 50 mm adds only about 3–6 K. A summer shop at 30 °C can push even 25 mm sections past PLA's Tg.",
+  "Insulating setting casings: placing them on foam, stacking them, wrapping them, or pouring several pieces touching. The orthopaedic 'pillow' effect raised peaks to 54 °C and above, and 63–68 °C in older studies.",
+  "Reusing a PLA casing that went near 55–60 °C. Residual stresses from printing relax near Tg, so parts can warp even without load, and clamped flanges creep. Check flatness and registration before the next pour.",
+  "Flat 0.8–1.2 mm panels wider than about 40–60 mm will bulge visibly. Digitalfire's 0.8 mm success relies on curved, low-profile shells.",
+  "One-piece casing cups or closed rings around plaster. Setting expansion (about 0.2%) wedges the plaster into the casing.",
+  "Assuming a soft casing will distort the plaster piece. By the time the casing is hot the plaster has set, so geometry errors come from cold-phase bulging, not from hot-phase softening.",
+  "Extrapolating orthopaedic numbers directly. Those casts are 7–14 mm, use fast or extra-fast plaster at a lower water ratio, and sit on a 37 °C substrate. Treat them as trend and bounding data only.",
+  "Putting hands in, or leaving large leftover masses of, setting plaster. Bulk plaster has exceeded 60 °C and caused amputation-level burns. Mix only what the pour needs (plus 10–20%).",
+  "Mixing with hot water to speed up the set. Digitalfire caps water at 105 °F (40.5 °C), and warm water also raises the peak temperature.",
+  "The derived peak model rests on a textbook hydration enthalpy and on assumed reaction kinetics and heat-transfer coefficients, none re-verified online in this session. Its uncertainty is about ±5 K, and a single thermocouple log should replace it."
+ ],
+ "prior_art": [
+  {
+   "name": "Digitalfire: 2019 Jiggering-Casting Project of the Medalta 66 Mug",
+   "url": "https://digitalfire.com/project/15",
+   "what_it_does": "Pours pottery plaster into 3D-printed PLA shells 0.8 mm thick (later 1.2 mm), held by rubber bands and paper clamps, and removes them with a heat gun.",
+   "relevance": "Documented evidence that thin PLA survives the pottery-plaster exotherm on mug-sized molds, with very little deformation."
+  },
+  {
+   "name": "Digitalfire: Medalta Ball Pitcher Slip Casting Mold via 3D Printing",
+   "url": "https://digitalfire.com/project/medalta+ball+pitcher+slip+casting+mold+via+3d+printing",
+   "what_it_does": "Case mold for a piece about 250 mm tall, built from 0.8 mm PLA prints. The low profile avoids bulging, no parting agent was needed, and the PLA was peeled with a heat gun.",
+   "relevance": "Shows that thin-wall success depends on a low profile and curved shells, consistent with the plate-bending rule."
+  },
+  {
+   "name": "Burghardt et al. 2014, Exothermic properties of plaster-synthetic composite casts",
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC3965769/",
+   "what_it_does": "Measures peak temperatures under plaster casts 7–14 mm thick at 24 °C and 40 °C dip water.",
+   "relevance": "The thickest measured plaster exotherm data found, plus a usable thermocouple test protocol."
+  },
+  {
+   "name": "Hutchinson & Hutchinson 2008, Factors contributing to the temperature beneath plaster or fiberglass cast material",
+   "url": "https://pmc.ncbi.nlm.nih.gov/articles/PMC2288595/",
+   "what_it_does": "Tabulates peak temperatures by layer count, water temperature, padding and insulation.",
+   "relevance": "Quantifies how much insulation (a pillow) raises the plaster peak, which applies to how casings are placed while curing."
+  },
+  {
+   "name": "Prusament PETG technical data sheet",
+   "url": "https://storage.googleapis.com/prusa3d-content-prod-14e8-wordpress-prusament-prod/2023/10/9f8d2165-tds_prusament-petg_n_en.pdf",
+   "what_it_does": "Gives HDT (ISO 75, 0.45 MPa) of 68 °C and printed-specimen moduli.",
+   "relevance": "Primary numbers for the PETG side of the material choice and for the 1.23× wall-thickness factor."
+  },
+  {
+   "name": "Gap-3 heat model script (this research, scratchpad)",
+   "url": "file:///C:/Users/tiago/AppData/Local/Temp/claude/D--Coding-fusion360-claude/a07cb48d-22ad-4482-8deb-e272c5d65144/scratchpad/plaster_heat.py",
+   "what_it_does": "1-D transient finite-difference model of a setting plaster slab inside a casing, covering wall, convection, start temperature and adiabatic rise.",
+   "relevance": "Could be ported into the toolkit as a 'predictedPlasterPeak' check and recalibrated from the user's thermocouple log."
+  }
+ ],
+ "open_questions_for_user": [
+  "What are your shop and mix-water temperatures across the year (lowest and highest)? This decides whether PLA can be the default for reusable casings.",
+  "Do you want sacrificial casings (thin PLA, peeled off with a heat gun) or reusable ones? If reusable, how many pours per casing set? Why did you choose 5 mm walls?",
+  "What is the thickest plaster section and the tallest pour depth (slurry head) in your planned molds? For example, the bottom piece of the 80 mm mug, or larger vases.",
+  "Can you log one pour with a thermocouple or a waterproof probe thermometer (mid-thickness, plus one taped inside the casing face) so we can replace the model with measured data?",
+  "Do you have PETG on hand and a printer tuned for it? PETG needs about 1.23× the wall thickness of PLA to bulge the same amount.",
+  "Would you accept ribbed casings (thinner walls plus ribs) instead of uniform 5 mm shells, to save print time and filament?",
+  "Is a cool-water bath or a fan practical in your workspace for summer pours?"
+ ]
+}

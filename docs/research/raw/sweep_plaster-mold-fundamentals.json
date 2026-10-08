@@ -1,0 +1,609 @@
+{
+ "topic": "plaster-mold-fundamentals",
+ "summary": "The best primary data on plaster for drain-cast molds comes from USG's own sheets for No. 1 Pottery Plaster. Mix it at consistency 70: 70 parts water to 100 parts plaster by weight. Use water at 21–38 °C (70–100 °F). Soak 1–4 minutes and mix 2–5 minutes. Vicat set is 14–24 minutes, and maximum setting expansion is 0.21% (USG's ceramics guide gives about 0.17% when expansion is unrestrained). Dry compressive strength is about 2,400 psi and total absorption capacity is 36%. Wet density is 1.58 g/cm3 and dry density 1.10 g/cm3. Molds should be dried to constant weight with air at or below 49 °C (120 °F), because hotter air calcines the surface. A mold that is cooled suddenly from above about 38 °C (100 °F) can crack. USG gives 1-1/2 in (38 mm) as the usual minimum wall for casting molds. It also says to avoid thin mold edges and large changes in section thickness. Studio practice is thinner: a materials-education module asks for at least 1 in (25 mm) all round, and the Shape Cast tool offsets plaster about 25 mm around a 75 mm cup. Sheffield Pottery publishes a table that scales wall thickness with mold size: 1–1.5 in under 8 in, up to 2.5–3 in above 24 in. Uniform thickness gives even absorption and drying. It also limits differential thermal stress and keeps weight down. A thicker mold holds more water, so it can take more casts before drying, but it then takes longer to dry. USG notes that free water as low as 5% of dry weight roughly halves the absorption rate.\n\nOn the ceramic side, published total shrinkage for casting slips runs from about 4.5–6% for cone 06 earthenware (Miller NS1, Laguna White Star) to 14–15.5% for cone 6 stoneware and porcelain slips. Practitioners report 13–20% for their own bodies. Scale the model by 1/(1 − s), not (1 + s), and test your own slip first. Slip-cast ware shrinks enough that zero draft is acceptable on outer mold walls, but the angle must never be negative. Suppliers recommend 1–3° where possible. Shrinkage pulls the cast away from outer (female) surfaces but tightens it onto convex cores or hump-like features, so those need draft and early release. The spare (reservoir, pouring gate) keeps slip above the finished rim while the level drops as the plaster draws water. Practitioners make it slightly taller than needed and fill it about halfway. They remove the spare piece once the sheen is gone (about 20 minutes after draining), then cut the rim flush with the mold top, holding the blade flat. No source gives a height in mm, so it should be calculated: level drop ≈ water absorbed / spare cross-section. That is about 5 mm for an 80 mm mug, and much more for narrow necks.\n\nRegistration uses hemispherical keys made with a coin (about 18–24 mm across, 2–3 per seam) or commercial 3/8 in (9.5 mm) plastic natches. Digitalfire's 3D-printed natch work uses a 0.1 mm fit allowance and at least 2 per seam. Mold soap goes on in about 3 coats, wiping excess between coats, on every plaster-to-plaster face. PLA releases plaster without any parting agent. Molds are held with rubber inner-tube bands or straps. They are drained upside down at an angle so no drips form on the bottom, and seams are cleaned with a fettling knife and a damp sponge. Mold life is roughly 50–120 casts. For 3D-printed casings, the main risks are the setting exotherm against PLA's roughly 60 °C softening point, rigid one-piece casings that lock the set plaster in (Shape Cast had to split its outer mold), and hard spots where the plaster stream hits the working face.",
+ "findings": [
+  {
+   "claim": "USG No. 1 Pottery Plaster, the de-facto standard, is mixed at consistency 70 (70 parts water to 100 parts plaster by weight)",
+   "details": "Normal consistency is 70 lb water per 100 lb plaster. Machine-mix Vicat set is 14–24 min, and hand mixing takes longer. Compressive strength is 1,000 psi (6.9 MPa) one hour after set and 2,400 psi (16.5 MPa) dry. Wet density is 99 lb/ft3 (1,586 kg/m3) and dry density 69 lb/ft3 (1,105 kg/m3). Total absorption capacity is 36%. Maximum setting expansion is 0.21%. Use potable water at 70–100 °F (21–38 °C); warmer slurry sets faster. Weigh both water and plaster, because the ratio governs strength and absorptivity. Arbuckle also lists USG No. 1 Moulding Plaster at 100:70. Digitalfire lists Puritan Pottery Plaster at 66:100 and notes that Ultracal/Hydrostone use far less water: they are harder but much less absorbent, so they suit case molds, not working molds. USG's ceramics guide says working-mold consistencies range from 68 to 90.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://cdn.shopify.com/s/files/1/1023/7667/files/USG_1_Pottery_Plaster_Mixing.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://digitalfire.com/material/plaster",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "claim": "Mixing sequence: strew the plaster onto the water, soak 2–4 min, mix 2–5 min, and finish pouring within about 5 min of mixing",
+   "details": "USG IG503 says to sift plaster into water slowly, soak 2–4 min (good plaster is almost fully wetted in 3–4 min), then mix 2–5 min until creamy. Batch size should let you finish pouring no later than 5 min after mixing. Hand mixing is acceptable for batches up to 5 lb. Longer mixing raises strength and shortens set time, but over-mixing lowers strength and porosity. The Arbuckle/Andrew Martin schedule is: add plaster 1 min, soak 3, mix 3, liquid 3, thixotropic 2, plastic 3. That makes about 15 min from first sifting to set, so pour while it is still liquid. Pour into the deepest area so the slurry flows across the case. A stream striking the case face densifies the plaster there, and that hard spot absorbs unevenly. Contaminated water produces efflorescence, which also leaves hard spots on the mold surface.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "claim": "Plaster quantity can be computed directly from the Fusion plaster-body volume: about 0.93–0.99 g dry plaster plus 0.65–0.69 g water per cm3 at consistency 70, plus 10–20% overage",
+   "details": "USG IG503 gives the wet weight of consistency-70 slurry as about 1,674 g/L. That works out to 985 g plaster and 689 g water per litre. Andrew Martin's table (in the Arbuckle handout) agrees: 1 quart water plus 2.85 lb plaster gives about 80 in3, i.e. about 0.986 g plaster per cm3. USG's own set wet density of 1,586 kg/m3 implies about 0.93 g/cm3. Arbuckle advises mixing 10–20% extra for spills and leaks. Shape Cast already reports plaster and water weights for USG No. 1 from the computed plaster volume.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "Setting is exothermic. Expansion peaks around 20 min, and practitioners wait at least about 1 hour before taking pieces apart",
+   "details": "Arbuckle: plaster heats as it sets, reaches maximum expansion in about 20 min and then contracts slightly; Richard Notkin advises waiting at least an hour before separating molds. CAN Mold Making 101 assembles the finished mold 2–3 h after pouring the last section. USG warns that the material becomes very hot, sometimes quickly. CNC Kitchen notes that larger plaster masses warm enough to affect PLA. Meshcast says PLA starts softening around 60 °C, so a thick pour can distort a PLA mold box. It recommends PETG, thinner sections, or standing the mold in cool water, and treats the warmth peaking then falling as the demold signal. USG's ceramics sheet gives no peak temperature. A rough adiabatic estimate is about 25–30 K rise: hydration enthalpy of about 17 kJ/mol (about 118 J/g) of hemihydrate, at consistency 70. That would mean roughly 45–50 °C peak from room temperature in large insulated masses and less in small pours. This is a derived estimate, not a measured value.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.cnckitchen.com/blog/r85hx5mwi0vxk0gwdb7ko4rfj1g5y2",
+    "https://meshcast.app/guides/plaster-cracking",
+    "https://pmc.ncbi.nlm.nih.gov/articles/PMC7076736/"
+   ]
+  },
+  {
+   "claim": "Setting expansion is 0.17–0.21%. It occurs once per plaster generation, and restraint pushes it into other directions",
+   "details": "USG IG526: pottery plaster expands about 0.17% in all directions if free. If restrained in one direction, it expands more in another. In a traditional block mold → case mold → working mold chain the expansion compounds twice, which is why low-expansion (0.05%) gypsum cements are used for blocking and casing. Printing the casing directly replaces the block and case molds, so only one expansion step remains: about 0.17 mm on 100 mm. Arbuckle: cold water (below 65 °F) increases expansion and can make removing the mold difficult.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "claim": "Dry new molds to constant weight with air at or below 49 °C (120 °F) and good airflow. Never cool them suddenly",
+   "details": "USG IG1366/IG502: dry as quickly as is safely possible to constant weight. Recommended dryer temperature is 110–120 °F (43–49 °C). Supply air may enter at up to 150 °F only while the mold still holds substantial free water, and the temperature must come down as drying progresses. Higher temperatures calcine the surface, leaving it soft and powdery. Air speed should be at least 15 fps (4.6 m/s), up to 30 fps. Leave about 1/2 in between small casts. Strength rises only slightly until about 93% of free water is gone. Only about 18 parts water per 100 plaster are chemically needed, so at consistency 70 about 52 parts are free water to evaporate. IG526: molds crack if suddenly cooled from above about 100 °F. Store case and block molds at 30% RH or more and 100 °F or less. Merten and Arbuckle both repeat the 120 °F limit. Room-temperature drying can take several days; Sheffield says at least 48–72 h, ideally a week, before first casting.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/drying-plaster-casts-application-en-IG502.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "claim": "Mold wall thickness: USG gives 1.5 in (38 mm) as the usual minimum for casting molds, studio sources use 25 mm and up, and thickness should scale with mold size",
+   "details": "USG IG526: allow adequate plaster volume, with 1-1/2 in minimum usually appropriate for casting molds. Avoid thin mold edges (they calcine) and significant variation in cross-section (differential thermal stress). Merten (University of Washington module): at least 1 in all round. Shape Cast: plaster offset about 25 mm around a 75 mm cup, giving an outer mold about 200 mm across. Sheffield Pottery's table: molds under 8 in, 1–1.5 in thick (5–15 lb); 8–16 in, 1.5–2 in (15–30 lb); 16–24 in, 2–2.5 in (30–50 lb); over 24 in, 2.5–3 in (50+ lb). CAN's troubleshooting article: oversized walls make molds heavy, so proportion walls to the shape and cut outside corners at 45°.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "claim": "Uniform wall thickness matters because the mold works as a balanced water pump: water passes through capillaries to the back face and evaporates there",
+   "details": "USG IG526 compares the mold to a rigid sponge that draws water from the slip and passes it to the back, where it evaporates. Casting works best when mold absorption is in balance with the built-up clay layer. Absorbing too fast causes surface shrinkage, cracks and premature release. Absorbing too slowly gives a soft, mucky cast that sticks. Free water strongly reduces absorption rate: about 5% free water halves it. Shops run at 5–15% free water. In most shops the drying rate (about 0.01 g/cm2/min), not plaster capacity, limits casts per day. Uneven thickness therefore means uneven local casting rate, uneven drying and thermal stress. Plaster areas sealed by a casing, or enclosed, cannot evaporate.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "claim": "Casts per day are limited by mold water saturation, so thicker molds buy casts at the cost of drying time",
+   "details": "USG IG526: if mold drying between cycles is adequate, molds can be denser because a large reservoir is not needed. Careful mold drying in automatic casting tripled pieces per mold per day. Digitalfire: traditional plaster drying takes 8–10 h. Derived water budget: a 4 mm wall cast from SG 1.8 slip leaves roughly 0.24 g of water in the plaster per cm3 of cast (about 30–35 g for an 80 mm mug) before extra drying in the mold. With about 1.5 kg of dry plaster, staying below about 10–15% water uptake allows a few (about 3–6) casts per drying cycle. This is an estimate to calibrate by weighing molds, as USG recommends.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://digitalfire.com/glossary/slip+casting"
+   ]
+  },
+  {
+   "claim": "Casting times and cast thickness for studio tableware run from about 10 to 30 minutes for 2–5 mm walls",
+   "details": "Digitalfire: casts take 10+ min; 2–3 mm for simple bowls; 4–5 mm walls in 10–15 min with modern bodies; drying shrinkage of slip-cast ware can be as low as 1.5%. Gilliatt: about 10 min for a colored liner, then about 30 min for the white body. Shape Cast: about 30 min dwell. Wikipedia: tableware earthenware 35–60 min, thin sections (5–10 mm) 10–15 min. Wandless: casting slip SG 1.80–1.85 is typical (1.74 for volumetric casts, up to 1.90 for slabs). Gates: time the first cast and reuse that time for even walls.",
+   "confidence": "high",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://digitalfire.com/project/60",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://en.wikipedia.org/wiki/Slip_casting"
+   ]
+  },
+  {
+   "claim": "The spare (reservoir, pouring gate, slip well) keeps slip above the rim as the level drops, giving an even rim thickness",
+   "details": "Shape Cast: without a slip well the rim comes out thinner because the slip level drops from water absorption. The slip well is a stepped-out region added above the rim, with a small radius on the plaster edge for handling, offered in none, regular and tall modes. Gilliatt: four-part molds (bottom, two sides, top pouring gate). He makes the gate a little taller than needed so he can control rim quality, and plans seams along edges or changes of curvature. Gates: fill to about halfway up the reservoir wall; after draining, once the sheen goes (about 20 min), remove only the reservoir piece, trim and sponge, and leave the rest of the mold on about 1 h more. Mehlman: vertical-spare and step-spare variants; the vertical spare's step-back from the edge sets rim thickness. Digitalfire: a 3D-printed pour spout (0.8 mm wall, stuck on with slip) can replace a plaster spare and allows flared lips. No source gives a spare height in mm.",
+   "confidence": "high",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+    "https://digitalfire.com/glossary/pour+spout",
+    "https://shapecastmolds.com/"
+   ]
+  },
+  {
+   "claim": "Trim the rim with the blade flat on the mold top, cutting from the inside toward the mold wall",
+   "details": "Gilliatt: remove the pouring-gate section when the slip is no longer glossy or tacky. Hold the X-Acto blade flush with the top of the mold as a guide, pierce once, then angle the blade so the inner wall is cut first. That presses the clay back into the mold instead of pulling it away and warping the rim. Finish with a damp sponge and soft rib. The parting plane between spare and body therefore sets the rim plane: it should be flat or a simple shape the knife can follow.",
+   "confidence": "high",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "claim": "Casting-slip total shrinkage ranges from about 4.5–6% (cone 06 earthenware) to about 14–16% (cone 6), with 13–20% reported by artists. Scale the model by 1/(1 − s)",
+   "details": "Product data: Miller NS1 earthenware about 4.5%; Laguna CN401 White Star (cone 06) 6% ±2%; Tucker's A-1 cone 6 stoneware 14.0%; Clay-King Standard cone 6 porcelain 14.5%. Artists: Gilliatt 16% porcelain slip; Hanazono about 20%; Shape Cast default 13%; Digitalfire mug about 10%; Old Forge scales prints to 112%. Gilliatt's reverse-shrinkage formula: model = fired / (1 − s); for example a 4 in bowl at 16% needs a 4.76 in model. Always measure your own slip first. Digifab notes that high-precision work needs iteration, because shrinkage depends on geometry and wall thickness.",
+   "confidence": "high",
+   "sources": [
+    "https://stoneleafpottery.com/lacn401-white-star-cone-06-04-slip/",
+    "https://tuckers-pottery-supplies-inc.shoplightspeed.com/a-1-white-casting-slip-cone-6-stoneware-ecom.html",
+    "https://www.clay-king.com/product/standard-cone-6-porcelain-dry-slip/",
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/project/60",
+    "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+   ]
+  },
+  {
+   "claim": "Draft: zero draft is acceptable on outer (female) surfaces because the cast shrinks away, negative draft never is, and 1–3° helps",
+   "details": "Digifab (MIT-style digital fabrication blog): slip-cast parts shrink so much that 0° draft is OK, but draft can never be negative, and parting lines go where draft changes sign. Sheffield Pottery: at least 1–2° on mold walls, 1–3° on models. Digitalfire: release happens as the piece shrinks and pulls away from the mold. Arbuckle, on hump molds: clay that shrinks onto a convex mold will split if not removed in time. So cores, bosses and inward-facing convex plaster features (inside a foot ring, handle holes) need generous draft and early release. CAN Mold Making 101 detects undercuts by running a fingernail down from the top edge of the casting area. Merten: sand out any undercuts found in the mold.",
+   "confidence": "high",
+   "sources": [
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf"
+   ]
+  },
+  {
+   "claim": "Natches (keys): use 2–4 per seam, either coin-sized hemispherical keys or 3/8 in (9.5 mm) commercial natches, and taper them so they never bind",
+   "details": "CAN Mold Making 101: press a quarter (about 24 mm) or a dime (about 18 mm) to carve half-sphere keys at two or three locations per face. Digitalfire: the popular commercial natch has a 3/8 in (9.5 mm) nipple and needs about a 9.8 mm hole. The DIY printed natch system uses 13.5 mm holes in case molds, a 0.1 mm fit allowance (4.8 mm nipple in a 4.9 mm space), and at least 2 embeds per seam; natches are replaceable when broken. Digifab: tapered or curved keys constrain all degrees of freedom, while straight dowels do not. Sheffield: keys at least 1/2 in deep and 1 in wide, about 1/4 in wider at the base, 3–4 spaced around the perimeter. CAN troubleshooting: reversed tapers or missing parting compound cause stuck keys, and poor registration causes flashing.",
+   "confidence": "medium",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://digitalfire.com/glossary/mold+natches",
+    "https://digitalfire.com/project/63",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "claim": "Mold release: size plaster-to-plaster faces with potter's soap, about 3 coats wiped between coats. Leather-hard clay and PLA need no release, and oil releases clog plaster pores",
+   "details": "Industrial Plasters soft soap: dilute 50:50 with boiling water, let cool, then apply three coats by brush or sponge, removing excess between coats. CAN 101 uses a 50/50 Murphy's Oil Soap and water solution; b2w uses 1:1 Murphy's, two coats. Arbuckle: porous items need several coats, don't size too far ahead, plaster releases from leather-hard clay without release, and oil releases like Vaseline block pores and reduce absorbency. Digitalfire: PLA side rails and case molds release plaster with no parting agent and no smoothing. Old Forge used generic mould-maker's soap. CAN troubleshooting: insufficient parting compound causes stuck mold parts. Pouring too early lets the slurry water wash off the soap (Arbuckle).",
+   "confidence": "high",
+   "sources": [
+    "https://industrialplasters.com/products/soft-soap-release",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://b2wceramics.com/making-2-or-multipart-molds/",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/63",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "claim": "Casting workflow: strap tightly, pre-dampen, fill, invert at an angle to drain, firm up, then demold and fettle",
+   "details": "Gates: secure the parts firmly with strong bands cut from rubber inner tubes to prevent leaks. Fill halfway up the reservoir, drain upside down at an angle into a bucket so drips don't form stalactites on the bottom, remove the reservoir after about 20 min, and demold about 1 h later. Clean seams with a fettling knife and damp sponge. Gilliatt: wet the mold with a sponge before pouring. Once the piece is bone-dry, remove seam lines with an X-Acto, fettling knife or metal rib and smooth with drywall sanding mesh, wearing a respirator. CAN 101: briefly dunk dry pieces in water to start capillary action, and use 35–50 psi compressed air if a cast sticks. Hanazono embeds Molduct tubing for air release on large molds and uses ratchet straps. USG IG526: condition dry molds by dipping, or discard the first cast.",
+   "confidence": "high",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "claim": "Mold life: roughly 50–120 casts for pottery plaster, with wear at seams and fine detail first",
+   "details": "Industrial sanitaryware study (search-result abstract): about 80 and 120 casts for two plaster brands. Sheffield: 500+ for small simple molds and 200–300 for large complex ones; that blog's numbers look optimistic. USG IG526: denser molds last longer; failures come from abrasion and chipping, calcination or thermal shock, rotten molds from too little drying, and pinholes from poor mixing. Gypsum dissolves about 0.2% in water, so repeated slip impact on one spot erodes it. A wet mold has about half the compressive and abrasion strength of a dry one.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "claim": "Plaster is weak in tension and shear, and a wet mold is half as strong as a dry one, so avoid thin edges, sharp corners and thin bridges",
+   "details": "USG IG526, for a dry well-made mold: compressive about 2,000 psi, tensile about 290 psi, shear about 450 psi. Thermal expansion is about 8.3e-6 in/in/°F. Keep stresses compressive and support the mold. Arbuckle: round sharp mold edges with a rib or Surform so they don't flake plaster into the work. These numbers favor chamfered or rounded outer edges and a minimum local thickness, especially at parting-line corners and natch bosses.",
+   "confidence": "high",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "claim": "Piece weight and handling: wet set plaster is about 1.58 g/cm3 and dry about 1.10 g/cm3, so wet molds weigh about 44% more",
+   "details": "Using the USG densities, a typical 80 mm mug mold with 25 mm walls has about 1.4 L of plaster: roughly 1.6 kg dry, 2.3 kg wet. Sheffield's table runs from 5–15 lb for molds under 8 in to 50+ lb above 24 in. CAN troubleshooting suggests proportioning walls, cutting corners at 45°, or using bottom-drain designs for heavy molds. Shape Cast found that a solid block with the pot subtracted wastes plaster and gives a heavy, unwieldy mold, and offsets the outside from the pot shape instead. Printer build volume also limits casing size: Shape Cast splits the outer mold into 2 or 4 parts partly for this reason.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "claim": "3D-printed casing lessons from prior art: split the casing, seal joints, bolt or clamp the parts, and print the working face fine",
+   "details": "Shape Cast: in early tests a one-piece outer mold made removing the set plaster extremely difficult, so the outer mold was split into 2 or 4 parts with flanges, M3 bolts and heat-set inserts. Joints are sealed with neoprene foam weatherstrip tape in designed recesses. The inner mold has a 2.4 mm wall and the plaster offset is 25 mm. The inner mold is printed upside down, at high resolution, so supports never touch the working face; filler primer can be sanded on it. The outer mold can be printed at draft settings, and a plaster pour hole is generated automatically. Shape Cast's website mentions binder clips and ridge/groove flanges to stop leaks. Digitalfire: 1.2 mm PLA side rails with a bottom flange that tucks under the mold to stop plaster leaking under and lifting it. Clamps and rubber bands are used, and PLA needs no parting agent. Digitalfire also notes that STL facets transfer to the cast.",
+   "confidence": "high",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://shapecastmolds.com/",
+    "https://digitalfire.com/glossary/side+rails",
+    "https://digitalfire.com/project/60",
+    "https://digitalfire.com/project/59"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "shrinkageScale (model scale factor)",
+   "recommended_value": "scale = 1 / (1 - shrinkTotal); default shrinkTotal = 13% (scale 1.149) until the user measures their slip",
+   "range": "shrinkTotal 4.5–20% (cone 06 earthenware about 4.5–6%, cone 6 stoneware/porcelain 14–16%, some artist porcelains about 20%)",
+   "rationale": "Shrinkage is wet-to-fired linear. Using (1 + s) under-scales by about 1.7% at s = 13%. Shape Cast's default is 13%.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.clay-king.com/product/standard-cone-6-porcelain-dry-slip/",
+    "https://stoneleafpottery.com/lacn401-white-star-cone-06-04-slip/"
+   ]
+  },
+  {
+   "parameter": "plasterWallThickness (nominal offset of plaster around the cavity)",
+   "recommended_value": "25 mm for pieces up to about 150 mm; 30–40 mm for 150–300 mm; 40–65 mm above that",
+   "range": "20–75 mm; USG suggests 38 mm minimum for production casting molds",
+   "rationale": "Enough water capacity and strength without excess weight or drying time. USG gives 1.5 in minimum; studio practice and Shape Cast use about 25 mm for small ware; Sheffield scales thickness with mold size.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://materialseducation.org/educators/matedu-modules/docs/Slip_Casting.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "parameter": "plasterWallUniformity (validation check)",
+   "recommended_value": "Local plaster thickness within ±30% of nominal; nowhere below 0.6 × nominal or 15 mm; no knife-thin edges at parting lines",
+   "range": "Warn at 0.6–0.8 × nominal, fail below 0.6 × nominal",
+   "rationale": "USG: avoid thin edges (they calcine and chip) and large section variation (thermal stress, uneven absorption). Plaster tensile strength is only about 290 psi.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "parameter": "outerEdgeTreatment",
+   "recommended_value": "Chamfer or fillet outer plaster edges 3–5 mm; cut big outside corners at 45° to save weight",
+   "range": "2–10 mm chamfer/fillet",
+   "rationale": "Sharp plaster edges flake into the work and chip; 45° corners reduce weight.",
+   "sources": [
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://ceramicartsnetwork.org/daily/article/10-slip-casting-problems-and-how-to-solve-them"
+   ]
+  },
+  {
+   "parameter": "minDraftAngle (on cast-facing surfaces relative to each piece's pull direction)",
+   "recommended_value": "Outer/female surfaces: at least 0° (fail on negative), warn below 1°. Convex cores or plaster bosses the cast shrinks onto: 3° or more",
+   "range": "0–3° outer; 2–5° on cores",
+   "rationale": "Slip casts shrink away from female surfaces, so 0° works there, but never negative. Clay shrinks onto convex plaster and splits if held.",
+   "sources": [
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "parameter": "spareHeight (reservoir/well extension above the rim)",
+   "recommended_value": "max(15 mm, 2 × predictedLevelDrop + 5 mm trim allowance); predictedLevelDrop ≈ (castArea × castThickness × 0.24 g/cm3) / spareCrossSectionArea. That gives about 5 mm for an 80 mm mug, so about 15–20 mm",
+   "range": "15–40 mm for tableware; taller for narrow necks",
+   "rationale": "Practitioners fill about halfway up the reservoir and make it slightly taller than needed. No source gives mm values, so it is computed from the water budget (SG 1.8 slip to about 19% moisture cast; derived constant to calibrate).",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/glossary/slip+casting"
+   ]
+  },
+  {
+   "parameter": "spareShape / rimPlane",
+   "recommended_value": "Extrude the top rim profile straight up, or step it outward 2–5 mm. The rim plane equals the spare/body parting plane, and should be flat so the knife can ride the mold top. Round the plaster edge at the top of the well",
+   "range": "Step-out 0–10 mm; flare 0–15°",
+   "rationale": "Rim trimming uses the mold top as a blade guide. The step-back sets edge thickness in vertical spares, and Shape Cast rounds the slip-well plaster edge.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "https://www.mehlmandesign.com/ceramic-glass/blog-detail/mold-design-three-decisions/",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "natchCountPerSeam",
+   "recommended_value": "3 per seam: 2 near the seam ends plus 1 offset. Minimum 2; 4 on long seams",
+   "range": "2–4",
+   "rationale": "CAN uses 2–3 coin keys per face, Sheffield 3–4 around the perimeter, Digitalfire at least 2 per seam.",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://digitalfire.com/project/63"
+   ]
+  },
+  {
+   "parameter": "natchGeometry (hemispherical or conical key cast in plaster)",
+   "recommended_value": "Hemisphere or truncated cone 15–20 mm diameter, 6–8 mm deep, centered at least 12 mm from the cavity edge and at least 8 mm from the outer edge. Alternatively provide a 9.8 mm socket for 3/8 in commercial natches",
+   "range": "Diameter 10–25 mm; depth 0.3–0.5 × diameter",
+   "rationale": "Coin keys are about 18–24 mm. A commercial natch has a 9.5 mm nipple in a 9.8 mm hole. Tapered or curved keys self-locate. Keeping keys away from edges preserves the thin plaster lip.",
+   "sources": [
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://digitalfire.com/glossary/mold+natches",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+   ]
+  },
+  {
+   "parameter": "natchClearance",
+   "recommended_value": "0.15 mm radial for plaster-on-plaster keys formed from one printed geometry; 0.1 mm for printed natch inserts",
+   "range": "0.1–0.3 mm",
+   "rationale": "Digitalfire starts printed natches at 0.1 mm allowance and iterates. Plaster setting expansion (0.17–0.21%) is negligible at natch scale (about 0.03 mm on 15 mm).",
+   "sources": [
+    "https://digitalfire.com/project/63",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "parameter": "plasterConsistency",
+   "recommended_value": "70 (water parts per 100 plaster by weight) for USG No. 1 Pottery Plaster; brand-specific",
+   "range": "66–80 (Puritan 66; USG range for working molds 68–90)",
+   "rationale": "Ratio governs strength and absorptivity; manufacturer value is the default.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://digitalfire.com/material/plaster",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "parameter": "plasterBatchCalc (from Fusion plaster-body volume V in cm3)",
+   "recommended_value": "plaster_g = V × 0.985 × 1.15; water_g = plaster_g × consistency / 100 (C = 70)",
+   "range": "0.93–0.99 g plaster/cm3; 10–20% overage",
+   "rationale": "USG gives 1,674 g/L slurry wet weight at C70; Martin's table gives about 0.986 g/cm3; Arbuckle adds 10–20% extra.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "parameter": "pourTimingWindow",
+   "recommended_value": "Water 21–38 °C; soak 2–4 min; mix 2–5 min; finish pouring within 5 min; total about 15 min to set",
+   "range": "Vicat set 14–24 min (machine mix)",
+   "rationale": "USG and Arbuckle schedules. Plan casing assembly and sealing before mixing, and size batches per piece.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf"
+   ]
+  },
+  {
+   "parameter": "casingPourGateLocation",
+   "recommended_value": "Pour opening over the back (non-working) face, at the deepest point, so the stream never hits the cast-forming surface",
+   "range": "Gate diameter at least 25 mm; vent at the highest point",
+   "rationale": "A stream striking the case face densifies the plaster into a hard spot with uneven absorption; pour into the deepest area.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "parameter": "demoldTimeFromCasing",
+   "recommended_value": "At least 60 min after pour, and only once the exotherm has peaked and the block is cooling",
+   "range": "45–180 min",
+   "rationale": "Expansion peaks at about 20 min, practitioners wait at least 1 h, and warmth peaking then falling is the readiness signal.",
+   "sources": [
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://ceramicartsnetwork.org/ceramics-monthly/ceramics-monthly-article/Monthly-Methods-Mold-Making-101",
+    "https://meshcast.app/guides/plaster-cracking"
+   ]
+  },
+  {
+   "parameter": "casingThermalLimit",
+   "recommended_value": "Assume plaster can reach about 45–50 °C in thick sections. PLA (softens about 55–60 °C) is acceptable for thin or small pours; prefer PETG for thick or large pieces, or cool the casing in water",
+   "range": "Maximum single-pour plaster thickness in PLA: about 40–50 mm (unverified, should be tested)",
+   "rationale": "PLA fails around 60 °C; plaster exotherm can distort PLA mold boxes. The peak temperature is an estimate.",
+   "sources": [
+    "https://www.cnckitchen.com/blog/r85hx5mwi0vxk0gwdb7ko4rfj1g5y2",
+    "https://meshcast.app/guides/plaster-cracking",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "parameter": "moldDryingSpec",
+   "recommended_value": "Air at or below 49 °C (120 °F), at least 15 fps (4.6 m/s) airflow, at least 12 mm spacing; dry to constant weight; never cool suddenly from above 38 °C",
+   "range": "43–49 °C; supply air up to 66 °C only while the mold is still wet",
+   "rationale": "USG calcination and thermal-shock limits.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/drying-plaster-casts-application-en-IG502.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "parameter": "castWallThicknessTarget (for documentation and spare calculation)",
+   "recommended_value": "3–5 mm for mugs and cups",
+   "range": "1–6 mm studio tableware",
+   "rationale": "Digitalfire: 2–3 mm simple bowls, 4–5 mm mugs in 10–15 min. Walker Ceramics (search snippet only) suggests about 5 mm for small pieces.",
+   "sources": [
+    "https://digitalfire.com/glossary/slip+casting",
+    "https://digitalfire.com/project/60"
+   ]
+  },
+  {
+   "parameter": "moldReleaseProcedure",
+   "recommended_value": "Potter's soap (soft soap 1:1 with boiling water, cooled) applied in 3 coats with excess wiped off, on every plaster face that will touch fresh plaster. No soap on the cast-forming face of working molds; no oil releases",
+   "range": "2–3 coats",
+   "rationale": "Prevents plaster pieces bonding together; oils block pores. PLA needs no release.",
+   "sources": [
+    "https://industrialplasters.com/products/soft-soap-release",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "https://digitalfire.com/glossary/side+rails"
+   ]
+  },
+  {
+   "parameter": "perPieceWeightLimit (handling)",
+   "recommended_value": "Report the dry weight (V × 1.10 g/cm3) and wet weight (V × 1.58 g/cm3) of every piece; warn when any wet piece exceeds about 6 kg",
+   "range": "Threshold user-configurable (Sheffield: 5–15 lb molds under 8 in)",
+   "rationale": "Wet plaster is about 44% heavier than dry; molds are inverted full of slip to drain.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "parameter": "partingLinePlacement",
+   "recommended_value": "Put seams on edges or curvature transitions (draft sign changes), not across flat or visible faces; keep the rim plane as its own parting plane",
+   "range": "n/a",
+   "rationale": "Seams on edges are easier to fettle and less visible; parting lines belong where draft changes direction.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Scaling the model by (1 + s) instead of 1/(1 − s) undersizes it, by about 1.7% at 13% shrinkage. Always take shrinkage from the user's own slip test bar, not a generic default.",
+  "A rigid one-piece casing around set plaster is very hard to remove. Shape Cast abandoned it, and setting expansion presses the plaster against the walls. Split casings into parts and bolt or clamp them.",
+  "Plaster exotherm can soften PLA (failure around 60 °C), and thick single pours are the worst case. Avoid PLA casings with very thick plaster sections, or use PETG or cooling.",
+  "Pouring plaster straight onto the cast-forming surface leaves dense hard spots that absorb unevenly. Place the casing pour gate over the back face and pour into the deepest point.",
+  "Thin plaster edges and abrupt changes in thickness calcine, chip and crack under thermal stress. Validate a minimum local wall, especially at parting-line corners and natch bosses.",
+  "Drying molds above 49 °C (120 °F), or cooling them suddenly from above 38 °C, calcines the surface or causes thermal-shock cracks.",
+  "Oil-based releases (Vaseline and similar) on working plaster clog the pores, and soap residue left on the cast-forming face affects casting. Size only plaster-to-plaster faces and wipe off excess.",
+  "Undersized or missing spares give thin, uneven rims. Narrow necks need a much taller spare for the same cast, because the level drop is roughly cast-water volume divided by spare cross-section.",
+  "Negative draft anywhere on a piece's face against its pull direction locks the cast in. Plaster convex features the clay shrinks onto (cores, foot-ring interiors, handle holes) grip the cast and crack it if it is not released early.",
+  "Natches too close to the cavity or outer edge chip out of the plaster. Reversed tapers or zero clearance make them bind. Symmetric natch layouts allow pieces to be assembled the wrong way round; asymmetric layouts are standard practice but no source here confirms it.",
+  "Seams placed across flat or visible faces are hard to fettle and leave visible lines. Poor registration or loose strapping causes flashing and leaks.",
+  "Treating a new mold as dry too early: room-temperature drying takes days, and strength only develops once about 93% of free water is gone. Pouring slip into a damp mold gives slow, mucky casts that stick.",
+  "Over-thick molds are heavy and slow to dry, and are much heavier wet (×1.44). Under-thick molds saturate after a few casts. Wall thickness should be a parameter, not a constant.",
+  "STL or mesh faceting and print layer lines transfer from the casing into the plaster and then into the cast. Print the working faces fine and orient them away from supports.",
+  "Several sources mix units (in vs mm) and some supplier blog tables look generic, Sheffield's for example. Prefer USG data and measured studio values when the two disagree.",
+  "Fusion's internal API length unit is cm. All mm design rules must be converted (25 mm = 2.5 cm) when written to user parameters or used in scripts."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast (Kent Lyons, CHI EA 2024)",
+   "url": "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "what_it_does": "Web tool that turns a 2D pot profile (SVG) into printable STLs for making plaster molds. It produces the inner mold (scaled for shrinkage, default 13%, with an automatic slip well), an outer mold offset 25 mm and split into 2 or 4 parts with flanges and M3 bolts, a bottom ring, and a plaster pour hole. It also outputs plaster volume and USG No. 1 mix weights. Joints are sealed with neoprene foam tape, and the inner mold wall is 2.4 mm.",
+   "relevance": "The closest automated pipeline to the user's goal, though limited to one-piece revolved molds (two-part was proof-of-concept only). It validates the 25 mm plaster offset, the split-casing decision, the slip-well geometry and the plaster batch calculator. A 2025 CHI follow-up exists: 'Crafting the Curve', https://dl.acm.org/doi/10.1145/3706598.3713866 (not read)."
+  },
+  {
+   "name": "Shape Cast web app",
+   "url": "https://shapecastmolds.com/",
+   "what_it_does": "Production version with selectable wall thickness, slip-well modes (none, regular, tall), flange ridges and grooves against leaks, binder-clip assembly, and STEP/STL export.",
+   "relevance": "Its parameter set (shrinkage, wall thickness, slip-well mode, flange ridges) is a good model for Fusion user parameters."
+  },
+  {
+   "name": "Digitalfire 3D-printed case mold projects (Tony Hansen)",
+   "url": "https://digitalfire.com/project/60",
+   "what_it_does": "Documents designing case molds in Fusion 360 and OnShape for a coffee mug and a ball pitcher (project 59). Covers 0.8–1.2 mm PLA shells, about 10% shrinkage scaling, 3D-printed pour spouts instead of spares, side rails, and natch embeds.",
+   "relevance": "Practitioner reference for printed shells, printed spouts, embedding natches through printed holes, and lessons on warping and fit."
+  },
+  {
+   "name": "Digitalfire DIY natch system",
+   "url": "https://digitalfire.com/project/63",
+   "what_it_does": "Printable natch, embed, clip and spacer set: 13.5 mm holes in case molds, 0.1 mm fit allowance, replaceable natches, flat mating surfaces.",
+   "relevance": "Drop-in registration hardware for printed casings. An alternative to hemispherical keys cast into the plaster."
+  },
+  {
+   "name": "Digitalfire side rails",
+   "url": "https://digitalfire.com/glossary/side+rails",
+   "what_it_does": "Printed 1.2–1.6 mm rails with bottom flanges that lock under the mold, clamped or banded, to contain plaster pours.",
+   "relevance": "Proven pattern for leak-proof printed casing walls and clamp interfaces."
+  },
+  {
+   "name": "Old Forge Creations 3-part fully 3D-printed system",
+   "url": "https://www.oldforgecreations.co.uk/blog/3-part-mould-for-slipcasting-from-fully-3d-printed-system",
+   "what_it_does": "Hobbyist three-part printed casing system (about 375 ml plaster, 112% scale) that uses a plaster calculator and mould soap.",
+   "relevance": "Small-scale multi-part example similar to the user's three-piece mug mold."
+  },
+  {
+   "name": "Glazy Plaster Calculator",
+   "url": "https://plaster.glazy.org/",
+   "what_it_does": "Online plaster and water calculator from volume (page content not readable in this research, title only).",
+   "relevance": "Cross-check for the toolkit's own plaster batch calculation."
+  },
+  {
+   "name": "Metamolds / FlexMolds (Alderighi et al., Malomo et al.)",
+   "url": "https://dl.acm.org/doi/10.1145/3197517.3201381",
+   "what_it_does": "Academic computational design of silicone and flexible molds, including automatic cut and parting decomposition (cited by the Shape Cast paper).",
+   "relevance": "Algorithmic reference for automatic undercut detection and parting-surface decomposition; it does not account for plaster or clay material constraints."
+  }
+ ],
+ "open_questions_for_user": [
+  "Which casting slip or clay body will you use (brand, cone), and do you have a measured wet-to-fired shrinkage from a test bar? This sets the default shrinkage scale, which ranges from 4.5% to 20%.",
+  "Which plaster brand is available to you locally, and what consistency does its data sheet give? USG No. 1 is 70; others such as Puritan are 66, and local pottery plasters may differ.",
+  "What size range will you make (largest piece height and diameter)? This drives plaster wall thickness defaults (25 mm vs 38 mm or more) and whether casing parts must be split to fit your printer. What is your printer build volume?",
+  "What production rate do you want (casts per mold per day)? Can you dry molds with forced air at 43–49 °C, or only at room temperature? This decides whether to prefer thicker walls or faster drying.",
+  "Will the casings be printed in PLA or PETG (or other), and what wall and infill settings? Thick plaster sections in PLA risk exotherm distortion.",
+  "Do you prefer the spare as a separate top piece (classic four-piece: bottom, two sides, spare) or built into the side pieces as in your current three-piece mug? And a plaster spare or a 3D-printed pour spout as Digitalfire does?",
+  "For registration: plaster-cast hemispherical keys (your current spherical natches), commercial 3/8 in plastic natches, or printed natch embeds? Should natches be laid out asymmetrically to prevent wrong assembly?",
+  "What target cast wall thickness and rim style (straight, flared, stepped rim) do you want? This feeds the spare height calculation and trim-plane design.",
+  "How much does a full mold piece weigh wet, and is there a weight limit per piece? The toolkit can report dry and wet weight per piece.",
+  "Will forms include handles, spouts or other appendages cast in place (more mold pieces and cores) or attached separately, as most potters do with separate handle molds?",
+  "How should the casings be held together while the plaster cures: printed clamps, bolts with heat-set inserts (as Shape Cast does), binder clips, or straps? And how should joints be sealed: tongue-and-groove only, or also foam gasket tape?",
+  "Do you want bottom-drain molds or drain holes in the design, or always drain by inverting the mold?"
+ ],
+ "techniques": [
+  {
+   "name": "Volume-based plaster batch calculator",
+   "description": "Read each plaster body's volume from Fusion (cm3), then compute plaster_g = V × 0.985 (C70), water_g = plaster_g × C/100, add 10–20% overage, and report dry and wet piece weights at 1.10 and 1.58 g/cm3.",
+   "pros": "Exact, repeatable, removes mixing guesswork; Shape Cast does the same.",
+   "cons": "Constants are brand- and consistency-specific (USG figures conflict slightly: 1,674 g/L slurry vs 1,586 kg/m3 set wet density), so make them parameters.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plaster-mixing-procedures-application-en-IG503.pdf",
+    "https://www.lindaarbuckle.com/handouts/Plaster.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "name": "Spare sizing from a water budget",
+   "description": "Estimate water absorbed per cast as cast area × target cast thickness × about 0.24 g/cm3 (SG 1.8 slip to about 19% moisture cast). The level drop equals that volume divided by the spare's horizontal cross-section. Size the spare at about 2× the drop plus trim allowance, with a 15 mm minimum, and fill to about half.",
+   "pros": "Gives a physical, parametric spare height; catches narrow-neck cases.",
+   "cons": "Derived constant, not from a published rule; calibrate with a real cast.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://digitalfire.com/glossary/slip+casting"
+   ]
+  },
+  {
+   "name": "Mold water-capacity / casts-per-cycle estimate",
+   "description": "Mold dry mass × 10–15% allowable water uptake, divided by water per cast (including firming time in the mold), gives casts before the mold needs drying. Compare against the user's desired casts per day to choose wall thickness.",
+   "pros": "Links wall thickness to productivity quantitatively; USG recommends calibrating by weighing molds.",
+   "cons": "Rough estimate; drying rate, not capacity, often dominates.",
+   "sources": [
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/usg-no1-pottery-plaster-data-en-IG1366.pdf"
+   ]
+  },
+  {
+   "name": "Offset-from-form plaster shell instead of a box Boolean",
+   "description": "Generate the plaster body as an outward offset or shell of the scaled form plus spare (uniform thickness), then trim the base and top flat. A box with the form subtracted is the naive alternative.",
+   "pros": "Uniform absorption and drying, less plaster and weight. Shape Cast found the box approach heavy and unwieldy.",
+   "cons": "Offsets of complex B-rep shapes can fail or self-intersect (Shape Cast needed a robust Clipper offset). Needs flat bases or registration faces added.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.usg.com/content/dam/USG_Marketing_Communications/united_states/product_promotional_materials/finished_assets/plasters-gypsum-cements-for-ceramics-application-guide-en-IG526.pdf"
+   ]
+  },
+  {
+   "name": "Traditional four-piece layout (bottom, two sides, spare)",
+   "description": "Split the side walls on a vertical plane through the axis, use a separate bottom piece for the foot, and a separate top spare piece removed first for rim trimming.",
+   "pros": "Standard practice for cups, jugs and bowls; the spare comes off independently so the rim can be cut against the mold top.",
+   "cons": "More pieces and seams; a separate spare piece adds a seam at the rim plane.",
+   "sources": [
+    "https://claybucket.com/wp-content/uploads/cadaily-moldmaking2.pdf"
+   ]
+  },
+  {
+   "name": "3D-printed pour spout instead of a plaster spare",
+   "description": "Print a thin (0.8 mm) non-absorbent spout or collar that sits on the mold top, stuck on with slip, and acts as the reservoir. Remove it and cut the rim along the mold edge.",
+   "pros": "Less slip and scrap, allows flared lips, enables simpler molds, visible slip level.",
+   "cons": "Extra printed part per pour; needs a sealing interface; less traditional.",
+   "sources": [
+    "https://digitalfire.com/glossary/pour+spout",
+    "https://digitalfire.com/project/60"
+   ]
+  }
+ ]
+}

@@ -1,0 +1,594 @@
+{
+ "topic": "fusion-api-feasibility",
+ "summary": "The Fusion Python API covers every step of the slip-cast mold pipeline, but the steps differ a lot in how reliable they are. The easy parts: creating and editing user parameters, then driving features from them by passing ValueInput.createByString('paramName'). Also easy: extruding the planar top face upward with a taper to form the spare, plane-based SplitBody, Combine (join/cut/intersect with keep-tools), tagging with attributes, checks with the volume, interference and minimum-distance tools, and per-body STL/3MF export. The riskier parts: (a) building a uniform-wall plaster body. Shell with outsideThickness and RoundedOffsetShellType is the right tool, but it fails wherever the offset self-intersects: tight concave curvature, thin features, thickness larger than local radii. (b) Automatic undercut detection and parting design for arbitrary shapes. Fusion has no API to create a Draft Analysis; the Analyses collections only expose item/itemByName/deleteMe, and the Sept 2026 release added creation of Zebra and Environment Map analyses only. So the undercut and visibility logic has to live in our own scripts, built on BRepFace.evaluator normals (which always point out of the solid), TriangleMeshCalculator tessellation and Component.findBRepUsingRay. SilhouetteSplit exists, but a solid-body split needs a planar parting line, and it works best on shelled bodies.\n\nParametric caveats: in a parametric design, TemporaryBRepManager geometry can only enter the model through a BaseFeature (startEdit / bRepBodies.add / finishEdit). That geometry is 'dumb' and will not update when parameters change. Custom Features (a true parametric 'Mold' feature) are still preview, need an add-in rather than an MCP script, and their custom compute is only supported for base features plus sketches plus combine. The recommended architecture splits parameters into two kinds. Dimensional parameters (wall thickness, spare height, clearances, natch size) are bound live as expressions on native features. Structural parameters (number of pieces, pull directions, natch count) are handled by idempotent stage scripts that delete and rebuild their own tagged output. Each script uses a timeline checkpoint (Timeline.count, markerPosition, deleteAllAfterMarker) as its transaction and rollback, because each API change is a separate undo item outside a command's execute event. Faces should be found by geometric queries (normal and position) rather than by index or tempId.\n\nAutodesk Fusion MCP specifics, from the live tool schemas. fusion_mcp_execute runs Python source with featureType='script' and object.script; scripts follow the run(context) convention. object.readOnly=true is enforced: any modification fails, and read-only scripts may run while a command dialog is open, which normal scripts may not. fusion_mcp_read supports apiDocumentation (regex searchPattern, apiCategory, namespace filter), screenshot (camera direction presets, 32-4096 px, transparent background), document/project queries and activeCommand. fusion_mcp_update gives undo and redo of the last committed transaction. The server is local-only Streamable HTTP, enabled under Preferences > General > API, default port 27182 according to third-party docs. Scripts run on Fusion's main thread inside one persistent Python 3.14 interpreter. Imported helper modules are therefore cached (use importlib.reload), and long scripts freeze the UI. Avoid modal ui.messageBox; print a JSON result instead (the MCP client captures print output).",
+ "findings": [
+  {
+   "claim": "Internal units are fixed: cm for length, radians for angle, kg for mass. ValueInput.createByReal is read in those units; createByString is an expression with units that can reference parameters.",
+   "details": "The API returns internal units without exception. UserParameters.add(name, ValueInput, units, comment): a real ValueInput is read in internal units for the unit type (5 means 5 cm for any length unit). A string ValueInput is used as-is as the expression ('5 mm', 'wall*2', '5 + Length'). units='' makes a unitless numeric parameter. units='Text' makes a text parameter whose expression must be a single-quoted literal. Boolean ValueInputs are not supported; use a unitless parameter with 'true'/'false' (evaluated as 1/0). Features created with createByString('paramName') get a model parameter bound to that expression, so editing the user parameter recomputes them. OffsetFacesFeatures.createInput states this explicitly. Setting Parameter.value resets the expression; set Parameter.expression with units (e.g. '25 mm') so the result does not depend on document units. Expressions support if(...).",
+   "confidence": "high",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.UserParameters.add",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Parameter.expression / Parameter.value",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.OffsetFacesFeatures.createInput"
+   ]
+  },
+  {
+   "claim": "Attributes can tag bodies, faces, edges, features and components with string values (JSON is fine) and are found with Design.findAttributes, but they do not reliably follow geometry through modeling operations.",
+   "details": "The attributes property exists on BRepBody, BRepFace, BRepEdge, Feature, Component, Analysis and others. Values are always strings. Design.findAttributes(groupName, attributeName) matches exactly or with a 're:' regex, and '' matches everything. An attribute on a consumed B-Rep entity is never deleted automatically; its parent returns None, so always check. Searching by group name is more efficient than iterating entities. A forum report (search snippet only; the page returned 403) says only one fragment keeps the attribute after a split, so re-tag bodies after every split.",
+   "confidence": "medium",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Attributes_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.findAttributes",
+    "https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/strange-behavior-setting-a-solid-body-s-attributes/td-p/12325838 (search snippet only)"
+   ]
+  },
+  {
+   "claim": "Entity tokens are persistent IDs that must never be compared as strings. tempIds are valid only until the body changes.",
+   "details": "BRepFace.entityToken (only for non-temporary faces) can be re-bound with Design.findEntityByToken. The same entity can produce different token strings over time, so compare the bound entities, not the strings. After a face is split, findEntityByToken returns an array of all fragments, with the most logical match first. Body tokens are more stable than face/edge tokens (forum snippet). BRepFace/Edge/Vertex.tempId is valid only while the document is open and the owning body is unmodified; BRepBody.findByTempId can return several entities.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepFace.entityToken",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.findEntityByToken",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepFace.tempId / BRepBody.findByTempId"
+   ]
+  },
+  {
+   "claim": "The Custom Feature API (adsk.fusion.CustomFeature) is still preview, needs an add-in, and supports custom compute only for base features plus sketches plus combine. It is not a practical basis for an MCP-script-driven parametric 'mold feature'.",
+   "details": "The classes are marked 'preview… Do not use it in distributed programs' and there is no release date. There are two modes: grouping standard features into one timeline node (editing is limited to parameters of the grouped features), and custom compute (temp B-Rep in a base feature plus Combine). Custom compute 'should not be used for any other cases and will likely fail'. The CustomFeatureDefinition must be created in an add-in's run(). If the add-in is not loaded, the node shows a yellow warning, editing is blocked, and custom-compute geometry will not update. CustomFeatureInput supports addDependency, addCustomParameter and setStartAndEndFeatures.",
+   "confidence": "high",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomFeatures_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.CustomFeatureDefinition / CustomFeatureInput / CustomFeature"
+   ]
+  },
+  {
+   "claim": "Extending the cast body upward into a spare is simple when the top is a planar face: extrude the face itself, joined, with a parameter-driven distance and an optional taper.",
+   "details": "ExtrudeFeatures.createInput(profile, operation) and addSimple accept 'a single planar face' as the profile. Use input.setOneSideExtent(adsk.fusion.DistanceExtentDefinition.create(ValueInput.createByString('spareHeight')), ExtentDirections.PositiveExtentDirection, ValueInput.createByString('spareTaper')). A negative taper angle tapers inward, a positive one outward. startExtent supports an offset start. participantBodies limits which bodies a cut or intersect affects. setDistanceExtent and the taperAngle property are retired. If the top is not planar, cut a section with Sketch.projectCutEdges(body) or intersectWithSketchPlane on a plane at the rim, then extrude or loft that profile.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.ExtrudeFeatures.createInput / addSimple",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.ExtrudeFeatureInput.setOneSideExtent / taperAngle / startExtent / participantBodies",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Sketch.projectCutEdges / intersectWithSketchPlane"
+   ]
+  },
+  {
+   "claim": "Shelling outward (outsideThickness) with RoundedOffsetShellType is the natural way to get a uniform-thickness plaster body or printed casing. It fails where the offset self-intersects, and isTangentChain defaults to True.",
+   "details": "ShellFeatures.createInput(inputEntities, isTangentChain=True). inputEntities holds the faces to remove or the bodies to shell; it fails if faces and their own body are both given. Selecting a body with no faces gives a closed hollow body. ShellFeatureInput has insideThickness, outsideThickness and shellType (SharpOffsetShellType is labelled legacy; RoundedOffsetShellType gives rounded outer corners, i.e. a true constant-distance offset). ShellFeature.setThicknesses(inside, outside) only works after rolling the timeline to just before the feature (timelineObject.rollTo(True)). creationOccurrence is needed when the input geometry is in another component and the shell is not in the root. Because isTangentChain defaults to True, removing the top face of a filleted mug can also remove the tangent fillet faces; pass False. UI docs give direction options Inside/Outside/Both. Known failure modes (search summaries): self-intersecting faces, edges about the size of the thickness, high curvature, and thickness larger than the smallest local thickness or radius.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.ShellFeatures.createInput / ShellFeatureInput / ShellTypes / ShellFeature.setThicknesses",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/ShellFeatureSample_Sample.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-83A14252-0009-42AA-AE7E-435F595DE41B.htm",
+    "https://www.techandespresso.com/blog/fusion-360-shell-command-tutorial"
+   ]
+  },
+  {
+   "claim": "The offset and thicken family gives other ways to build uniform walls: OffsetFeatures (surface bodies, Sharp or Rounded), OffsetFacesFeatures (push/pull faces on a solid) and ThickenFeatures (faces to a solid).",
+   "details": "OffsetFeatures.createInput(faces ObjectCollection, distance, operation, isChainSelection=True) supports only NewBody and NewComponent and produces surface bodies. offsetType (SharpOffsetType / RoundedOffsetType) is settable and can be changed on existing features as of the Sept 2026 API. OffsetFacesFeatures.createInput(faces list, distance) moves solid faces; positive distance goes along the face normal. ThickenFeatures.createInput(faces, thickness, isSymmetric, operation, isChainSelection=True) turns faces or patch bodies into solids. These are fallbacks when Shell fails on one region, e.g. thicken only the outer faces.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.OffsetFeatures.createInput / OffsetFeatureInput / OffsetTypes",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.OffsetFacesFeatures.createInput",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.ThickenFeatures.createInput",
+    "https://help.autodesk.com/view/fusion360/ENU/?contextId=SFC-OFFSET",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WhatsNew.htm"
+   ]
+  },
+  {
+   "claim": "SplitBodyFeatures takes one splitting tool per feature. Multi-piece molds need sequential splits, and the resulting bodies must be found by diffing the body list.",
+   "details": "SplitBodyFeatures.createInput(splitBodies (BRepBody or ObjectCollection), splittingTool (a single construction plane, profile, face, or open/solid BRepBody), isSplittingToolExtended). Each split consumes the original body reference, so re-acquire bodies before the next split. Forum reports (search snippets) say SplitBodyFeature.bodies can be empty; the workaround is to snapshot component.bRepBodies before the split and diff afterwards. Feature.bodies is documented as 'bodies that were modified or created by this feature'. For BaseFeatures it returns source bodies while editing and result bodies otherwise.",
+   "confidence": "medium",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.SplitBodyFeatures.createInput / SplitBodyFeature",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Feature.bodies",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/SplitBodyFeatureSample_Sample.htm",
+    "https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/splitbodyfeature-count-to-zero-after-split/td-p/11679675 (search snippet only)",
+    "https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/split-body-using-multiple-splitting-tools/td-p/12996963 (search snippet only)"
+   ]
+  },
+  {
+   "claim": "SilhouetteSplitFeatures automates a two-piece parting along one view direction, but SolidBody splits need a planar parting line and the tool 'works best on shelled bodies'.",
+   "details": "createInput(viewDirection: construction axis, linear BRepEdge, planar BRepFace or construction plane; targetBody: a single solid; operation). Operations: SilhouetteSplitFacesOnlyOperation (splits faces, keeps one body), SilhouetteSplitShelledBodyOperation (body must already be shelled; gives 2 bodies), SilhouetteSplitSolidBodyOperation (parting line must be planar). Placement is automatic and the user has no control. The tool struggles with non-coplanar silhouettes; falling back to FacesOnly and building a parting surface is the usual workaround. For a revolved part with a horizontal view direction, the silhouette is the meridian, equivalent to a plane split through the axis.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.SilhouetteSplitFeatures.createInput / SilhouetteSplitOperations",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/SilhouetteSplitFeatureSample_Sample.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+    "https://www.techandespresso.com/blog/fusion-360-silhouette-split-tool"
+   ]
+  },
+  {
+   "claim": "TemporaryBRepManager is a fast, non-parametric modeling kernel suited to analysis and verification. It has no offset, shell or fillet, and its results enter a parametric design only through a BaseFeature.",
+   "details": "Functions: copy (body, face, loop or edge), booleanOperation(target, tool, BooleanTypes Union/Difference/Intersection) where the target must be temporary and is modified, transform(body, Matrix3D), createBox(OrientedBoundingBox3D), createCylinderOrCone, createEllipticalCylinderOrCone, createSphere, createTorus, createSilhouetteCurves(face, viewDirection, returnCoincidentSilhouettes) which returns wire bodies or None, planeIntersection, createProjectedBodyOutline (approximate; default tolerance 0.001 x bbox diagonal), deleteFaces, createRuledSurface, createFaceFromPlanarWires, imprintOverlapBodies, exportToFile (.sat/.smt). To persist: baseFeat = comp.features.baseFeatures.add(); baseFeat.startEdit(); comp.bRepBodies.add(tempBody, baseFeat); baseFeat.finishEdit(). Ekins measured 2,000 holes in under 20 s this way. The bodies keep no association with their source and do not respond to parameter changes. Forum snippets report Combine failing with bodies from TemporaryBRepManager.copy and BoundaryFill needing real bodies.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TemporaryBRepManager (all members)",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepBodies.add / BaseFeature",
+    "https://ekinssolutions.com/using-temporary-b-rep-in-fusion-360/"
+   ]
+  },
+  {
+   "claim": "Component.findBRepUsingRay can drive visibility and undercut tests, with caveats: it returns each entity only once (at its first hit), searches every visible body in the component, and uses Python tuple out-arguments.",
+   "details": "Signature: findBRepUsingRay(originPoint, rayDirection, entityType, proximityTolerance=-1, visibleEntitiesOnly=True, hitPoints). The ray is infinite from the origin. Results are sorted by distance, and hit points line up with entities in the same order. 'If an entity is hit more than once, the entity is returned once for the first intersection', so a single revolved face that occludes itself shows only one hit. Start rays slightly off the surface and filter by face.body, hiding or filtering other bodies (plaster, casings). It needs real (non-temporary) bodies. BRepBody.pointContainment(point) returns Inside/On/Outside/Unknown and is useful for stepping samples along a pull direction. In Python, out-arguments come back as a tuple: (ret, value, …).",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Component.findBRepUsingRay / findBRepUsingPoint",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepBody.pointContainment / PointContainment",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm"
+   ]
+  },
+  {
+   "claim": "Normals from BRepFace.evaluator always point out of the solid. Use them, not the geometry evaluator, for draft and undercut tests. The surface parameter range comes from parametricRange(), not getParameterExtents.",
+   "details": "'The direction of the normal for a solid is always outward.' The B-Rep evaluator takes the rest of the body into account; Surface.evaluator does not, and BRepFace.isParamReversed exposes the reversal. SurfaceEvaluator methods: getNormalAtPoint, getNormalsAtParameters, getPointsAtParameters, getParameterAtPoint, getParametersAtPoints, isParameterOnFace (respects face trimming when taken from a BRepFace) and parametricRange() returning a BoundingBox2D. getParameterExtents exists only on curve evaluators. Parameterization is non-uniform (NURBS 0..1, cylinders -π..π), so sample in 3D or on a tessellation for even coverage. Out-args: (ok, normal) = face.evaluator.getNormalAtPoint(p).",
+   "confidence": "high",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/BRepGeometry_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepFace.evaluator / isParamReversed",
+    "fusion_mcp_read apiDocumentation: adsk.core.SurfaceEvaluator.*",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm"
+   ]
+  },
+  {
+   "claim": "TriangleMeshCalculator gives a controllable tessellation with per-node normals, a good substrate for pure-Python undercut maps.",
+   "details": "body.meshManager.createMeshCalculator() returns a TriangleMeshCalculator with surfaceTolerance, maxSideLength, maxAspectRatio and maxNormalDeviation. setQuality(TriangleMeshQualityOptions) picks LOD Low=8, Normal=11, High=13, VeryHigh=15, with surfaceTolerance = bboxDiameter / 2^LOD (about 0.39 mm / 0.049 mm / 0.012 mm / 0.003 mm for a 100 mm object). calculate() returns a TriangleMesh with nodeCoordinatesAsDouble, normalVectorsAsDouble, nodeIndices, triangleCount and surfaceTolerance. It is available on BRepBody, BRepFace, lumps and shells.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.MeshManager / TriangleMeshCalculator.setQuality / TriangleMesh"
+   ]
+  },
+  {
+   "claim": "Draft Analysis cannot be created or queried numerically through the API. Undercut detection must be implemented in our own scripts; the UI Draft Analysis only serves as a human visual check.",
+   "details": "Analyses exposes draftAnalyses, accessibilityAnalyses and others, but those collections only have item, itemByName and count, and DraftAnalysis/AccessibilityAnalysis only have deleteMe. The Sept 2026 API added creation of ZebraAnalysis and EnvironmentMapAnalysis only. In the UI, Draft Analysis takes a pull direction plus start/stop angles, a tolerance zone, opacity and high quality. Green means sufficient draft along the pull, yellow insufficient, red sufficient in the opposite direction.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Analyses / DraftAnalyses / DraftAnalysis / AccessibilityAnalysis",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WhatsNew.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-F372F1AF-71F1-499D-AA1F-712E57C89806.htm"
+   ]
+  },
+  {
+   "claim": "Verification tools are solid: interference, volumes, minimum distance and oriented bounding boxes all work through the API. Temporary-body booleans also allow a 'virtual demold' translation test.",
+   "details": "Design.createInterferenceInput(ObjectCollection of bodies/occurrences in root context) has areCoincidentFacesIncluded. analyzeInterference returns results whose interferenceBody is a transient BRepBody; set isCreateBody to keep it. app.measureManager.measureMinimumDistance(g1, g2) accepts bodies, faces, edges, vertices, construction geometry, Point3D or Plane, and returns cm plus the two closest points. getOrientedBoundingBox(geometry, lengthVec, widthVec). BRepBody.volume (cm^3, 0 if not solid), area (cm^2), isSolid, boundingBox; getPhysicalProperties(accuracy) defaults to Low (±1%). Virtual demold: copy the piece and the cast with TemporaryBRepManager, transform the piece along its pull vector, intersect, and check the volume.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.createInterferenceInput / analyzeInterference / InterferenceInput / InterferenceResult",
+    "fusion_mcp_read apiDocumentation: adsk.core.MeasureManager.measureMinimumDistance / getOrientedBoundingBox",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepBody.volume / getPhysicalProperties / isSolid",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TemporaryBRepManager.booleanOperation / BooleanTypes"
+   ]
+  },
+  {
+   "claim": "Parting surfaces for non-planar parting lines can be built from silhouette or edge curves with RuledSurfaceFeatures (Direction type) and then used as a SplitBody tool.",
+   "details": "RuledSurfaceFeatures.createInput(profile, distance, angle, ruledSurfaceType, direction). The profile comes from Component.createBRepEdgeProfile(edges or loop, chainEdges) or createOpenProfile(sketch curves). DirectionRuledSurfaceType takes a linear or planar entity as direction. cornerType gives rounded or mitered corners. Silhouette edges come from a SilhouetteSplit FacesOnly feature, or from TemporaryBRepManager.createSilhouetteCurves turned into sketch curves. Then SplitBody uses the surface body with isSplittingToolExtended=True. DraftFeatures (fixed plane; parting-line types are preview as of Sept 2026) can add draft to walls.",
+   "confidence": "medium",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.RuledSurfaceFeatures.createInput / RuledSurfaceFeatureInput / RuledSurfaceTypes",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Component.createBRepEdgeProfile / createOpenProfile",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.DraftFeatures.createInput / DraftFeatureInput"
+   ]
+  },
+  {
+   "claim": "For axisymmetric pieces (most mugs, cups, vases) a sketch-profile pipeline is the most robust and fully parametric path: project or section the body, offset the profile parametrically, revolve.",
+   "details": "Sketch.project2(entities, isLinked): projecting a BRepBody gives its silhouette. Sketch.projectCutEdges(body) and intersectWithSketchPlane give section curves. sketch.geometricConstraints.createOffsetInput(curves, ValueInput.createByString('plasterWall')) then addOffset2 creates a parameter-driven offset constraint (positive is to the right of the curve flow; closed circles offset outward). Sketch.offset is retired. RevolveFeatures.createInput(profile or planar face, axis, operation). Use Sketch.isComputeDeferred to speed up heavy sketch creation, but do not leave it on while editing sketches that features depend on. Digitalfire's precision slip-mold workflow also revolves the outline and defines parameters first.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Sketch.project2 / projectCutEdges / intersectWithSketchPlane / offset / isComputeDeferred",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.GeometricConstraints.createOffsetInput / addOffset2",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.RevolveFeatures.createInput",
+    "https://digitalfire.com/video/make+a+precision+plaster+mold+for+slip+casting+using+fusion+360+and+3d+printing"
+   ]
+  },
+  {
+   "claim": "BoundaryFill can turn a hollow vessel model into the solid 'plug' needed as the cast cavity, but createInput opens a transaction that must end with add() or cancel().",
+   "details": "BoundaryFillFeatures.createInput(tools: construction planes and open or closed bodies, operation) partially computes and starts a transaction. Not calling add leaves 'Fusion in a bad state', with undo problems and possibly a crash; call BoundaryFillFeatureInput.cancel() to abort. Pick cells through bRepCells (isSelected); on an existing feature, call applyCellChanges with the timeline rolled to just before it. Wrap the call in try/finally so cancel always runs.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BoundaryFillFeatures.createInput / BoundaryFillFeatureInput.cancel / BoundaryFillFeature.bRepCells"
+   ]
+  },
+  {
+   "claim": "Combine handles natches, keys, cavity subtraction and casing assembly with keep-tool-bodies, and the CombineFeatureInput properties map one-to-one to the UI.",
+   "details": "CombineFeatureInput has targetBody, toolBodies (ObjectCollection), operation (Join/Cut/Intersect FeatureOperations), isNewComponent, isKeepToolBodies and targetBaseFeature. Typical uses: cut the cast with the cast kept as tool (plaster minus cavity); join male natch spheres to one piece and cut them with clearance from the mating piece. Check the returned feature for None and its healthState. A cut may split a body, so diff the body list afterwards.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.CombineFeatureInput"
+   ]
+  },
+  {
+   "claim": "STL and 3MF export are available per body, occurrence or component, with refinement presets or custom deviation settings.",
+   "details": "ExportManager.createSTLExportOptions(geometry, filename) has isBinaryFormat, isOneFilePerBody, meshRefinement (MeshRefinementHigh/Medium/Low/Custom), surfaceDeviation, normalDeviation, maximumEdgeLength, aspectRatio, unitType, sendToPrintUtility and printUtility. createC3MFExportOptions has the same mesh controls. ExportManager.execute(options) returns a bool. Lengths such as surfaceDeviation are in cm. A community MCP client defaults to a 0.01 mm mesh tolerance.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.STLExportOptions / C3MFExportOptions / MeshRefinementSettings / ExportManager.execute",
+    "https://github.com/hitsmaxft/fusion-mcp-client"
+   ]
+  },
+  {
+   "claim": "Undo grouping: outside a command's execute event, every model-changing API call is its own undo step. A timeline checkpoint is a more reliable rollback for multi-step scripts than repeated MCP undo calls.",
+   "details": "Commands_UM says everything done in the execute event handler is 'bundled within a single transaction and can be undone with one undo'; otherwise 'every API call that causes a change… will show up as a separate operation in the undo list'. MCP fusion_mcp_update undo/redo acts on 'the last committed transaction' and fails during interactive commands. Checkpoint pattern: n0 = design.timeline.count before a stage; on failure set timeline.markerPosition = n0 and call timeline.deleteAllAfterMarker(). Sept 2026 also added TimelineObject.deleteObject/isDeletable and TimelineGroup.deleteMe. Whether the MCP wraps a whole script as one transaction is unverified.",
+   "confidence": "medium",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+    "fusion_mcp_update tool schema (undo/redo description)",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Timeline.markerPosition / count / deleteAllAfterMarker",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WhatsNew.htm"
+   ]
+  },
+  {
+   "claim": "Feature health must be checked explicitly: Design.computeAll() returning True does not mean every feature computed.",
+   "details": "computeAll 'doesn't indicate if all the items in the timeline successfully computed'. Check TimelineObject.healthState and errorOrWarningMessage, or the feature's own healthState, after each add. TimelineGroups.add(startIndex, endIndex) groups a stage's features; groups cannot nest, and rollTo fails on an expanded group. Changing designType to DirectDesignType deletes all history.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.computeAll / designType",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TimelineObject.healthState / errorOrWarningMessage / rollTo",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TimelineGroups.add"
+   ]
+  },
+  {
+   "claim": "Autodesk Fusion MCP behavior, from the live tool schemas: Python source runs via featureType 'script' with an enforced readOnly flag. Read tools cover API docs, screenshots, documents and the active command; undo/redo is a separate tool.",
+   "details": "fusion_mcp_execute: featureType 'script', object.script = Python source (run(context) convention), object.readOnly=true only for pure reads. 'The claim is enforced, so any attempt to modify the design from a read-only script fails', and read-only scripts may run while a command dialog is open, which normal scripts may not. featureType 'document' opens, closes or saves only with userConfirmed* flags. fusion_mcp_read: apiDocumentation (searchPattern regex, apiCategory class/member/description/all, filter such as 'adsk.fusion.ShellFeatureInput'), screenshot (direction current/front/back/top/bottom/left/right/iso-*, width/height 32-4096, transparentBackground, antiAliasing), document search/open/recent, projects, activeCommand, licensing. fusion_mcp_update: undo/redo. Autodesk help: local-only, desktop-only, Streamable HTTP, enabled in Preferences > General > API, tools discovered at connection. Third-party client: default endpoint http://127.0.0.1:27182/mcp, print output captured, readOnly 'not an OS sandbox', guard arguments expected_document_id/expected_version. Autodesk's reference server marshals calls to the main thread via custom events. No documented timeout.",
+   "confidence": "high",
+   "sources": [
+    "fusion_mcp_execute / fusion_mcp_read / fusion_mcp_update tool schemas (Autodesk_Fusion MCP server in this session)",
+    "https://help.autodesk.com/view/ADSKMCP/ENU/?guid=ADSKMCP_FusionDesktopMcp_autodesk_fusion_mcp_server_html",
+    "https://github.com/hitsmaxft/fusion-mcp-client",
+    "https://github.com/AutodeskFusion360/FusionMCPSample"
+   ]
+  },
+  {
+   "claim": "Fusion runs a single persistent embedded Python interpreter (3.14 since early 2026). Helper modules stay cached between runs, scripts block the UI, and third-party packages such as numpy are brittle.",
+   "details": "Scripts block the main thread; adsk.doEvents() yields to the UI. Modules imported from a repo helper library stay in sys.modules across MCP runs, so use importlib.reload(lib) during development (forum: one Python instance shared by all scripts and add-ins). numpy can be pip-installed into Fusion's own interpreter via subprocess with sys.executable, but the install is tied to Fusion's Python version, which moved from 3.12 to 3.14 in the January 2026 update (search snippet). Pure-Python geometry helpers are safer. Collections iterate like lists; API arrays are 'vector' objects, so wrap them in list(). Use adsk.fusion.X.cast(obj) for type checks.",
+   "confidence": "medium",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm",
+    "https://dcyoung.github.io/post-f360-py-modules/",
+    "https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/stale-python-imports/td-p/11002630 (search snippet only)",
+    "https://www.autodesk.com/products/fusion-360/blog/january-2026-product-update-whats-new/ (search snippet only; page 403)"
+   ]
+  },
+  {
+   "claim": "A Fusion add-in in the same domain, the Lure Mold Generator, shows workable patterns: ray-grid parting search with a 'release %' score, report-not-block undercuts, regenerate by discarding components, and pure-geometry modules testable outside Fusion.",
+   "details": "It works in the mesh domain with Fusion mesh booleans, picks the split height by casting a grid of vertical rays to minimize trapped features (e.g. 93% release at the optimal split vs 62% at the center), avoids timeline constraints by deleting and rebuilding components on regeneration, and keeps layout/parting/meshgen modules free of Fusion imports for unit tests. It warns that about 25k-triangle inputs exceed its budget.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  },
+  {
+   "claim": "Performance: parametric features are slow per operation. Temporary B-Rep is much faster for bulk work, and Direct design speeds things up by dropping history.",
+   "details": "Ekins: 2,000 holes in under 20 s with temp B-Rep plus one base feature, versus far longer with hole features. Forum (search snippet): DirectDesignType sped up a large job from hanging to about 30 min, and creating a component takes about 100-200 ms. Keep the parametric feature count per mold to tens, not thousands; do sampling and verification on temporary copies.",
+   "confidence": "medium",
+   "sources": [
+    "https://ekinssolutions.com/using-temporary-b-rep-in-fusion-360/",
+    "https://forums.autodesk.com/t5/fusion-360-api-and-scripts/super-slow-run-time/td-p/8750813 (search snippet only)"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "Internal length unit in all script math",
+   "recommended_value": "cm (convert mm with /10); angles in radians",
+   "rationale": "The API always returns and expects database units; mixing in mm is the most common silent scale bug.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Units_UM.htm"
+   ]
+  },
+  {
+   "parameter": "Binding feature sizes to user parameters",
+   "recommended_value": "ValueInput.createByString('<userParamName>'); create user params with units 'mm' and expressions that include units (e.g. '25 mm')",
+   "rationale": "String ValueInputs create model parameters whose expression references the user parameter, so dimensional edits recompute live. Expressions with units do not depend on document units.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.UserParameters.add",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.OffsetFacesFeatures.createInput"
+   ]
+  },
+  {
+   "parameter": "Parameter classes",
+   "recommended_value": "Live (expression-bound): plasterWall, spareHeight, spareTaper, casingWall, casingBase, clearance, natchDiameter. Regenerate-only (script re-run): pieceCount, pullDirections, natchCount, split layout",
+   "rationale": "Feature counts and topology cannot be driven by timeline parameters without Custom Features (preview, add-in only), so structural changes need deterministic regeneration.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomFeatures_UM.htm"
+   ]
+  },
+  {
+   "parameter": "Shell input for plaster body and casings",
+   "recommended_value": "isTangentChain=False; outsideThickness=createByString(param); shellType=RoundedOffsetShellType; remove only explicitly found faces (top/pour face)",
+   "rationale": "isTangentChain defaults True and would also remove tangent fillet faces. Rounded offset keeps the wall distance constant at convex edges; Sharp is labelled legacy.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.ShellFeatures.createInput / ShellTypes",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/GUID-83A14252-0009-42AA-AE7E-435F595DE41B.htm"
+   ]
+  },
+  {
+   "parameter": "Shell failure fallback order",
+   "recommended_value": "1) Rounded outward shell → 2) axisymmetric profile offset (addOffset2) + revolve → 3) primitive block/cylinder (from oriented bbox + wall) Combine-cut with cast kept → 4) shell + Combine-intersect with primitive for flat exterior",
+   "rationale": "Shell fails on high curvature or thin regions. Profile offset is robust for revolved forms; primitive minus cast always succeeds but gives non-uniform walls.",
+   "sources": [
+    "https://www.techandespresso.com/blog/fusion-360-shell-command-tutorial",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.GeometricConstraints.createOffsetInput"
+   ]
+  },
+  {
+   "parameter": "Face selection",
+   "recommended_value": "Select faces by geometric predicates (surfaceType, evaluator normal vs axis, centroid or bbox position, e.g. 'planar, normal·Z > 0.999, max Z'), never by index or tempId; re-query after every feature",
+   "rationale": "Indices and tempIds are invalidated by any body modification, and entity tokens can split into several faces.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepFace.tempId / entityToken / Design.findEntityByToken"
+   ]
+  },
+  {
+   "parameter": "Split strategy",
+   "recommended_value": "One SplitBodyFeature per tool, isSplittingToolExtended=True; snapshot comp.bRepBodies before and diff after to identify results; re-tag pieces with attributes immediately",
+   "rationale": "Single splitting tool per feature, and the original body reference disappears. Feature.bodies has been reported empty for splits.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.SplitBodyFeatures.createInput",
+    "https://forums.autodesk.com/t5/fusion-api-and-scripts-forum/splitbodyfeature-count-to-zero-after-split/td-p/11679675 (search snippet only)"
+   ]
+  },
+  {
+   "parameter": "Undercut classification threshold (per sample, normal n out of cast, piece pull direction d)",
+   "recommended_value": "Undercut if n·d < -sin(0.5°); zero-draft warning if |n·d| < sin(1°); also occluded if a ray from p + 0.01 cm·d along d hits the cast again",
+   "rationale": "Local test from outward B-Rep normals plus a global visibility test by ray casting. The small epsilon avoids self-hits, given the single-hit-per-entity behavior. Thresholds are numerical tolerances to tune with the ceramic draft requirements from the domain research.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/BRepGeometry_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Component.findBRepUsingRay"
+   ]
+  },
+  {
+   "parameter": "Tessellation level for analysis",
+   "recommended_value": "TriangleMeshCalculator.setQuality(NormalQualityTriangleMesh) (LOD 11 → tol ≈ diameter/2048, ~0.05 mm on 100 mm); Low (LOD 8) for quick previews",
+   "rationale": "This gives enough sample density for undercut maps while keeping pure-Python loops fast.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TriangleMeshCalculator.setQuality"
+   ]
+  },
+  {
+   "parameter": "Virtual demold test",
+   "recommended_value": "For each piece: temp copy, translate along pull by 0.01, 0.1 and 1.0 cm, intersect with a temp copy of the cast; pass if intersection volume < 0.001 cm^3 (1 mm^3) at every step; treat booleanOperation False or an empty body as zero",
+   "rationale": "A geometry-agnostic check that catches undercuts missed by sampling. It uses only fast temporary B-Rep.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TemporaryBRepManager.booleanOperation / transform",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepBody.volume"
+   ]
+  },
+  {
+   "parameter": "Assembly verification",
+   "recommended_value": "analyzeInterference on all plaster pieces (areCoincidentFacesIncluded=False) expecting 0 results; volume check |Σ piece volumes − plaster volume| < 0.1%; min wall via measureMinimumDistance(cast, plaster outer faces) ≥ plasterWall − 0.5 mm",
+   "rationale": "Catches overlaps, lost slivers and thin walls before any printing.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.createInterferenceInput / analyzeInterference",
+    "fusion_mcp_read apiDocumentation: adsk.core.MeasureManager.measureMinimumDistance"
+   ]
+  },
+  {
+   "parameter": "Tagging schema",
+   "recommended_value": "Attribute group 'moldgen'; attributes role ∈ {cast, spare, plaster, piece, casing, clamp, natch}, pieceId, pullDir (JSON vector), stage, version; also tag the generated features and components",
+   "rationale": "Design.findAttributes('moldgen', ...) finds the outputs to delete or rebuild during regeneration. Values must be strings.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Attributes_UM.htm"
+   ]
+  },
+  {
+   "parameter": "Stage transaction / rollback",
+   "recommended_value": "n0 = timeline.count at stage start; on exception set timeline.markerPosition = n0 and call deleteAllAfterMarker(); on success timelineGroups.add(n0, count-1) named 'MoldGen: <stage>'",
+   "rationale": "Without a command execute event each API call is a separate undo item. A checkpoint gives deterministic all-or-nothing stages.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Commands_UM.htm",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Timeline.markerPosition / deleteAllAfterMarker / TimelineGroups.add"
+   ]
+  },
+  {
+   "parameter": "MCP script conventions",
+   "recommended_value": "def run(context); readOnly=true for analysis and inspection scripts; no ui.messageBox; print exactly one JSON summary (lengths reported in mm); check healthState after each feature; take a screenshot (iso-top-right plus the pull-direction views) after each modifying stage",
+   "rationale": "readOnly is enforced and also works while dialogs are open. Modal dialogs block automation. JSON output is easy for agents to parse.",
+   "sources": [
+    "fusion_mcp_execute / fusion_mcp_read tool schemas",
+    "https://github.com/hitsmaxft/fusion-mcp-client"
+   ]
+  },
+  {
+   "parameter": "Helper library loading",
+   "recommended_value": "sys.path.insert(0, <repo>/fusion_lib); import moldlib; importlib.reload(moldlib) (and submodules) at top of every MCP script; pure-Python (no numpy)",
+   "rationale": "One persistent interpreter caches modules. Third-party binary packages break when Fusion's Python version changes.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/PythonSpecific_UM.htm",
+    "https://dcyoung.github.io/post-f360-py-modules/"
+   ]
+  },
+  {
+   "parameter": "Export",
+   "recommended_value": "Binary STL or 3MF, one file per body, meshRefinement=MeshRefinementCustom with surfaceDeviation 0.001 cm (0.01 mm) and normalDeviation ~10° (or MeshRefinementHigh); file names <design>_<role>_<pieceId>",
+   "rationale": "Per-body export lines up with tagged pieces. 0.01 mm deviation is far below FDM resolution.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.STLExportOptions / C3MFExportOptions",
+    "https://github.com/hitsmaxft/fusion-mcp-client"
+   ]
+  },
+  {
+   "parameter": "BoundaryFill usage",
+   "recommended_value": "Always wrap in try/finally: call add() or input.cancel()",
+   "rationale": "An unfinished boundary-fill transaction leaves Fusion in a bad state with undo problems and possibly a crash.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BoundaryFillFeatures.createInput / BoundaryFillFeatureInput.cancel"
+   ]
+  },
+  {
+   "parameter": "Temporary B-Rep insertion",
+   "recommended_value": "Use only for analysis or non-parametric primitives (clamps, natch spheres) via baseFeatures.add() → startEdit() → bRepBodies.add(body, bf) → finishEdit(); prefer native features for anything that must follow parameters",
+   "rationale": "Base-feature bodies have no association with their source and will not recompute on parameter edits.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.BRepBodies.add",
+    "https://ekinssolutions.com/using-temporary-b-rep-in-fusion-360/"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Everything is in cm internally. A ValueInput.createByReal(5) is 5 cm, not 5 mm. Angles are radians.",
+  "ShellFeatures.createInput and DraftFeatures.createInput default isTangentChain=True, and OffsetFeatures/ThickenFeatures default isChainSelection=True. On filleted bodies this silently pulls in extra faces.",
+  "SharpOffsetShellType is legacy and thickens corners. Use RoundedOffsetShellType for a uniform plaster wall.",
+  "Shell or offset fails where the offset self-intersects: concave curvature radius smaller than the thickness, thin necks, handles, edges about the size of the thickness. Always check feature healthState and keep a fallback path.",
+  "ShellFeature.setThicknesses only works after rolling the timeline to just before the feature (rollTo(True)).",
+  "Fusion has no API to create a Draft Analysis (the collections only support item/itemByName, and DraftAnalysis only deleteMe). Undercut detection must be our own code.",
+  "findBRepUsingRay returns each face once, at its first hit, only searches visible bodies in the component, and does not work on temporary bodies. Offset ray origins and filter by body.",
+  "Use BRepFace.evaluator for normals. Surface.evaluator can point inward. SurfaceEvaluator has parametricRange(), not getParameterExtents (that one is for curves).",
+  "Python out-arguments come back as tuples: (ok, normal) = evaluator.getNormalAtPoint(p). Forgetting this gives confusing type errors.",
+  "SilhouetteSplit with SolidBody needs a planar parting line, and ShelledBody needs an already-shelled body. It gives only 2 pieces per direction and placement cannot be controlled.",
+  "SplitBody takes one tool per feature. The original body reference dies after each split, and SplitBodyFeature.bodies may be empty, so diff body lists.",
+  "Attributes may stay on only one fragment after a split. Re-tag after each split or combine. Attribute.parent can be None once the entity is consumed.",
+  "Never compare entityToken strings. tempIds are invalid after any body modification. Face indices change after every feature.",
+  "Base-feature bodies (from TemporaryBRepManager) are dumb geometry and will not follow parameter changes. Combine with TemporaryBRepManager.copy bodies has been reported to fail, and BoundaryFill needs real bodies.",
+  "A BoundaryFillFeatureInput must end with add() or cancel(), or Fusion may end up in a bad undo state or crash.",
+  "Design.computeAll() returning True does not mean all features succeeded. Inspect TimelineObject.healthState and errorOrWarningMessage.",
+  "Outside a command execute event each API call is a separate undo step, so the MCP undo tool may need many calls. Prefer a timeline checkpoint and deleteAllAfterMarker.",
+  "Normal (non-readOnly) MCP scripts cannot run while a command dialog is open. Query activeCommand first. readOnly=true is enforced and any modification raises an error.",
+  "Scripts block Fusion's UI thread. Long sampling loops freeze the app, so keep them on temporary geometry, chunk the work, or call adsk.doEvents().",
+  "The single persistent Python interpreter caches imported helper modules. Edits to the repo library are not picked up without importlib.reload or a Fusion restart.",
+  "Don't use ui.messageBox in MCP-run scripts. Modal dialogs block automation; print JSON instead.",
+  "Custom Features are preview, need an add-in, and support custom compute only for base features plus sketches plus combine. If the add-in is not loaded, the feature shows a warning and stops updating.",
+  "Changing Design.designType to Direct permanently deletes the timeline and history.",
+  "Sketch.isComputeDeferred left True while editing a sketch that features depend on can produce bad models. Roll the timeline back first or don't defer.",
+  "Setting Parameter.value overwrites its expression. Use .expression to keep formulas such as 'plasterWall * 2'.",
+  "The cast cavity must be the solid outer envelope (plug). Hollow vessel models need a plug step first (BoundaryFill, or patch plus stitch, or a revolved profile)."
+ ],
+ "techniques": [
+  {
+   "name": "Expression-bound native feature pipeline (live parametric)",
+   "description": "Create user parameters, then build spare extrude (planar top face, taper), outward Rounded shell with the top face removed, plane splits, natch Combine, and casing shells, all with ValueInput.createByString(param). Changing a dimensional parameter recomputes the whole chain.",
+   "pros": "Truly parametric in the Fusion UI. Simple to inspect. Matches the user's hand-built mug example.",
+   "cons": "Breaks when topology changes (face references) or when shell fails. Structural changes (piece count) still need a script.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.UserParameters.add / ShellFeatureInput / ExtrudeFeatureInput.setOneSideExtent"
+   ]
+  },
+  {
+   "name": "Axisymmetric profile pipeline",
+   "description": "Section or silhouette the cast with Sketch.projectCutEdges/project2 on a plane through the axis, build spare and plaster outlines with addOffset2 parametric offsets, revolve 360° (or 180° per half), then split with planes through the axis plus a horizontal base plane.",
+   "pros": "The most robust approach. Exact uniform walls. Fully parametric. Ideal for mugs, cups and vases.",
+   "cons": "Only for rotationally symmetric forms. Handles and spouts need separate treatment.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Sketch.projectCutEdges / project2 / GeometricConstraints.addOffset2 / RevolveFeatures.createInput",
+    "https://digitalfire.com/video/make+a+precision+plaster+mold+for+slip+casting+using+fusion+360+and+3d+printing"
+   ]
+  },
+  {
+   "name": "Normal-map + ray-visibility undercut analysis (read-only script)",
+   "description": "Tessellate the cast (TriangleMeshCalculator, LOD 11) or sample BRepFace evaluators. For candidate pull directions compute n·d per node, then run occlusion rays with findBRepUsingRay. Output per-face or per-region assignments, a 'release %' score per direction, and suggested parting curves. Run with readOnly=true.",
+   "pros": "Works on any shape. Fast in pure Python. No model changes. Gives quantitative output for agents.",
+   "cons": "Sampling-based (may miss small features). The single-hit-per-entity ray behavior needs care. Choosing piece regions on complex shapes is research-grade.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TriangleMeshCalculator / Component.findBRepUsingRay",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/BRepGeometry_UM.htm",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  },
+  {
+   "name": "Silhouette and run-off parting surfaces",
+   "description": "Get parting curves per pull direction (SilhouetteSplit FacesOnly, or TemporaryBRepManager.createSilhouetteCurves), build run-off surfaces with RuledSurfaceFeatures (DirectionRuledSurfaceType) from createBRepEdgeProfile, then SplitBody the plaster with the surface.",
+   "pros": "Handles non-planar parting lines on organic shapes.",
+   "cons": "More fragile: profiles must chain and surfaces must fully cut through. The SilhouetteSplit SolidBody op only works for planar lines.",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.RuledSurfaceFeatures.createInput / SilhouetteSplitFeatures.createInput / TemporaryBRepManager.createSilhouetteCurves",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm"
+   ]
+  },
+  {
+   "name": "Virtual demold verification with temporary B-Rep",
+   "description": "For each plaster piece, translate temporary copies along the piece's pull vector in steps and boolean-intersect with the cast and neighbours. Run analyzeInterference and volume-conservation checks.",
+   "pros": "Shape-agnostic, fast, read-only. Catches what sampling misses.",
+   "cons": "Needs the pull vectors decided. Zero-draft sliding faces pass (friction is not modelled).",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.TemporaryBRepManager.booleanOperation / transform",
+    "fusion_mcp_read apiDocumentation: adsk.fusion.Design.analyzeInterference"
+   ]
+  },
+  {
+   "name": "Regenerate-by-script with tags, timeline groups and checkpoints",
+   "description": "Each stage script is idempotent. It finds and deletes its previous tagged output (Design.findAttributes('moldgen', ...), TimelineGroup.deleteMe or TimelineObject.deleteObject), rebuilds from the current user parameters, groups the new features, and rolls back to a checkpoint on error.",
+   "pros": "Handles structural parameter changes and is predictable for agents. Avoids preview Custom Features.",
+   "cons": "Downstream manual edits are lost on regeneration. Timeline grows if cleanup fails.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Attributes_UM.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/WhatsNew.htm",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  },
+  {
+   "name": "Primitive block minus cast (fallback plaster body)",
+   "description": "Create a cylinder or box from the oriented bounding box plus the wall parameter (extrude or revolve sketch, or temp B-Rep), then Combine-cut the cast+spare with isKeepToolBodies=True. Optionally intersect with an outward shell to cap the maximum thickness.",
+   "pros": "Boolean-only, so it almost never fails. Flat exterior faces suit casings and clamps.",
+   "cons": "Non-uniform plaster thickness (slower and uneven drying).",
+   "sources": [
+    "fusion_mcp_read apiDocumentation: adsk.fusion.CombineFeatureInput / MeasureManager.getOrientedBoundingBox"
+   ]
+  },
+  {
+   "name": "Custom Feature add-in (future option)",
+   "description": "Package the mold as a CustomFeature grouping native features, with custom parameters exposed in the Parameters dialog.",
+   "pros": "A single timeline node with real parameters.",
+   "cons": "Preview API, add-in only (not MCP scripts), limited editing. Breaks if the add-in is not loaded.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomFeatures_UM.htm"
+   ]
+  },
+  {
+   "name": "Mesh-domain generation",
+   "description": "Generate mold pieces as triangle meshes and combine with mesh booleans, as in the Lure Mold Generator.",
+   "pros": "Robust to messy inputs. Avoids B-Rep offset failures.",
+   "cons": "Loses B-Rep precision and parametric editing. Triangle budget limits.",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator"
+   ]
+  }
+ ],
+ "prior_art": [
+  {
+   "name": "AutodeskFusionLureMoldGenerator",
+   "url": "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "what_it_does": "Fusion add-in that turns a lure mesh into a 2-part printable injection mold, with ray-cast parting search, alignment pegs, sprues and vents.",
+   "relevance": "Closest Fusion-API prior art: ray-grid parting scoring, report-not-block undercuts, regenerate by deleting components, pure-geometry modules unit-testable outside Fusion."
+  },
+  {
+   "name": "AutodeskFusion360/FusionMCPSample",
+   "url": "https://github.com/AutodeskFusion360/FusionMCPSample",
+   "what_it_does": "Autodesk reference MCP server add-in that runs Fusion API scripts, marshalling calls to the main thread via custom events.",
+   "relevance": "Shows how MCP script execution is threaded. Useful if we later ship our own add-in or commands."
+  },
+  {
+   "name": "hitsmaxft/fusion-mcp-client",
+   "url": "https://github.com/hitsmaxft/fusion-mcp-client",
+   "what_it_does": "Python client and CLI for the local Autodesk Fusion MCP (127.0.0.1:27182/mcp): read-only-by-default script execution, screenshots, bundle export.",
+   "relevance": "Documents MCP behaviors (print capture, readOnly not a sandbox, expected_document_id guards, 0.01 mm mesh default) usable in our agent instructions."
+  },
+  {
+   "name": "Digitalfire Fusion 360 slip-cast mold tutorials",
+   "url": "https://digitalfire.com/video/make+a+precision+plaster+mold+for+slip+casting+using+fusion+360+and+3d+printing",
+   "what_it_does": "Practitioner workflows: revolve the outline, box it for plaster pouring, parameters defined first.",
+   "relevance": "Confirms the profile/revolve parametric approach for axisymmetric ware."
+  },
+  {
+   "name": "Shape Cast (CHI 2024)",
+   "url": "https://dl.acm.org/doi/10.1145/3613905.3651020",
+   "what_it_does": "Generates printable plaster-mold geometry for slip casting from a 2D pot profile, including shrinkage (described from search results; the page returned 403).",
+   "relevance": "Academic prior art for the profile-driven approach and its parameter set."
+  },
+  {
+   "name": "MoldStudio3D",
+   "url": "https://moldstudio3d.com/ceramic-slip-casting-mold/",
+   "what_it_does": "Browser tool generating multi-part slip-casting case molds with natches and pour spouts from STL.",
+   "relevance": "Commercial benchmark for feature set (natches, spouts, dividing walls)."
+  }
+ ],
+ "open_questions_for_user": [
+  "Are your Fusion source models always solid outer envelopes (plugs), or sometimes hollow vessels with real wall thickness and an open top? The latter needs an automatic 'plug' step.",
+  "What share of your pieces are rotationally symmetric (mugs, cups, vases) versus free-form? A robust profile/revolve path can cover the first group fully, while free-form needs the riskier analysis-driven path.",
+  "Do you want live parametric behavior in the Fusion timeline (edit a parameter, everything recomputes), or is 'edit parameters, then ask the agent to regenerate the mold' acceptable? The second handles piece count and layout changes far more robustly.",
+  "Can we install a Fusion add-in in addition to MCP-run scripts? It would allow command-based single-undo operations and a future Custom Feature, though Custom Features are preview.",
+  "Is non-parametric (base feature) geometry acceptable for helper parts such as clamps or natch primitives, or must everything stay as native features?",
+  "Should every mold stage live in the same design as the original model (as components or timeline groups), or should outputs go to a new document per mold?",
+  "Which layouts should be supported first: bottom + 2 sides, bottom + 3 or 4 sides, 2-piece silhouette split? Do appendages like handles or spouts get their own molds?",
+  "When a step fails (e.g. Shell can't offset a region), should the agent fall back automatically to a block-style plaster body with non-uniform walls, or stop and ask?",
+  "What is your printer's build volume and preferred export format (STL vs 3MF)? This drives automatic casing panel splitting and per-body export settings.",
+  "Is it acceptable for analysis scripts to temporarily hide bodies or create temporary sketches? Pure read-only analysis with readOnly=true is safest but cannot change visibility."
+ ]
+}

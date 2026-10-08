@@ -1,0 +1,600 @@
+{
+ "topic": "computational-moldability",
+ "summary": "The core test is well defined. A body can be demolded along a direction d with two opposite pieces exactly when every line parallel to d crosses the body's boundary at most twice. Chen & McMains state it this way, citing Ahn et al. 2002. Alderighi 2021 calls such a part a \"double height field\" (DHF). Checking the face normal against the pull direction (n·d >= sin(draft)) is necessary but not enough, because a face can point toward d and still be hidden behind another part of the object. So any practical checker needs a local draft test plus a global occlusion test: cast a ray from each surface sample along the pull direction, or count how many times each line parallel to d crosses the surface (\"column/span\" test). Exact searches over all directions on the sphere are too expensive: Ahn's algorithm is O(n^4), and that bound is optimal in the worst case. Real systems (Ahn's own implementation, Khardekar, Alderighi 2019) therefore test a finite set of candidate directions: sampled sphere directions, face normals, and principal or bounding-box axes. For a maker toolkit the best-supported recipe is to sample the body once (about 2-5k area-weighted points with normals), compute an accessibility bitmask against a fixed set of directions (horizontal every 1-5 degrees, plus up and down), and then score a small library of slip-casting mold layouts by table lookup. The layouts are: one-piece drop-out; 2 sides; 2 sides + bottom; 3 or 4 sides + bottom; optionally a separate spare ring. Pick the simplest layout with no undercut area. This is the \"pre-computed accessibility signal for a predefined set of extraction directions\" idea from Alderighi 2021, cut down to fixed layouts.\n\nRevolved shapes have an exact, cheap answer (Chen & McMains 2007). The set of valid pull directions is symmetric around the axis, so every split plane containing the axis behaves the same, and for a profile that touches the axis the profile cross-section alone decides the result in O(n). My own derivation from that criterion (not stated in the paper): if the outer profile has a single radius at each height r(z) and the solid reaches the axis, every horizontal slice is a disk. Any horizontal pull is then undercut-free, so two side halves split on any axial plane work even for necked vases and inward bulges. Inward bulges only break the one-piece drop-out mold, which needs r(z) to never shrink going up, spare included. Side halves fail where a horizontal slice is not a single disk: a foot ring or recessed base (the slice is an annulus, hence the separate bottom piece in a 3-piece mug mold), a lip or flange that folds back downward, or off-axis features like handles. Extruded shapes reduce to a 2D test on the cross-section (Chen & McMains 2006, O(n^2 log n) exact or O(n) conservative). Freeform shapes need the sampled ray method.\n\nThe research literature mostly serves as a source of ideas, not code to port. Metamolds (2018) and Volume-Aware Composite Molds (2019) rely on flexible silicone, tetrahedral meshes and runtimes of tens of minutes, so they don't fit rigid plaster. Their \"metamold\" (a 3D-printed container to cast the mold in) is the same thing as the user's step-6 casings. Height-field decomposition (Herholz 2015), CoreCavity (2018) and DHF volume decomposition (2021) are rigid-mold methods, but they deform the object or cut it into separately cast parts. Priyadarshi & Gupta's multi-piece permanent molds are the closest rigid analog: global accessibility, a CORE/CAVITY/BOTH band of faces, a \"flattest parting loop\" score, and parting surfaces swept from the parting loop. Li/Martin/Langbein give a robust way to get smooth parting lines on meshes, within a band of near-perpendicular triangles that tolerates small undercuts. Shape Cast (Lyons, CHI 2024) is the only plaster slip-casting-specific automation I found. It is profile-based, supports one-piece revolved molds only (2-part as proof of concept), and uses a 25 mm plaster offset and printed outer molds split into 2 or 4 parts. Fusion 360 has the needed pieces built in: ray casting against B-rep (findBRepUsingRay), mesh extraction (meshManager), silhouette curves (TemporaryBRepManager.createSilhouetteCurves), the Silhouette Split feature, plane intersections and booleans, and custom graphics that show results without touching the timeline. A pure-Python Fusion add-in (a lure mold generator) already does ray-grid parting analysis inside Fusion with no dependencies.",
+ "findings": [
+  {
+   "claim": "Formal undercut-free condition: a direction d is an undercut-free parting direction (UFPD, 2-moldable) iff every line parallel to d intersects the part boundary at most twice. This is directly implementable as a ray-span/crossing-count test.",
+   "details": "Chen & McMains (DETC2007-34688) state: 'a direction d is a UFPD if and only if every line parallel to d intersects the boundary of the polyhedron at most twice', citing Ahn et al. 2002 and Ha et al. 2006. A part is 2-moldable in d if the two mold halves can be translated to infinity along d and -d without collision. Alderighi et al. 2021 build their rigid-mold decomposition on the same notion, calling parts representable by two opposite height fields 'double height fields' (DHF). Practical form: rotate so d = +Z and fire a grid of vertical lines. Sort each line's crossings with the surface and pair them into (enter, exit) spans. More than one span on any line means the body is not a DHF along d. For a 2-piece split, each line's lowest crossing belongs to the -d piece and its highest to the +d piece.",
+   "confidence": "high",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/"
+   ]
+  },
+  {
+   "claim": "The normal-vs-pull test (draft analysis) is necessary but not sufficient. Faces must also be checked for occlusion (visibility), because a face can point toward d and still be shadowed by another part of the body.",
+   "details": "Li, Martin & Langbein classify triangles by the angle theta_i between the normal and the parting direction D, with angular tolerance alpha: up if theta_i < 90-alpha, down if theta_i > 90+alpha, neither otherwise. Up and down triangles are then split into 'visible' or 'occluded'. 'Occluded triangles indicate undercut regions.' A point is visible if a ray from it along the parting direction does not hit any other part of the model. Bassi et al. 2010 classify B-rep faces by cos(theta) into positive (>0), negative (<0), perpendicular (=0) and dual (mixed). Dual faces are split at their silhouettes before the accessibility test. Draft definition used in CAD tools: faces parallel to the pull have 0 deg draft; positive draft means sloped toward the pull, negative means sloped away. In vector form: draft angle a = asin(n·d), so a face passes a minimum draft a_min when n·d >= sin(a_min). sin(0.5 deg) = 0.0087, sin(1 deg) = 0.0175, sin(2 deg) = 0.0349. Typical occluded-but-front-facing cases in ceramics: the underside of a rolled lip, the inner wall of a foot ring seen from the side, the region behind a handle.",
+   "confidence": "high",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf",
+    "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf"
+   ]
+  },
+  {
+   "claim": "Exact global search over all directions is impractical (O(n^4)). Real systems test a finite candidate set: face normals, principal or bounding-box axes, sampled sphere directions, and intersections of spherical accessibility regions.",
+   "details": "Per Chen & McMains' related work: Ahn et al. give an exact O(n^5 log n) and an O(n^4) algorithm and prove Omega(n^4) distinct directions can exist, but their implementation 'reverted to testing heuristically chosen directions based on input edge orientations and additional randomly chosen test directions'. Heuristic methods test the three principal axes, bounding-box axes, or face normal directions. Khardekar et al. (GPU) test face normal directions and intersections of spherical convex hulls bounding the directions where two faces may occlude each other. Finding all UFPDs that way is O(n^5). Alderighi 2019 uniformly samples k candidate directions on the Gaussian sphere, uses GPU rendering to measure visible and non-visible area for each, and picks the pair d1, d2 that minimizes non-visible area. Recommendation for the toolkit: candidates = Fibonacci-sphere samples (a few hundred) + clustered face normals + principal axes + design axes (for revolves the axis from RevolveFeature.axis). Score each by occluded area.",
+   "confidence": "high",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "claim": "Solids of revolution have an exact O(n) answer. Undercut-free directions are symmetric around the axis (any axial split plane is equivalent), and for a profile touching the axis the profile cross-section decides moldability.",
+   "details": "Chen & McMains 2007: 'If a direction is a UFPD, all directions having the same latitude on the Gaussian sphere are UFPDs'. So only directions in one meridian plane need testing. Profile types: Type I, where the closest element to the axis lies on the axis (the normal case for a solid mug or vase body). Here a candidate direction is valid iff it is valid for the central cross-section polygon, i.e. the profile plus its mirror. Type II (the profile does not touch the axis; the closest element is a single edge or vertex off the axis): only +z and -z can be valid. Type III (several elements equally close to the axis): no valid direction. Lemma 3: profile edges with outward normals and concave endpoints (waists, necks) restrict non-horizontal directions to a cone, but horizontal directions stay candidates. Overall algorithm is O(n) in profile complexity. Derived consequence (my geometry, consistent with the criterion): if the outer profile is single-valued r(z) and the solid reaches the axis, every horizontal slice is a disk. A line in a horizontal plane crosses a disk boundary at most twice, so every horizontal pull is valid and any axial plane gives valid side halves, even for necked or bulging forms.",
+   "confidence": "high",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "claim": "Extruded shapes reduce to a 2D problem on the generator profile: exact undercut-free directions in O(n^2 log n), or a slightly conservative superset in O(n).",
+   "details": "Chen & McMains, 'Finding All Undercut-Free Parting Directions for Extrusions' (GMP 2006, LNCS 4077, pp. 514-527). Their 2D curved-polygon method (normal graph on the Gaussian circle) finds all valid directions of a polygon in O(n). For prismatic or extruded side regions of a ceramic form, slice horizontally and test each 2D slice for lines parallel to d crossing at most twice. Convex slices accept every horizontal direction. Star-shaped or lobed slices (fluted, scalloped forms) may need 3+ side pieces. They also propose a feature-based pruning step: intersect the valid-direction sets of individual CAD features and run an exhaustive check only on what remains. Treat that as a pruning heuristic and always verify on the final boolean body.",
+   "confidence": "high",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs.html",
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "claim": "Multi-piece rigid (permanent) mold automation (Priyadarshi & Gupta) uses global accessibility cones, a CORE/CAVITY/BOTH face band, a 'flattest parting loop' metric, and parting surfaces swept from the outer parting loop. Optimal 2-4 piece molds came out in under 5 minutes.",
+   "details": "UMD Advanced Manufacturing Lab overview (Gupta, 2008): the permanent multi-piece algorithm finds parting directions, parting lines and parting surfaces, and builds mold pieces from global accessibility, which 'guarantees the disassembly of the mold pieces'. Candidate directions come from global accessibility analysis (complete), not sampling. Accessibility analysis took about 2 s for 5000 facets using spatial hierarchies, with surface-tolerance issues handled by perturbing facet coordinates. Near-vertical facets are handled with tolerance compensation. Faces are partitioned into CORE, CAVITY and BOTH; BOTH is the belt that can go either way, and the parting loop is chosen inside it. Flatness psi = sum(length(projected e_i)^2) / sum(length(e_i)^2), projecting onto the plane perpendicular to the parting direction; psi <= 1, and psi = 1 only for a planar loop. The outer parting surface is made by sweeping the outer loop edges (with a best sweep direction); inner loops are covered by a triangulated patch. A hybrid breadth-first/depth-first search returns optimal solutions for 2-4 piece molds and feasible ones beyond. Their accessibility-driven spatial partitioning produced 1-3 planar-cut solutions using set covering. That planar-cut flavor suits plaster plus printed casings.",
+   "confidence": "high",
+   "sources": [
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+    "https://sites.usc.edu/skgupta/automated-design-of-multi-piece-molds-for-making-geometrically-complex-objects/"
+   ]
+  },
+  {
+   "claim": "On meshes, a smooth and nearly planar parting line should be routed through a 'triangle band' of near-perpendicular faces, not along the raw zig-zag silhouette. Small leftover undercuts are tolerated through material compliance or removed by local mesh edits.",
+   "details": "Li, Martin & Langbein: build the band from 'neither' triangles (normal within alpha of perpendicular to D), drop small visible or occluded islands below a projected-area threshold, skeletonize the band to find valid cycles, then optimize with weighted shortest paths. The weight is w = 1 within distance delta of the exterior profile, rising exponentially beyond. Parameters used: angular tolerance 5-8 deg; delta about 0.2-2% of model size (for example 0.2 on a size-10 model, 0.5 on size 130, 2 on size 100). Runtimes: band 7-280 s and path optimization 81-305 s for 20k-437k triangles; undercut removal 8 min to 2 h. Path computation is O(n log n). They note that a smooth parting line introduces small undercuts that compliance in the cast material may still allow to release. Relevance: for freeform ceramics a slightly simplified or planar parting surface is usually preferable to an exact silhouette, but residual undercut area must be measured and reported.",
+   "confidence": "high",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "claim": "Exact B-rep accessibility can be computed without sampling by sweeping each face along the pull direction and doing boolean subtraction (Bassi et al. 2010), at the cost of many boolean operations.",
+   "details": "Each face is swept along +dir (positive faces) or -dir (negative faces) by twice the part's maximum dimension, giving B_Swept1. B_Result = B_Original minus B_Swept1. If the volume is unchanged, the face is fully accessible. B_Result1 = B_Swept1 minus B_Original: two or more disjoint bodies means fully inaccessible (Type 1); a single body needs further iterative sweeps of its negative faces to separate partially accessible from Type 2 inaccessible. Dual faces are first split by silhouettes. Perpendicular faces get an offset-and-thicken test from both sides. Pros: exact, no tessellation loss. 'Features smaller than the discretization step are lost' with point and ray methods. Cons: one sweep plus one or more booleans per face per direction; Fusion's Extrude takes planar profiles, so sweeping curved faces needs workarounds (my assessment, unverified). Best kept as a final verification on a few suspicious faces, not as the main search.",
+   "confidence": "medium",
+   "sources": [
+    "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf"
+   ]
+  },
+  {
+   "claim": "Volume-Aware Composite Molds (Alderighi 2019) rely on silicone and tetrahedral meshing, so they are not a fit for rigid plaster. Their direction selection, region growing, registration noise and pouring-direction analysis are reusable ideas.",
+   "details": "Two-piece composite mold: a rigid printed shell plus a soft silicone part. Steps: (1) k directions uniformly sampled on the sphere, GPU visibility, choose d1, d2 minimizing non-visible area; directions need not be fully extractable because extra cuts fix that later. (2) Split the outer boundary into H1/H2 by greedy region growing from the two faces whose normals best match d1 and d2. (3) Escape paths: Dijkstra shortest paths on a tet mesh (TetWild target edge 0.0065 x bbox diagonal), weighted 1/(d^2 + 0.25) to push cuts away from the object; boundary-proximity exclusion at 15% of the convex-hull bbox diagonal; Laplacian smoothing with damping 0.5. (4) Perlin noise on the parting surface improves registration. (5) Pouring direction from persistence pairs (maximum-saddle), with relevance threshold 0.5 mm and a 10 deg tilt cone. Silicone offset fixed at 15 mm for 95-300 mm objects. Membrane runtimes 4-58 min; Tetgen/TetWild runs 35-47 min. Listed limitations: bottle shapes with small openings and long thin isolated parts. Relevance: the persistence-based trapped-air idea is a possible later check for slip pour orientation. The extra-membrane concept needs a flexible material.",
+   "confidence": "high",
+   "sources": [
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf"
+   ]
+  },
+  {
+   "claim": "Metamolds (Alderighi 2018) introduced 3D-printed containers ('metamolds') into which mold material is cast. That is the same concept as the user's printed casings for plaster pieces, though its silicone-specific segmentation does not transfer to rigid plaster.",
+   "details": "Official pages: molds are made 'by casting liquid silicone into custom 3D printed containers called metamolds', and a segmentation that 'takes into account both geometric and topological constraints' defines the cuts. Per the 2019 follow-up, Metamolds segmentation is based on surface visibility plus local surface descriptors and solves a complex integer programming problem. It only adds volume cuts for tunnel holes and can fail on elongated thin features, knots and complex shapes such as a dragon. Practical takeaway: the casing (metamold) is built from the plaster piece geometry plus the cut layout. The visibility-driven piece assignment is reusable; the ILP and flexible-silicone assumptions are not.",
+   "confidence": "high",
+   "sources": [
+    "http://vcg.isti.cnr.it/publication/2018/AMGPBC18/",
+    "https://visualcomputing.ist.ac.at/publications/2018/Metamolds/",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf"
+   ]
+  },
+  {
+   "claim": "Rigid-mold decomposition papers (Herholz 2015 height fields, CoreCavity 2018, Alderighi 2021 DHF volume decomposition) enforce the same per-piece height-field condition. They reach it by deforming the object or cutting it into separately cast parts, which only fits slip casting where the artist accepts separately cast and joined parts.",
+   "details": "Herholz, Matusik & Alexa (CGF 2015): partition the surface into height-field charts (one per rigid mold piece) via an integer linear program, with candidate directions from the Gaussian sphere. Small violations are later fixed by deforming the geometry, so 'many objects can be generated from a small number of mold pieces if slight deformations are acceptable'. CoreCavity (Nakashima et al. 2018): splits a thin-shell version of the object into parts, each cast between two rigid mold pieces; coarse decomposition, then active-contour boundary refinement with a fabrication-constraint energy, interactive. Alderighi 2021: splits the volume into DHF parts for two-piece rigid casting, using an energy over 'a pre-computed signal on the mesh volume representing the accessibility for a predefined set of extraction directions'. That precompute-then-optimize structure is the most transferable idea. For a hobby toolkit, use it to precompute per-sample accessibility once, then evaluate candidate mold layouts cheaply.",
+   "confidence": "medium",
+   "sources": [
+    "https://dspace.mit.edu/entities/publication/28c9f4f5-fd97-4bf1-be55-2dc78894a45d",
+    "https://cdl.ethz.ch/publications/corecavity-interactive-shell-decomposition-for-fabrication-with-two-piece-rigid-molds/",
+    "https://history.siggraph.org/learning/corecavity-interactive-shell-decomposition-for-fabrication-with-two-piece-rigid-molds-by-nakashima-auzinger-iarussi-zhang-igarashi-et-al/",
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/",
+    "https://history.siggraph.org/learning/volume-decomposition-for-two-piece-rigid-casting-by-alderighi-malomo-bickel-cignoni-and-pietroni/"
+   ]
+  },
+  {
+   "claim": "The only plaster slip-casting-specific automation found (Shape Cast, Lyons CHI EA 2024) is profile-based for revolved forms and limited to one-part molds (two-part as proof of concept). It gives concrete defaults for printed casings.",
+   "details": "Input is a single SVG profile, revolved 360 deg. The inner mold (the form that shapes the plaster) is scaled for clay shrinkage (13% in their examples) and gets an automatic slip well, plus a small radius on the well to round off the plaster. Printed inner mold wall: profile offset inward 2.4 mm. Design-proof print wall: 1.2 mm (3 x 0.4 mm nozzle). Plaster thickness: offset 25 mm from the inner mold. Outer mold split into 2 or 4 parts, both for build volume (75 mm pot needs about 200 mm outer mold) and for demolding; 'removing the fully set plaster was extremely difficult' with a one-piece outer mold. Flanges with M3 bolts and heat-set inserts; bottom ring printed in parts and CA-glued; neoprene foam tape gasket against leaks; plaster pour hole generated automatically. Parts printed upside down so bubbles rise and the critical surface has no support marks. Plaster and water quantities computed for USG No.1 Pottery Plaster. Offsets use Clipper (winding-number polygon offsetting) to avoid self-intersections. Future work lists multipart molds and non-revolved forms (extruding the profile along a closed path). A CHI 2025 follow-up, 'Crafting the Curve', exists but was paywalled and not read.",
+   "confidence": "high",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://doi.org/10.1145/3613905.3651020"
+   ]
+  },
+  {
+   "claim": "A pure-Python Fusion add-in already does ray-grid parting analysis inside Fusion: a 60x60 vertical ray grid, triangle bucketing, span pairing, and a 'single span containing h' score over 80 candidate heights. It uses no external dependencies and keeps its geometry modules testable outside Fusion.",
+   "details": "Autodesk Fusion Lure Mold Generator, parting.py: ray_columns() splits the XY bounding box into DEFAULT_RAYS_X x DEFAULT_RAYS_Y (60x60) cells. _bucket_triangles() indexes triangles by the grid cells their XY bounding box covers, avoiding about 360M brute-force tests. A 2D barycentric test per triangle gives z = u*az + v*bz + w*cz. _spans() merges near-duplicate hits (shared edges) and pairs (enter, leave); an odd hit count marks a degenerate ray. score_at(h) is the fraction of rays whose solid is a single span containing h. best_parting_z() tests 80 heights and breaks ties toward the middle. Reported effect: 93% releasable at the found split vs 62% for a centered split. Mesh capped around 25k triangles; everything is mesh, combined with mesh booleans, to avoid the paid extension; requires Fusion 2704.1.53+. Module layout (layout, meshgen, orient, parting, relief, mesh_repair) is Fusion-independent and unit-tested. That is a good architecture for agent-maintained scripts.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator/tree/main",
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/main/LureMoldGenerator/lure_mold/parting.py"
+   ]
+  },
+  {
+   "claim": "Fusion 360 has native APIs for every step: B-rep ray casting, mesh extraction, silhouette curves and silhouette split, plane intersection, booleans, ruled surfaces, and non-destructive custom-graphics overlays. Internal units are cm.",
+   "details": "TemporaryBRepManager sample: tempBrepMgr.createSilhouetteCurves(face, viewDirection, True) (parting-line extraction per face), planeIntersection(body, plane) (slice wires for per-height profile and 2D tests), booleanOperation(target, tool, type), createRuledSurface(wire1, wire2) (ruled or extruded parting surfaces), bodies.add(tempBody). Silhouette Split (UI reference; API SilhouetteSplitFeatures with view-direction entity): modes Split Faces Only, Split Shelled Body (two bodies; 'works best on shelled bodies') and Split Solid Body (parting line must be planar). The plaster mold body is essentially a shell around the cast, so Split Shelled Body is worth testing (unverified). Custom graphics: body.meshManager.displayMeshes.bestMesh exposes nodeCoordinatesAsDouble, nodeIndices and normalVectorsAsDouble; documented coordinates are in cm; custom graphics can color undercut samples without adding timeline features. Inspect workspace: Draft Analysis (color gradient vs a chosen axis, finds zero-draft and undercut areas) and Accessibility Analysis (green accessible, red inaccessible from a plane's direction) are UI tools; an AccessibilityAnalyses API collection exists but appears limited to listing and visibility, per search snippet only. Component.findBRepUsingRay(originPoint, rayDirection, entityType, proximityTolerance, visibleEntitiesOnly=True, hitPoints) returns hit entities sorted nearest-first, with hitPoints as Point3D outputs. That signature comes from the Autodesk API reference index; the page returned 404 when fetched, so verify through the Fusion MCP before relying on it.",
+   "confidence": "medium",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/TemporaryBRepManager_Sample.htm?guid=ReferenceManual_UM",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-INSPECT-TOOLS.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/CustomGraphics_UM.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/Component_findBRepUsingRay.htm"
+   ]
+  },
+  {
+   "claim": "For mesh-based checks outside Fusion, trimesh and Open3D (both Embree-backed) provide batch ray queries, surface sampling with face indices, and intersection counting. Expect about 50x speedup with Embree, and watch for misses on shared edges.",
+   "details": "trimesh: mesh.ray.intersects_location(ray_origins, ray_directions [, multiple_hits]) returns locations, index_ray, index_tri. RayMeshIntersector also has intersects_any (bool per ray, ideal for occlusion), intersects_first, intersects_id(return_locations, multiple_hits) and contains_points. The README example says pyembree gives 'the same API with a roughly 50x speedup'. trimesh.sample.sample_surface(mesh, count, ...) returns (samples, face_index), so normals come from mesh.face_normals[face_index]; sample_surface_even does rejection sampling and may return fewer points. Known issue #1766: Embree misses rays through shared triangle edges when scaled to a unit box; workaround RayMeshIntersector(mesh, scale_to_box=False). Open3D: o3d.t.geometry.RaycastingScene with add_triangles and cast_rays on an [N,6] tensor (origin + direction), returning t_hit (inf if no hit), geometry_ids, primitive_ids, primitive_uvs and primitive_normals; count_intersections is also available, which suits the crossing-count test. Both run in a normal CPython; installing them into Fusion's embedded Python 3.14 is unverified. Safer pattern: export the mesh from Fusion via the MCP and analyze externally, or use pure-Python bucketing like the lure add-in.",
+   "confidence": "high",
+   "sources": [
+    "https://github.com/mikedh/trimesh/blob/main/examples/ray.py",
+    "https://github.com/mikedh/trimesh/issues/1766",
+    "https://trimesh.org/trimesh.sample.html",
+    "https://trimesh.org/trimesh.ray.ray_triangle.html",
+    "https://www.open3d.org/docs/latest/tutorial/geometry/ray_casting.html"
+   ]
+  },
+  {
+   "claim": "Practitioner parting rules that map directly onto algorithm constraints: the parting line sits tangent to the outermost features (the silhouette) and level; the parting surface may deviate to avoid undercuts; unavoidable undercuts are filled; never split through the foot; add 3rd or 4th sections for complex forms; use tapered registration.",
+   "details": "whatmakeart: the parting line 'should be tangent to the outermost features of the object' and level to the work surface; ideal objects 'not have deep undercuts'; unavoidable undercuts 'can be filled prior to making to mold'; cottle boards about 1.5 in from the object and plaster 1.5 in above its highest point. Ceramic Arts Network (10 in cinched vase): valid layouts are (1) two sides + separate reservoir + bottom, (2) two sides (each with half the reservoir) + bottom, (3) two sides + drop-out spare for the bottom. Avoid a parting line that bisects the foot ('questionable mold design', extra trimming). Sheffield Pottery: 'Any area where the mold curves back under itself will mechanically trap the cast'; complex forms may 'need to add a third or fourth section'; 3-4 keys around the perimeter. DigiFab blog: draft 'can generally never be negative', zero draft is OK because slip casts shrink 5-10%, and tapered pins beat cylindrical dowels for registration.",
+   "confidence": "high",
+   "sources": [
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/",
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+   ]
+  },
+  {
+   "claim": "Recommended practical algorithm for the toolkit: precompute per-sample accessibility for a fixed direction set, then enumerate a small library of slip-casting mold layouts and their parameters (split azimuth, bottom split height), scoring each by table lookup and taking the simplest layout with zero undercut area.",
+   "details": "Pseudocode (Fusion cm units):\n1) SAMPLE: mesh = body.meshManager (calculator, fine quality) -> triangles; P = centroids or area-weighted samples (N about 2k-5k), Nrm = unit normals, A = areas. Orientation check on a few samples: body.pointContainment(p + eps*n) must be outside, else flip.\n2) DIRECTIONS: D = {-Z (bottom piece / drop-out), +Z (open top, no mold)} plus horizontal h_j = (cos t, sin t, 0) for t = 0..360 deg in 2 deg steps (180 dirs). Add sphere samples only for freeform.\n3) ACCESS[i,j] = (Nrm_i·d_j >= sin(draft_min) - tol) AND NOT ray_hits_body(P_i + eps*Nrm_i, d_j). Optionally also ZERO[i,j] = |Nrm_i·d_j| < sin(draft_min).\n4) LAYOUTS in order: DROP_OUT (all mold faces use -Z); SIDES2; SIDES2+BOTTOM(z_split); SIDES3+BOTTOM; SIDES4+BOTTOM; optional +SPARE_RING. Label each sample: top cap (n·Z about 1 at z_top) = OPEN; z < z_split = BOTTOM (d=-Z); else sector k by azimuth about the axis, piece direction = sector bisector h(phi0 + (k+0.5)*360/K).\n5) SEARCH: for phi0 in [0, 360/K) step 2 deg, for z_split in candidate heights (from slice analysis): undercut = sum A_i where NOT ACCESS[i, dir(label_i)]; score = W_u*undercut + W_z*zeroDraftArea + W_p*pieces + W_s*seamLength.\n6) RETURN the first layout with undercut <= tol_area (e.g. < 1 mm^2 total and no patch wider than the sample spacing). Otherwise return the best layout plus a heat map (custom graphics) and suggestions: fill the undercut, add a piece, reorient, cast the appendage separately.\n7) BUILD and VERIFY: split the plaster body with planes (vertical through the axis at phi0 + k*360/K; horizontal at z_split). Re-sample each real piece's cavity faces and ray-test along that piece's direction against the cast. Then check disassembly order and the registration features between each pair of pieces.\nComplexity: step 3 costs N x |D| rays (5000 x 182, about 0.9M). With Embree that is seconds. Pure-Python bucketing (one rotated XY grid per direction, O(T + R*k)) is minutes. Per-call findBRepUsingRay is suitable only for verification (about 10^3-10^4 rays). Steps 4-5 are lookups (ms per configuration), so dense parameter sweeps are cheap. This is the Alderighi 2021 precompute idea plus the layout restriction typical of plaster practice.",
+   "confidence": "medium",
+   "sources": [
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/",
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/main/LureMoldGenerator/lure_mold/parting.py",
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download"
+   ]
+  },
+  {
+   "claim": "Revolve-specific fast path: from the profile r(z) (read from the revolve sketch, or sampled with planeIntersection at M heights) the agent can decide the mold layout analytically before any ray casting.",
+   "details": "Derived from the UFPD criterion and the revolve results. Rules: (a) one-piece drop-out works iff r(z) never shrinks going up from foot to the top of the spare, and the base recess walls taper (cast pulled +Z, so all mold-contact outward normals need n_z <= -sin(draft)). This is the one-part revolved case Shape Cast automates. (b) Two side halves on any axial plane work for the z-range where each horizontal slice is a single disk (single-valued r(z), solid to the axis). Waists, bulges and narrow necks are fine. (c) Where a slice is an annulus or several rings (foot ring, recessed base, downward-folding lip or flange), the region must go to a piece pulled along Z (bottom piece below z_split, or a top or spare ring), or the shape must be changed. Set z_split just above the highest such feature at the bottom and check that the bottom region is a height field from below. (d) Rotating the split plane makes no difference (axial symmetry), so choose phi0 for other reasons (handle placement, print bed). (e) Off-axis features (handles, spouts, knobs) break symmetry and need the general sampled method or separate casting.",
+   "confidence": "medium",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms"
+   ]
+  },
+  {
+   "claim": "The number of side pieces sets the minimum draft at the seams. With K sector pieces each pulled along its bisector, a vertical wall at a seam has draft asin(cos(180/K)): 0 deg for K=2, 30 deg for K=3, 45 deg for K=4.",
+   "details": "Derived from the draft definition sin(a) = n·d. At a seam between sectors, a radial wall normal is 180/K deg from each piece's pull direction, so n·d = cos(180/K) for vertical walls (times the radial normal component for sloped walls). Two-piece molds always have a zero-draft band at the parting plane. Slip casting tolerates that because the cast shrinks away from the plaster (DigiFab: 'a zero degree draft angle is OK'; 5-10% shrinkage). Practitioners still recommend 1-2 deg draft where possible (Sheffield). More pieces mean more seams to fettle and more casings to print. The toolkit should report zero-draft area per layout so the user can choose.",
+   "confidence": "medium",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster"
+   ]
+  },
+  {
+   "claim": "A mold is only valid if a disassembly order exists in which every piece can translate away from the cast and from the remaining pieces. Registration features between two pieces must be undercut-free along their relative separation direction, which the toolkit should check explicitly.",
+   "details": "Priyadarshi & Gupta stress a 'disassembly-based algorithm that guarantees the disassembly of the mold assembly' using global, not local, accessibility. Derived implications for plaster molds: (1) side pieces moving horizontally over a bottom piece cannot cross protruding hemispherical natches on a horizontal side/bottom interface. Such keys must be shallow or tapered (a spherical cap whose edge slope stays below the angle of the relative motion), placed on vertical side/side faces, or the opening order must change (for flaring forms, removing the bottom first and sliding the sides down and out may be the only collision-free sequence). (2) For the casings, the same test applies between each printed casing part and the plaster piece. Shape Cast found a one-piece outer mold nearly impossible to remove from set plaster. Recommended check: for each ordered pair (A, B), sample A's faces in contact with B and ray-test along d_A - d_B against B. Search over removal orders (at most 5! orders for 5 pieces).",
+   "confidence": "medium",
+   "sources": [
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html"
+   ]
+  },
+  {
+   "claim": "Learned (deep-learning) mold generators exist but are not suitable for this toolkit: they do not guarantee manufacturability and need large paired datasets.",
+   "details": "AIMold (arXiv 2608.00800) predicts injection-mold components with voxel and rectified-flow generators trained on about 4.9k CAD models and 3,850 mold assemblies. Orientation is chosen from plane-detection candidates by a classifier (91.17% accuracy). Parting surfaces are fitted as planar or quadratic surfaces to the predicted interface. Outputs may be non-watertight and there is no feasibility guarantee. It uses no LLM agents. For an agent toolkit, deterministic geometric checks (above) should stay the source of truth. Its related-work list (Chakraborty & Reddy 2009, Khardekar 2005, Doñate & Paramio 2013, Banerjee & Gupta 2007, Fu 2008) gives further classical references.",
+   "confidence": "high",
+   "sources": [
+    "https://arxiv.org/html/2608.00800"
+   ]
+  }
+ ],
+ "design_rules": [
+  {
+   "parameter": "draftMinDeg (analysis threshold for 'good draft')",
+   "recommended_value": "1.0 deg (n·d >= 0.0175)",
+   "range": "0-3 deg; 0 acceptable for slip casting at seams, 1-2 deg preferred",
+   "rationale": "Slip casts shrink away from plaster (5-10%), so zero draft is tolerated, but practitioners recommend 1-2 deg (or 1-3 deg on originals) for easy release. Use draftMinDeg to flag a warning band, not to fail outright.",
+   "sources": [
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://boards.core77.com/t/slip-casting/26997"
+   ]
+  },
+  {
+   "parameter": "undercutNormalTolerance (hard-fail threshold on n·d)",
+   "recommended_value": "fail if n·d < -sin(0.25 deg) (about -0.0044) or if a ray along d hits the cast",
+   "range": "-sin(0.1 deg) to -sin(0.5 deg)",
+   "rationale": "Negative draft must never occur ('can generally never be negative'). A tiny tolerance absorbs tessellation noise on curved faces near the silhouette. The occlusion test is mandatory because the normal test alone is not sufficient.",
+   "sources": [
+    "http://digifabw09.blogspot.com/2009/01/slip-casting-techniques.html",
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "parameter": "sampleCount / sample spacing for accessibility",
+   "recommended_value": "about 5000 area-weighted samples for an 80 mm mug (about 2 mm spacing); spacing <= half the smallest feature you care about",
+   "range": "2,000-20,000 samples",
+   "rationale": "Point and ray methods lose features smaller than the discretization step. Spacing is roughly sqrt(surfaceArea/N); an 80x80 mm mug has about 25,000 mm^2.",
+   "sources": [
+    "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf",
+    "https://trimesh.org/trimesh.sample.html"
+   ]
+  },
+  {
+   "parameter": "rayOriginOffset eps",
+   "recommended_value": "0.001 cm (0.01 mm) along the outward normal, or 1e-5 x bbox diagonal, whichever is larger",
+   "range": "1e-4 to 1e-2 cm",
+   "rationale": "Rays that start on the surface hit their own face. Embree can miss hits on shared edges in scaled scenes; use scale_to_box=False and/or jitter origins slightly.",
+   "sources": [
+    "https://github.com/mikedh/trimesh/issues/1766"
+   ]
+  },
+  {
+   "parameter": "horizontalDirectionStepDeg (precomputed direction set for side pieces)",
+   "recommended_value": "2 deg (180 directions) + {-Z, +Z}",
+   "range": "1-5 deg",
+   "rationale": "Precomputing accessibility for a fixed direction set lets layout and parameter search reduce to lookups, as in Alderighi 2021's precomputed accessibility over predefined extraction directions.",
+   "sources": [
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/"
+   ]
+  },
+  {
+   "parameter": "sphereCandidateDirections (freeform 2-piece search)",
+   "recommended_value": "about 200-500 Fibonacci-sphere directions + clustered face normals + principal/bbox axes + design axes",
+   "range": "100-2000",
+   "rationale": "Exact search is O(n^4). Practice samples the sphere uniformly (Alderighi 2019) or tests normals and axes (heuristics surveyed by Chen & McMains; Khardekar). Score each by occluded area.",
+   "sources": [
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "parameter": "layoutSearchOrder (mold topology templates)",
+   "recommended_value": "drop-out(1) -> 2 sides -> 2 sides + bottom -> 3 sides + bottom -> 4 sides + bottom -> (+spare ring)",
+   "range": "1-5 plaster pieces for typical studio ware",
+   "rationale": "These match the configurations practitioners use (two sides plus bottom or reservoir, drop-out spares, 3rd/4th sections for complex forms). Picking the simplest feasible layout keeps casings and seams to a minimum.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "parameter": "bottomSplitHeight (z_split)",
+   "recommended_value": "lowest height above which every horizontal slice is valid for the side pulls (single disk for revolves), plus 2-5 mm margin; never through the foot",
+   "range": "0 to about 25% of object height",
+   "rationale": "Foot rings and recessed bases give annular slices that side pieces cannot release. A parting line that bisects the foot is questionable design and needs extra trimming.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "parameter": "sideSplitAzimuthStepDeg (phi0 sweep)",
+   "recommended_value": "2 deg over [0, 360/K)",
+   "range": "1-5 deg; irrelevant for pure revolves (any axial plane is equivalent)",
+   "rationale": "Undercut-free directions of solids of revolution are symmetric around the axis. For non-revolved forms, sweep phi0 and keep the configuration with minimum undercut and zero-draft area.",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "parameter": "parting-loop flatness acceptance (plane vs swept parting surface)",
+   "recommended_value": "use a planar split if psi >= 0.98 and the silhouette deviates <= 0.5 mm from its best-fit plane; otherwise sweep the silhouette outward (ruled or extruded parting surface)",
+   "range": "psi 0.95-1.0; deviation 0.2-1 mm",
+   "rationale": "psi = sum|proj e_i|^2 / sum|e_i|^2 equals 1 only for planar loops (Priyadarshi & Gupta). Planar splits are far simpler for printed casings and gaskets. Fusion's Silhouette Split 'Split Solid Body' requires a planar parting line. Thresholds are my suggestion.",
+   "sources": [
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm"
+   ]
+  },
+  {
+   "parameter": "triangleBandAngularTolerance (smooth parting line on meshes)",
+   "recommended_value": "5 deg",
+   "range": "5-8 deg; area threshold drops islands smaller than a few mm^2; delta about 0.2-2% of model size",
+   "rationale": "Li et al. used 5-8 deg bands and deltas of about 0.2-2% of model size to get smooth, near-planar parting lines that tolerate small undercuts.",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "parameter": "residualUndercutTolerance",
+   "recommended_value": "total < 1 mm^2 and no connected patch wider than the sample spacing; report all patches visually",
+   "range": "0-5 mm^2 depending on clay compliance and the user's acceptance",
+   "rationale": "Smooth parting lines introduce small undercuts that material compliance may let release. Leather-hard clay has some compliance, but this needs user calibration.",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "parameter": "pure-Python ray budget inside Fusion",
+   "recommended_value": "<= about 25k triangles with XY bucketing per direction (60x60 grid per direction as a starting point); per-call findBRepUsingRay only for <= about 10^4 verification rays",
+   "range": "10k-50k triangles",
+   "rationale": "The working Fusion add-in caps triangles at about 25k and uses grid bucketing. Embree in external Python is about 50x faster than pure Python for bulk queries. The findBRepUsingRay cost is unmeasured; benchmark it.",
+   "sources": [
+    "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+    "https://github.com/mikedh/trimesh/blob/main/examples/ray.py"
+   ]
+  },
+  {
+   "parameter": "plaster wall thickness for the plaster-body offset (context for the analysis body)",
+   "recommended_value": "25 mm for mug-sized pieces",
+   "range": "25-38 mm (1-1.5 in) for molds under 8 in; 1.5-2 in for 8-16 in",
+   "rationale": "Shape Cast offsets the plaster 25 mm. Sheffield's table gives 1-1.5 in for molds under 8 in; cottle boards are about 1.5 in from the object.",
+   "sources": [
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+    "https://www.sheffield-pottery.com/blogs/ceramic-arts-blog/common-casting-problems-how-to-prevent-plaster-disaster",
+    "https://whatmakeart.com/making/two-part-slip-cast-mold/"
+   ]
+  }
+ ],
+ "techniques": [
+  {
+   "name": "Per-face / per-sample draft classification",
+   "description": "For pull direction d, compute c = n·d using outward normals. Positive if c >= sin(a_min), zero-draft band if |c| < sin(a_min), negative if c <= -sin(a_min). Split dual faces (mixed sign) at their silhouette.",
+   "pros": "O(N), trivial in Fusion (face evaluator normals) or numpy; gives a draft heat map and the near-silhouette band.",
+   "cons": "Cannot detect occlusion (front-facing but shadowed faces); sensitive to flipped normals and tessellation noise near tangency.",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf",
+    "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf"
+   ]
+  },
+  {
+   "name": "Ray-cast occlusion (global accessibility) with a direction bitmask",
+   "description": "For each sample p with normal n and each candidate direction d, cast a ray from p + eps*n along d. Any hit on the cast body means p is inaccessible along d. Store ACCESS[i, j] for a fixed direction set and reuse it for all layout evaluations.",
+   "pros": "Robust for any shape; directly gives undercut area and location; batchable (trimesh intersects_any, Open3D cast_rays) and parallel; precompute once, query many layouts.",
+   "cons": "Sampling misses small features; edge-grazing rays need offsets or jitter; Fusion per-call ray API is slow for bulk use.",
+   "sources": [
+    "https://trimesh.org/trimesh.ray.ray_triangle.html",
+    "https://www.open3d.org/docs/latest/tutorial/geometry/ray_casting.html",
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/"
+   ]
+  },
+  {
+   "name": "Column / span (crossing-count, DHF) test",
+   "description": "Rotate the mesh so d = +Z, bucket triangles into an XY grid, fire one vertical line per cell, collect sorted z-crossings and pair them into solid spans. More than one span means not a double height field along d (fails 2-piece). The first and last crossing tell which piece forms each surface point. Scoring 'fraction of lines whose solid is a single span containing h' finds the best planar split height.",
+   "pros": "Exact criterion (lines cross at most twice); one pass per direction; pure Python is feasible in Fusion (proven by the lure add-in); also locates the parting surface.",
+   "cons": "Resolution-limited by grid size; one direction per pass; needs a watertight mesh; degenerate hits on edges need epsilon merging.",
+   "sources": [
+    "https://raw.githubusercontent.com/TheJoeJep/AutodeskFusionLureMoldGenerator/main/LureMoldGenerator/lure_mold/parting.py",
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf"
+   ]
+  },
+  {
+   "name": "Layout-library enumeration with parameter sweeps (recommended core)",
+   "description": "Fixed slip-casting layouts (drop-out, 2 sides, 2 sides + bottom, 3/4 sides + bottom, optional spare ring). Each sample's label (piece) comes from simple rules: z thresholds and azimuth sectors around the axis. Sweep phi0 and z_split, look up ACCESS, score undercut area, zero-draft area, piece count and seam length, and return the simplest feasible layout.",
+   "pros": "Matches studio practice and planar casings; explainable to the user; fast after precompute; easy to expose as Fusion user parameters (cutCount, splitAzimuth, bottomSplitHeight).",
+   "cons": "Cannot find exotic non-planar multi-piece solutions; freeform sculpture may need a general segmentation fallback.",
+   "sources": [
+    "https://ceramicartsnetwork.org/daily/article/mastering-mold-design-choosing-the-right-approach-for-your-slip-cast-forms",
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+    "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/"
+   ]
+  },
+  {
+   "name": "Analytic revolve path",
+   "description": "Get the profile r(z) from the RevolveFeature sketch or via TemporaryBRepManager.planeIntersection at M heights. Check single-valuedness (one radius per height), monotonicity (for drop-out), annular slices (foot, folded lip), and Chen-McMains type I/II/III. Choose the layout without ray casting.",
+   "pros": "Exact, O(n), and fast; covers mugs, cups, vases and bowls; any axial split plane is equivalent.",
+   "cons": "Breaks as soon as there are off-axis features (handles, spouts, embossing) or non-revolved edits after the revolve.",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  },
+  {
+   "name": "Slice-based 2D moldability for extruded / prismatic regions",
+   "description": "Intersect the body with horizontal planes at many heights to get 2D loops. For each loop and candidate horizontal direction, test that lines parallel to d cross at most twice (convex loop: always). Aggregate across heights to get valid side directions and the needed number of sectors.",
+   "pros": "Exact per slice; handles faceted, fluted and lobed vessels; uses the native Fusion planeIntersection.",
+   "cons": "Misses non-horizontal occlusion (overhangs between slices) unless combined with Z-direction checks; slice density matters.",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs.html",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/TemporaryBRepManager_Sample.htm?guid=ReferenceManual_UM"
+   ]
+  },
+  {
+   "name": "Silhouette extraction, planarity test, then planar split or swept parting surface",
+   "description": "For the chosen direction, compute silhouette curves (createSilhouetteCurves per face, or the Silhouette Split feature). Measure flatness psi and deviation from the best-fit plane. If near-planar, split with a plane (Split Body). Otherwise sweep or extrude the silhouette loop outward perpendicular to d, or build ruled surfaces (createRuledSurface), and split the plaster body with that surface.",
+   "pros": "Uses native B-rep tools; planar case gives simple casings; Priyadarshi-style swept outer parting surfaces generalize it.",
+   "cons": "Silhouettes of freeform faces zig-zag or fragment; Silhouette Split solid mode needs a planar parting line; non-planar parting surfaces complicate casings and gaskets.",
+   "sources": [
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-Model/files/SLD-REF-SILHOUETTE-SPLIT.htm",
+    "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/TemporaryBRepManager_Sample.htm?guid=ReferenceManual_UM",
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download"
+   ]
+  },
+  {
+   "name": "Smooth parting line in a triangle band (Li/Martin/Langbein)",
+   "description": "Build the band of near-perpendicular triangles (5-8 deg tolerance), remove small islands, skeletonize, choose a separating cycle, and optimize it with weighted shortest paths that stay within delta of the exterior profile.",
+   "pros": "Produces smooth, near-planar lines on scanned or organic meshes; explicit control of the smoothness vs undercut trade-off.",
+   "cons": "Complex to implement (skeleton and cycle topology); minutes of runtime; introduces small undercuts that must be accepted or fixed.",
+   "sources": [
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "name": "B-rep sweep-and-boolean accessibility (Bassi et al.)",
+   "description": "Sweep a face along d by twice the part size, subtract it from or intersect it with the part, and compare volumes and body counts to classify the face as fully, partially or not accessible.",
+   "pros": "Exact, with no discretization loss; works on B-rep directly.",
+   "cons": "Many heavy booleans per face per direction; sweeping curved faces in Fusion is awkward; best only for final verification of flagged faces.",
+   "sources": [
+    "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf"
+   ]
+  },
+  {
+   "name": "Graph-based surface segmentation into pieces (multi-label / region growing)",
+   "description": "Label mesh faces with directions using a data cost (inaccessibility, draft) plus a smoothness cost (seam length, compactness). Solve by greedy region growing from best-aligned seeds (Alderighi 2019), graph cut, or an ILP (Herholz 2015, Metamolds 2018).",
+   "pros": "Handles freeform sculpture and finds non-obvious piece layouts.",
+   "cons": "Needs optimization libraries; may produce fragmented or tiny regions; ILP approaches are slow; output parting lines are non-planar.",
+   "sources": [
+    "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+    "https://dspace.mit.edu/entities/publication/28c9f4f5-fd97-4bf1-be55-2dc78894a45d",
+    "http://vcg.isti.cnr.it/publication/2018/AMGPBC18/"
+   ]
+  },
+  {
+   "name": "GPU depth-buffer visibility (Khardekar; Priyadarshi & Gupta)",
+   "description": "Render the part from direction d and use depth or stencil comparisons to mark occluded facets. Repeat for candidate directions.",
+   "pros": "Very fast per direction; mature literature.",
+   "cons": "Image-space approximation (resolution-limited); not available inside Fusion's Python; superseded for this use by Embree ray casting.",
+   "sources": [
+    "https://mcmains.me.berkeley.edu/pubs.html",
+    "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf"
+   ]
+  },
+  {
+   "name": "Post-build verification and disassembly-order search",
+   "description": "After splitting the plaster body: (1) re-sample each piece's cavity faces and ray-test along its pull against the cast; (2) for each ordered piece pair, test contact faces along the relative direction; (3) search removal orders; (4) repeat for casing parts against each plaster piece.",
+   "pros": "Catches errors from approximations, natch placement and spare geometry before printing; cheap at small piece counts.",
+   "cons": "Needs reliable contact-face identification between bodies (by proximity sampling).",
+   "sources": [
+    "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+    "http://www.emmielyons.com/pubs/shapecast-chi24.pdf"
+   ]
+  }
+ ],
+ "pitfalls": [
+  "Relying only on the draft (normal) test: front-facing faces can still be occluded, such as the underside of a rolled lip, the inner wall of a foot ring seen from the side, or the region behind a handle. Always add a ray or span occlusion test.",
+  "Flipped normals: surface parameterization can reverse normals relative to the solid. Verify outwardness by checking body.pointContainment(p + eps*n) is outside on a few samples per face before classifying.",
+  "Self-hits and edge misses in ray casting: offset origins by eps along the normal. With trimesh/Embree, use scale_to_box=False (issue #1766) or jitter, and merge near-duplicate crossings when pairing spans.",
+  "Units: Fusion's internal API length unit is cm. Parameters authored in mm (wall 5 mm, draft offsets) must be divided by 10, and eps must be set in cm.",
+  "Rays in a multi-body design hit other bodies (existing plaster, casings, construction geometry). Filter findBRepUsingRay hits to the cast body, or run the analysis on an isolated temporary or mesh copy. visibleEntitiesOnly defaults to True, so hidden bodies change results.",
+  "Analyzing the wrong solid: analyze the cast's outer envelope including the spare/well extension. The interior of a drain-cast piece is formed by the slip, not the mold. Exclude the top pour-opening cap from mold-contact samples.",
+  "Sampling and tessellation resolution: features smaller than the sample spacing are missed (Bassi). Use a fine-quality TriangleMeshCalculator, not a coarse display mesh, for small decorative details.",
+  "Treating per-feature (CAD history) valid directions as final: booleans between features can hide or create undercuts. Use the feature-based approach only to prune candidates, then verify on the final body.",
+  "Porting silicone-mold research directly: Metamolds and composite-mold extra cuts rely on flexible silicone; rigid plaster needs every piece to be a height field along its pull. The 2019 paper also notes failures on thin elongated features, knots and bottle shapes.",
+  "Parting line through the foot or base: avoid it (extra trimming, questionable design). Use a bottom piece or drop-out spare instead.",
+  "Zero-draft band at 2-piece seams: acceptable for slip casting thanks to shrinkage, but it causes plaster wear and sticking. Report it, and consider 3-4 sectors if large vertical walls sit at the seam.",
+  "Registration features ignoring motion direction: hemispherical natches on a horizontal side/bottom interface block horizontal side-piece removal. Check each key against the relative separation direction of its two pieces and plan the opening order. Tapered pins or keys are preferred over cylindrical dowels.",
+  "One-piece printed casings around set plaster are nearly impossible to remove (Shape Cast experience). Apply the same moldability and disassembly analysis to casings, and split them into 2-4 parts with bolted flanges and gaskets.",
+  "Assuming the parting line must equal the exact silhouette: exact silhouettes on meshes zig-zag. Smooth or planar approximations add small undercuts that must be measured and accepted by the user.",
+  "Performance surprises: bulk B-rep ray calls through the Fusion API and per-property mesh access can be slow. Cache mesh arrays once and do bulk ray work on meshes (pure-Python bucketing or Embree outside Fusion).",
+  "Installing numpy, trimesh or open3d into Fusion's embedded Python 3.14 is unverified and may break. Plan a dependency-free path (pure Python) and an external-analysis path (export the mesh via MCP, analyze in normal CPython).",
+  "Off-axis features on revolved forms (handles, spouts) silently break the analytic revolve shortcut. Detect any faces not generated by the revolve, or run the sampled check whenever the body is not purely axisymmetric.",
+  "Silhouette Split 'Split Solid Body' only works with a planar parting line. Non-planar parting needs shelled-body mode, a swept or ruled surface, or a different layout."
+ ],
+ "prior_art": [
+  {
+   "name": "Shape Cast (Lyons, CHI EA 2024)",
+   "url": "http://www.emmielyons.com/pubs/shapecast-chi24.pdf",
+   "what_it_does": "Web tool: SVG profile of a pot becomes a revolved design proof, inner mold, plaster volume, and outer mold split into 2 or 4 parts with M3 flanges, bottom ring and gasket provisions. Includes shrinkage scaling and slip well. One-part molds only.",
+   "relevance": "The only plaster slip-casting automation found; gives concrete defaults (25 mm plaster, 2.4 mm print walls, 2 or 4 part outer molds) and confirms that casings must be split."
+  },
+  {
+   "name": "Autodesk Fusion Lure Mold Generator (TheJoeJep)",
+   "url": "https://github.com/TheJoeJep/AutodeskFusionLureMoldGenerator",
+   "what_it_does": "Fusion add-in creating two-part soft-plastic injection molds. Pure-Python 60x60 ray-grid parting analysis with triangle bucketing, mesh booleans, pegs, bolts and vents; Fusion-independent tested modules.",
+   "relevance": "A working pattern for dependency-free moldability analysis inside Fusion and a clean testable architecture for agent-maintained scripts."
+  },
+  {
+   "name": "mold-maker (matta174)",
+   "url": "https://github.com/matta174/mold-maker",
+   "what_it_does": "Open-source two-part mold generator (React/Three.js, Manifold WASM CSG): load STL/OBJ, auto or manual parting plane, registration pins, sprue and vents.",
+   "relevance": "Reference for planar-split mold generation and registration pins; its auto-detect algorithm is undocumented."
+  },
+  {
+   "name": "Volume-Aware Design of Composite Molds (Alderighi et al. 2019)",
+   "url": "https://opus.lib.uts.edu.au/bitstream/10453/137699/4/composite_compressed.pdf",
+   "what_it_does": "Two-piece silicone + rigid shell molds; sphere-sampled direction pair minimizing non-visible area, region growing, escape-path membranes on a tet mesh, persistence-based pour direction.",
+   "relevance": "Direction selection, region growing, and Perlin-noise registration are reusable; the method itself assumes flexible silicone."
+  },
+  {
+   "name": "Metamolds (Alderighi et al. 2018)",
+   "url": "https://visualcomputing.ist.ac.at/publications/2018/Metamolds/",
+   "what_it_does": "Automatic multi-piece silicone molds cast inside 3D-printed containers (metamolds), with cut layout from visibility-based segmentation.",
+   "relevance": "Conceptual twin of the user's printed casings for plaster pieces."
+  },
+  {
+   "name": "Volume decomposition for two-piece rigid casting (Alderighi et al. 2021)",
+   "url": "https://visualcomputing.ist.ac.at/publications/2021/VDFTPRC/",
+   "what_it_does": "Decomposes an object into double-height-field parts castable in two-piece rigid molds, using precomputed accessibility over a predefined direction set.",
+   "relevance": "Rigid-mold criterion and the precompute-accessibility-then-optimize structure recommended for the toolkit."
+  },
+  {
+   "name": "CoreCavity (Nakashima et al. 2018)",
+   "url": "https://cdl.ethz.ch/publications/corecavity-interactive-shell-decomposition-for-fabrication-with-two-piece-rigid-molds/",
+   "what_it_does": "Interactive splitting of a thin-shell object into parts each castable with two rigid mold pieces (active contours with fabrication energy); outputs printable molds.",
+   "relevance": "Relevant if the user accepts casting appendages separately; shows an interactive, user-steered decomposition UI."
+  },
+  {
+   "name": "Approximating Free-form Geometry with Height Fields for Manufacturing (Herholz et al. 2015)",
+   "url": "https://dspace.mit.edu/entities/publication/28c9f4f5-fd97-4bf1-be55-2dc78894a45d",
+   "what_it_does": "ILP segmentation of a surface into height fields (rigid mold pieces) plus deformation to enforce constraints.",
+   "relevance": "Formalizes the per-piece height-field constraint for rigid multi-piece molds; deformation is likely unacceptable for design fidelity."
+  },
+  {
+   "name": "Finding All Undercut-Free Parting Directions for Solids of Revolution (Chen & McMains 2007)",
+   "url": "https://mcmains.me.berkeley.edu/pubs/DETC07ChenMcMains.pdf",
+   "what_it_does": "O(n) exact undercut-free direction computation for revolved solids from the 2D generator profile; companion work covers extrusions and curved polygons.",
+   "relevance": "Analytic fast path for mugs, vases and bowls; justifies any axial split plane."
+  },
+  {
+   "name": "Molds for Meshes: Smooth Parting Lines and Undercut Removal (Li, Martin, Langbein 2009)",
+   "url": "https://langbein.org/wp-content/uploads/2009/08/li2009.pdf",
+   "what_it_does": "Triangle-band parting-line computation on meshes with smoothness control and normal-driven undercut removal.",
+   "relevance": "For freeform or scanned shapes where exact silhouettes are unusable."
+  },
+  {
+   "name": "Multi-piece mold design research (Gupta / Priyadarshi, UMD/USC)",
+   "url": "https://drum.lib.umd.edu/bitstreams/a0209646-8ff2-49f4-84a8-7e4e421e2051/download",
+   "what_it_does": "Global accessibility cones, CORE/CAVITY/BOTH, flattest parting loop, swept parting surfaces, disassembly-guaranteed multi-piece permanent molds; one-click STL mold tool.",
+   "relevance": "Closest rigid multi-piece analog to plaster molds; flatness metric and disassembly guarantees."
+  },
+  {
+   "name": "Surface-based accessibility analysis on B-rep (Bassi, Bedi, Salas Bolaños 2010)",
+   "url": "https://www.cad-journal.net/files/vol_7/CAD_7(5)_2010_621-637.pdf",
+   "what_it_does": "Exact face accessibility via sweeps and booleans on B-rep, with positive/negative/perpendicular/dual classification.",
+   "relevance": "A B-rep-native verification method that can run inside Fusion for flagged faces."
+  },
+  {
+   "name": "Fusion 360 Silhouette Split / TemporaryBRepManager / Inspect analyses",
+   "url": "https://help.autodesk.com/cloudhelp/ENU/Fusion-360-API/files/TemporaryBRepManager_Sample.htm?guid=ReferenceManual_UM",
+   "what_it_does": "Native silhouette curves, plane intersection, booleans, ruled surfaces; Silhouette Split feature; Draft and Accessibility analysis in the UI.",
+   "relevance": "The building blocks the scripts should call instead of reimplementing geometry."
+  },
+  {
+   "name": "trimesh / Open3D RaycastingScene",
+   "url": "https://trimesh.org/trimesh.ray.ray_triangle.html",
+   "what_it_does": "Batch ray-mesh intersection (Embree-accelerated), surface sampling with face indices, intersection counts.",
+   "relevance": "Fast external-Python path for the accessibility precompute."
+  },
+  {
+   "name": "AIMold (2026)",
+   "url": "https://arxiv.org/html/2608.00800",
+   "what_it_does": "Deep-learning injection-mold component generator (voxel rectified flow, mesh-to-CAD).",
+   "relevance": "Shows the learned approach's limits (no feasibility guarantee); not recommended for this toolkit."
+  }
+ ],
+ "open_questions_for_user": [
+  "What shape families do you expect most: purely revolved forms (mugs, cups, vases, bowls), revolved with handles or spouts, extruded or faceted vessels, or freeform sculpture? This decides whether the analytic revolve path covers most cases or the general ray-sampling path must be robust from day one.",
+  "Are handles, spouts and knobs cast separately and attached (common practice), or must they be integral to the main mold? Integral appendages usually add pieces and break the axisymmetric shortcut.",
+  "Do you prefer the fewest plaster pieces (accepting zero-draft seams), or more side pieces for better seam draft (K=3 gives 30 deg, K=4 gives 45 deg on vertical walls)? Is there a hard maximum piece count?",
+  "Is a one-piece drop-out mold acceptable when the shape allows it (profile widening upward), or should the toolkit always build at least sides + bottom?",
+  "Is the pour opening always at the top of the design's +Z (the side the spare extends from), or may the agent reorient the object (for example cast upside down) to reduce pieces?",
+  "Can split surfaces be restricted to planes (simpler casings, gaskets and natches), or are non-planar (stepped or swept) parting surfaces acceptable for complex forms?",
+  "What minimum draft do you want enforced (0, 0.5, 1 or 2 deg), and should small residual undercuts that leather-hard clay can flex past be allowed? If so, up to what size?",
+  "Is it OK to install Python packages (numpy, trimesh) outside Fusion and run the heavy analysis there via exported meshes, or must everything run inside Fusion's embedded Python with no dependencies?",
+  "How should results be shown: temporary custom-graphics overlays (non-destructive), colored or split faces in the timeline, or a written report plus a screenshot?",
+  "In your 3-piece mug example, how do you open the mold: sides first or bottom first? Where are the spherical natches (side/side faces only, or also on the side/bottom interface)? This sets the disassembly-order and natch-direction rules.",
+  "Do you ever solid-cast (two-sided mold, both surfaces formed by plaster), or is it always drain casting where only the outer surface touches plaster?",
+  "What printer build volume should casing splits respect, and do you prefer bolted flanges (Shape Cast style, M3 + heat-set inserts) or printed clamps only?"
+ ]
+}
