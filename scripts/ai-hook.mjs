@@ -12,7 +12,7 @@
 // it would pull a large file into context for the rest of the session:
 // - a text file over 40,000 bytes;
 // - a persisted tool output (a path with a `tool-results` directory) over 10,000 bytes;
-// - CLAUDE.md at the workspace root when the caller already has it loaded: the main thread (no
+// - CLAUDE.md or AGENTS.md (which CLAUDE.md imports) at the workspace root when the caller already has it loaded: the main thread (no
 //   agent_type), or a subagent other than Explore, Plan or a custom agent whose
 //   .claude/agents/<name>.md frontmatter says `omitClaudeMd: true`.
 // Images, PDFs and notebooks are left alone. Any error on a Read call (a stat failure, an unreadable
@@ -60,7 +60,7 @@ function main() {
   const wrapped = wrap(command, execCommand(data.cwd, command));
   if (wrapped === null) return;
   deny(
-    `Run test, lint and typecheck commands through the output compressor (CLAUDE.md, "Checks"). ` +
+    `Run test, lint and typecheck commands through the output compressor (AGENTS.md, "Checks"). ` +
     `Run this instead: ${wrapped}`,
   );
 }
@@ -81,7 +81,7 @@ const LARGE_FILE_BYTES = 40_000;
 const LARGE_TOOL_RESULT_BYTES = 10_000;
 const CHARS_PER_TOKEN = 3;
 const MEDIA = new Set(['.png', '.jpg', '.jpeg', '.gif', '.webp', '.bmp', '.ico', '.svg', '.pdf', '.ipynb']);
-const INSTRUCTIONS = new Set(['claude.md']);
+const INSTRUCTIONS = new Set(['claude.md', 'agents.md']);
 // Built-in subagents that start without CLAUDE.md.
 const WITHOUT_INSTRUCTIONS = new Set(['Explore', 'Plan']);
 

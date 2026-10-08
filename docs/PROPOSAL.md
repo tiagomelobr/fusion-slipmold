@@ -74,7 +74,7 @@ Everything is driven by **Fusion user parameters** (prefix `mold_`) that you can
 ## 3. Proposed repository layout
 
 ```
-CLAUDE.md                          project rules + map (short; always loaded)
+AGENTS.md                          project rules + map (short; always loaded; CLAUDE.md imports it)
 README.md                          human overview + quickstart
 .claude/
   settings.json                    permissions (Fusion read tools, pytest) + hook registration
@@ -152,7 +152,7 @@ def run(_context):
 
 | Asset | Loaded when | Purpose |
 |---|---|---|
-| `CLAUDE.md` | Every session | What the repo is; **golden rules**: Fusion safety, never touch the source body, `mold_` prefix, cm internally, thresholds only from params, gates; where knowledge lives; how to run tests and stages |
+| `AGENTS.md` | Every session | What the repo is; **golden rules**: Fusion safety, never touch the source body, `mold_` prefix, cm internally, thresholds only from params, gates; where knowledge lives; how to run tests and stages |
 | `slipcast-mold` skill | "make a mold for…", `/slipcast-mold <body>`, "regenerate the mold" | Drives S0–S9: what to run, what to show, when to stop and ask, how to interpret each JSON result. References load on demand |
 | `fusion-scripting` skill | Any Fusion scripting, mold or not | Safe conventions plus measured API facts. Probes and bugs update `api-notes.md`, so knowledge compounds |
 | `slipcast-calibrate` skill | "calibrate", after first prints/pours | Generates coupons (groove clearance 0.15–0.35 mm, natch play 0.3–0.6 mm, clip fit), gives the pour-logging protocol, records results in `calibration.json` |

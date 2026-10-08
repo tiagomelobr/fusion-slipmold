@@ -23,7 +23,7 @@ Set them explicitly. An omitted `effort` inherits the session effort (xhigh unde
 
 | Stage | Options |
 |---|---|
-| Map, search, sweep, extraction, web research, Fusion API-documentation lookups (read-only) | `{ agentType: 'scout' }`: Sonnet, medium, no CLAUDE.md, cannot edit or change the design. Use `{ agentType: 'Explore', model: 'sonnet', effort: 'medium' }` if scout is unavailable |
+| Map, search, sweep, extraction, web research, Fusion API-documentation lookups (read-only) | `{ agentType: 'scout' }`: Sonnet, medium, no AGENTS.md, cannot edit or change the design. Use `{ agentType: 'Explore', model: 'sonnet', effort: 'medium' }` if scout is unavailable |
 | Mechanical edits: moves, renames, boilerplate, doc reformatting, test scaffolding | `{ model: 'sonnet', effort: 'medium' }` (or `'high'` for tricky ones) |
 | Implementation: mold-generation geometry, Fusion API scripts, parameter plumbing | `{ effort: 'high' }` (inherits Opus 5.5) |
 | Trivial extraction or formatting (pull fields from a file, reformat a table) | `{ model: 'haiku' }` (no effort setting, 200K window) |
@@ -35,7 +35,7 @@ No judge or synthesis agents: decisions between designs stay with the main sessi
 - Haiku 4.5 for trivial extraction and formatting; it has no effort setting and a 200K window.
 - Sonnet 5's cache reads cost the same as Opus 5.5's ($0.20/MTok). It saves ~28% on a typical workflow agent but only ~15% on a long read-heavy one, so pair it with short scopes (section 2).
 - Keep options identical across siblings of one stage (model, effort, agentType, schema). Siblings share the prompt-cache prefix only when those match.
-- `scout` starts without CLAUDE.md. Its prompt must carry every rule the stage needs, and it never makes a design decision. Stages that decide geometry or change the design use the default type.
+- `scout` starts without AGENTS.md. Its prompt must carry every rule the stage needs, and it never makes a design decision. Stages that decide geometry or change the design use the default type.
 
 ## 2. Scope each agent small
 
@@ -47,7 +47,7 @@ No judge or synthesis agents: decisions between designs stay with the main sessi
 ## 3. Give a context pack, not a reading list
 
 - The main session, or one scout stage, builds a pack per step: verbatim excerpts of the plan step and the relevant design rules, the Fusion document name, body/sketch/feature names and user-parameter names, `file:line` anchors taken from the current code, and the check commands. About 10k characters at most. Pass it inline or as a file path. Excerpts must be verbatim, never paraphrased.
-- Never tell an agent to read CLAUDE.md (already loaded; the hook refuses it) or whole large files.
+- Never tell an agent to read AGENTS.md or CLAUDE.md (already loaded; the hook refuses it) or whole large files.
 
 ## 4. Files in, short results out
 
@@ -96,8 +96,8 @@ export const meta = {
   phases: [{ title: 'Research' }, { title: 'Build' }],
 }
 const S = args.scratch                          // session scratchpad, passed in args
-const SCOUT = { agentType: 'scout' }            // Sonnet, medium, read-only, no CLAUDE.md
-const BUILD = { effort: 'high' }                // inherits Opus 5.5; CLAUDE.md loaded
+const SCOUT = { agentType: 'scout' }            // Sonnet, medium, read-only, no AGENTS.md
+const BUILD = { effort: 'high' }                // inherits Opus 5.5; AGENTS.md loaded
 const RULES = 'Read-only. Never read a file over 40k characters whole: search with rg -n, then read ranges.'
 // NOTES and IMPL (with files: string[], checks: string) are small flat JSON schemas defined here.
 
