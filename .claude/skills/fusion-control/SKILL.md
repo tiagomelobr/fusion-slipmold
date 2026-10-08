@@ -49,4 +49,5 @@ and Preferences → General → API → Fusion MCP Server is on, then `/mcp`.
   `STLExportOptions.unitType = MillimeterDistanceUnits`.
 - Look up signatures with `apiDocumentation` before writing a script.
 
-Worked, tested example of the whole flow: `scripts/integration_test/*.py`.
+Worked, tested example of the whole flow (2026-09-30, run in order on a disposable document):
+`examples/*.py` next to this file. `40_hole_attempt1_FAILED.py` is kept as the approach not to use.
