@@ -154,15 +154,75 @@ class CasingParamsTest(unittest.TestCase):
     def test_resolved_values(self):
         from moldkit.core import resolve as R
 
-        vals = R.resolve({"mold_casingMaterial": "pla", "mold_flangeThickness": 3.2})["values"]
+        # an older design's mold_casingMaterial is ignored (retired): no value, no tighter seam clearance
+        vals = R.resolve({"mold_casingMaterial": "PLA", "mold_flangeThickness": 3.2})["values"]
         p = s7.casing_params(vals)
-        self.assertEqual(p["casingMaterial"], "PLA")
+        self.assertNotIn("casingMaterial", p)
+        self.assertEqual(p["seamClearance"], R.resolve({})["values"]["seamClearance"])
         self.assertEqual(p["flangeThickness"], 3.2)
         self.assertEqual(p["casingWall"], vals["casingWall"])  # derived, no parameter needed
         self.assertEqual(p["plasterWall"], vals["plasterWall"])
-        self.assertIn("petgSectionMm", p)  # code-only casing.DEFAULTS stay
-        with self.assertRaises(ValueError):
-            s7.casing_params(dict(vals, casingMaterial="ABS"))
+        self.assertIn("filamentDensity", p)  # code-only casing.DEFAULTS stay
+
+
+class _Attrs:
+    def __init__(self, d=None):
+        self.d = dict(d or {})
+
+    def itemByName(self, group, key):
+        if (group, key) not in self.d:
+            return None
+        return types.SimpleNamespace(value=self.d[(group, key)], deleteMe=lambda: self.d.pop((group, key)))
+
+
+def _ent(name, **attrs):
+    return types.SimpleNamespace(name=name, attributes=_Attrs({("slipmold", k): v for k, v in attrs.items()}))
+
+
+class LegacyNamesTest(unittest.TestCase):
+    """Printed parts carried a material prefix until 2026-10-08: older designs are found and renamed."""
+
+    def test_unprefixed(self):
+        from moldkit.fusion import context as C
+
+        self.assertEqual(C.unprefixed("PETG_side1_core"), "side1_core")
+        self.assertEqual(C.unprefixed("PLA_Casings"), "Casings")
+        self.assertEqual(C.unprefixed("side1_core"), "side1_core")
+        self.assertEqual(C.unprefixed("clip_short"), "clip_short")
+
+    def test_find_component_by_role_then_by_old_name(self):
+        from moldkit.fusion import context as C
+
+        def occ(comp):
+            return types.SimpleNamespace(component=comp)
+        other, old = _ent("Notes"), _ent("PETG_Casings")
+        slip = types.SimpleNamespace(occurrences=[occ(other), occ(old)])
+        self.assertIs(s7._casings_comp(slip)[1], old)                 # untagged: by the old name
+        tagged = _ent("PETG_Casings", role="casingComponent")
+        slip.occurrences.append(occ(tagged))
+        self.assertIs(s7._casings_comp(slip)[1], tagged)              # the tagged one first
+        self.assertEqual([c for _o, c in C.sub_components(slip, "casingComponent", "Casings")], [tagged, old])
+        self.assertEqual(C.sub_component(types.SimpleNamespace(occurrences=[occ(other)]), "casingComponent",
+                                         "Casings"), (None, None))
+        self.assertIs(C.sub_component(types.SimpleNamespace(occurrences=[occ(_ent("PETG_Clips"))]),
+                                      "clipComponent", "Clips")[1].name, "PETG_Clips")
+
+    def test_rename_component_and_bodies(self):
+        from moldkit.fusion import context as C
+
+        a = _ent("PETG_side1_core", stage="s7", role="casingPart", part="side1_core", material="PETG")
+        b = _ent("PETG_side1_stand", stage="s7", role="casingPart")                 # no part attribute
+        c = _ent("side2_core", stage="s7", role="casingPart", part="side2_core")
+        x = _ent("PETG_sketch_body")                                                 # not a casing part
+        comp = types.SimpleNamespace(name="PETG_Casings", bRepBodies=[a, b, c, x])
+        old = C.drop_name_prefixes(comp, "Casings", "s7", "casingPart", "part")
+        self.assertEqual(old, ["PETG_Casings", "PETG_side1_core", "PETG_side1_stand"])
+        self.assertEqual([comp.name, a.name, b.name, c.name, x.name],
+                         ["Casings", "side1_core", "side1_stand", "side2_core", "PETG_sketch_body"])
+        self.assertIsNone(a.attributes.itemByName("slipmold", "material"))       # the old tag is dropped
+        self.assertEqual(C.drop_name_prefixes(comp, "Casings", "s7", "casingPart", "part"), [])
+        self.assertEqual(sorted(s7.live_parts(comp)), ["side1_core", "side1_stand", "side2_core"])
+        self.assertEqual(s7.live_parts(None), {})
 
 
 class CavityEvalTest(unittest.TestCase):

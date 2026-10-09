@@ -369,5 +369,41 @@ class S6HelpersTest(unittest.TestCase):
         self.assertEqual([s6.verdict(s) for s in ("pass", "warn", "fail", "error")], ["pass", "warn", "fail", "fail"])
 
 
+class S1RetiredTest(unittest.TestCase):
+    """S1 deletes a retired parameter (mold_casingMaterial) an older design still has, unless it is referenced."""
+
+    def design(self, names, referenced=()):
+        params = {}
+
+        def param(n):
+            def delete():
+                if n in referenced:
+                    return False
+                params.pop(n)
+                return True
+            return types.SimpleNamespace(name=n, deleteMe=delete)
+        for n in names:
+            params[n] = param(n)
+        return types.SimpleNamespace(userParameters=types.SimpleNamespace(itemByName=params.get)), params
+
+    def test_deleted_or_kept(self):
+        from moldkit.core import report
+        from moldkit.core import resolve as R
+        from moldkit.fusion import s1_params as s1
+
+        d, params = self.design(["mold_plasterWall", "mold_casingMaterial"])
+        r, deleted = report.new("s1_params"), []
+        names = R.retired_names(list(params), "mold_")
+        self.assertEqual(names, ["mold_casingMaterial"])
+        self.assertEqual(s1.delete_retired(d, names, deleted, r), [])
+        self.assertEqual((sorted(params), deleted, r["warnings"]), (["mold_plasterWall"], ["mold_casingMaterial"], []))
+        d, params = self.design(["mold_casingMaterial"], referenced=("mold_casingMaterial",))
+        r, deleted = report.new("s1_params"), []
+        self.assertEqual(s1.delete_retired(d, ["mold_casingMaterial"], deleted, r), ["mold_casingMaterial"])
+        self.assertEqual((sorted(params), deleted), (["mold_casingMaterial"], []))
+        self.assertIn("no longer uses it", r["warnings"][0])
+        self.assertEqual(s1.delete_retired(d, [], deleted, r), [])
+
+
 if __name__ == "__main__":
     unittest.main()

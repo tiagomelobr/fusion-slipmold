@@ -13,7 +13,7 @@ Add four things to this repo:
 An agent can then take a body in a Fusion design (revolved *or not*) and produce:
 1. a **cast plug** with an integrated slip well;
 2. **contoured plaster mold pieces**, proven undercut-free;
-3. **reusable split 3D-printable casings with printed PETG clips** for each plaster piece;
+3. **reusable split 3D-printable casings with printed clips** for each plaster piece;
 4. **STL/3MF files and a pour/process sheet**.
 
 Everything is driven by **Fusion user parameters** (prefix `mold_`) that you can edit in *Modify → Change Parameters*, then ask the agent to regenerate.
@@ -39,10 +39,10 @@ Everything is driven by **Fusion user parameters** (prefix `mold_`) that you can
 | Natches | **Spherical keys formed by the casings** | r 6 mm, depth 3.5 mm, 0.5 mm radial play (calibrate), 3 per seam, asymmetric |
 | Plaster form | **Contoured, uniform walls** | 25 mm nominal. Block shape is only an automatic fallback, with a warning |
 | Casings | **Reusable split casings** | Base pattern plate + end walls + back sectors, flanges with ridge/groove |
-| Clamps | **Printed PETG wedge clips** | Generated with the casings. The first print is a fit coupon |
+| Clamps | **Printed wedge clips** | Generated with the casings. The first print is a fit coupon |
 | Pour workflow | **Independent casings** | All pieces can be poured in one session; dry-fit check afterwards |
 | Printer | **260 × 260 × 260 mm bed** | Parts must fit 250 × 250 × 250 (5 mm margin parameter) |
-| Filament | **PLA + PETG** | PLA casings by default, PETG clips always. A thermal rule switches casings to PETG in warm conditions |
+| Filament | **A stiff, tough print filament** | Casings and clips; thermal advice keeps the setting plaster from softening the casings |
 | Plaster | **USG No. 1 Pottery Plaster** | Consistency 70; batch 0.985 g/cm³ + 15 % |
 | Fusion probes | **Allowed in a throwaway design, asking you right before** | First task of M0 |
 | Git | **No** | Plain folder; per-mold records still kept in `molds/` |
@@ -175,8 +175,8 @@ def run(_context):
 | **S5 Split + natches** | modify | Split by layout planes (vertical at the chosen azimuths, horizontal at the bottom split). Place asymmetric natches (axis ∥ the pieces' relative motion), cut sockets with clearance. Tag pieces | `SplitBodyFeatures` (one tool per feature, diff body lists), sketch-revolve caps, Combine | Tagged pieces, e.g. SideA, SideB, Bottom |
 | **S6 Verify** | read-only | Virtual demold (translate copies 0.1/1/10 mm, intersect < 1e-5 cm³). Disassembly order. Interference. Volume balance. Weights. Plaster batch per piece | `TemporaryBRepManager`, `analyzeInterference`, volumes | **GATE 2**: verifier report + screenshots |
 | **S7 Casings** | modify | Per piece: base pattern plate (working face + downward parting faces + natch forms), end walls, back sectors, flanges with ridge/groove, fill-line deboss, freeboard. Release gate per casing part | Extrude/Combine/Split, flange sketches | Casing parts, each passing release, span and bed-fit checks |
-| **S8 Clips + coupons** | modify | PETG wedge clips at ≤ 50 mm spacing along every flange seam; fit coupons (groove, natch, clip) | Sketch extrudes | Clip count per seam |
-| **S9 Export** | read-only + files | One STL/3MF per printed part, oriented as it should print. Process sheet: plaster + water per piece, assembly and demold order, clip count, PLA/PETG per part, print settings, thermal advice | `ExportManager` | **GATE 3**: files in `molds/<design>/exports/` |
+| **S8 Clips + coupons** | modify | Wedge clips at ≤ 50 mm spacing along every flange seam; fit coupons (groove, natch, clip) | Sketch extrudes | Clip count per seam |
+| **S9 Export** | read-only + files | One STL/3MF per printed part, oriented as it should print. Process sheet: plaster + water per piece, assembly and demold order, clip count, print settings per part, thermal advice | `ExportManager` | **GATE 3**: files in `molds/<design>/exports/` |
 
 **Regeneration.**
 1. You edit parameters in Fusion (or ask the agent to).
@@ -252,12 +252,12 @@ Sculptural, non-vessel forms (figurines), appendages cast in the same mold, and 
 | Natches | `mold_natchRadius` 6 mm · `mold_natchDepth` 3.5 mm · `mold_natchClearance` 0.5 mm · `mold_natchesPerSeam` 3 · `mold_natchEdgeMargin` 5 mm |
 | Casing | `mold_casingWall` 2.4 mm · `mold_casingBasePlate` 4 mm · `mold_casingRingSectors` 4 · `mold_pourOpenCone` 30° · `mold_casingFreeboard` 10 mm · `mold_fillLineDepth` 0.6 mm |
 | Seams | `mold_flangeThickness` 3 mm · `mold_flangeWidth` 12 mm · `mold_ridgeWidth` 2 mm · `mold_ridgeHeight` 2 mm · `mold_ridgeInset` 1.5 mm · `mold_seamClearance` 0.25 mm · `mold_grooveBottomGap` 0.4 mm · `mold_leadIn` 0.5 mm |
-| Clips (PETG) | `mold_clipSpacingMax` 50 mm · `mold_clipEndOffset` 15 mm · `mold_clipTaper` 0.05 · `mold_clipInterference` 0.15 mm · `mold_clipArm` 3.5 mm · `mold_clipWidth` 18 mm |
+| Clips | `mold_clipSpacingMax` 50 mm · `mold_clipEndOffset` 15 mm · `mold_clipTaper` 0.05 · `mold_clipInterference` 0.15 mm · `mold_clipArm` 3.5 mm · `mold_clipWidth` 18 mm |
 | Printer | `mold_bedX` 260 · `mold_bedY` 260 · `mold_bedZ` 260 mm · `mold_bedMargin` 5 mm · `mold_nozzle` 0.4 mm |
 
 **`mold.json` settings:**
 - **Analysis:** `undercutTolDeg` 0.5 · `draftWarnDeg` 1 · `coreDraftMinDeg` 3 · direction step 2° · about 20k triangles · wall warn/fail 0.8/0.6/15 mm · release tolerance 1e-5 cm³ · casing draft warn/fail 3°/1°.
-- **Process:** USG No. 1 at consistency 70 · 0.985 g/cm³ · 15 % overage · mix water 21 °C · shop max 24 °C (above it, casings switch to PETG) · wet-piece weight warning 6 kg.
+- **Process:** USG No. 1 at consistency 70 · 0.985 g/cm³ · 15 % overage · mix water 21 °C · shop max 24 °C (above it, cool the casings) · wet-piece weight warning 6 kg.
 - **Export:** 3MF or STL, deviation 0.01 mm / 10°.
 - Approvals, and the calibration file reference.
 
@@ -282,7 +282,7 @@ Your existing parameters are left untouched. `cutCount` and `baseMoldHeight` bel
 - **`mold-verifier` checklist:**
   - **Geometry:** virtual demold per piece, disassembly order including natches, interference, wall ratios, volume balance, casing-part release, bed fit.
   - **Craft:** no seam across the foot, spare height ≥ check, natches asymmetric and clear of edges, piece weights.
-  - **Print:** walls are nozzle multiples, overhangs ≤ 45°, working-face plates face-up with no supports, clips in PETG.
+  - **Print:** walls are nozzle multiples, overhangs ≤ 45°, working-face plates face-up with no supports.
 
 ---
 
@@ -292,7 +292,7 @@ Your existing parameters are left untouched. `cutCount` and `baseMoldHeight` bel
 |---|---|---|
 | **M0 Foundations + probes** | CLAUDE.md, three skills (skeleton + references), hook, settings, stub tool, `moldkit.core` params/units/report, S0 intake, S1 params, tests; Fusion probes (with consent) | `/slipcast-mold Mug` on *Mug 01.1* returns an intake report and creates `mold_*` params; pytest green; api-notes updated with probe results, including which plaster method is robust |
 | **M1 Plaster mold, any vessel** | S2–S6: general mesh moldability + layout search, revolved shortcut, three plaster methods + fallback, split + natches, verifier agent | *Mug 01.1* and ≥ 3 non-revolved test vessels → verified plaster pieces (verifier PASS); regenerating after a parameter edit works |
-| **M2 Casings + output** | S7–S9, PETG clips, coupons, process sheet, calibrate skill | All parts fit 250³, pass release and span checks; you print coupons and do the first pour; `calibration.json` filled |
+| **M2 Casings + output** | S7–S9, clips, coupons, process sheet, calibrate skill | All parts fit 250³, pass release and span checks; you print coupons and do the first pour; `calibration.json` filled |
 | **M3 Beyond vessels** | Appendages (handles/spouts) as separate molds, sculptural forms, non-planar parting if needed | Agreed test shapes produce verified molds |
 | **M4 (optional) Add-in UI** | Fusion add-in with a *Slip Mold* dialog and a *Regenerate* button reusing `moldkit` | One-click regenerate without an agent |
 
@@ -312,7 +312,7 @@ Out of scope for now:
 | Casing designs fail physically (leaks, lock-on, bulging) | Split rule plus release gate; coupons and a first pour before trusting defaults |
 | Fusion instability / timeouts | Hook, 25 s budgets, checkpoints, no doEvents, consent before modifying |
 | Seam step between independently cast pieces | Bed-printed mating faces; dry-fit check; sand on glass if needed |
-| Plaster heat softens PLA casings | Cool mix water (21 °C); thermal rule switches to PETG; never insulate curing casings |
+| Plaster heat softens the printed casings | Cool mix water (21 °C); cool the casings in a warm room; never insulate curing casings |
 | Agents drifting from the rules | Thresholds only from parameters; JSON results with a fixed status vocabulary; independent verifier |
 
 ---
@@ -327,4 +327,4 @@ Out of scope for now:
 >
 > *(S4–S6 + verifier)* 3 pieces. Virtual demold passes, walls are 24–29 mm, and the wet pieces weigh 0.6–0.8 kg. *[screenshot]* Approve?
 >
-> *(S7–S9)* 15 casing parts (PLA) + 22 clips (PETG), all within 250³. Files are in `molds/Mug/exports/`; see `process-sheet.md` for the pour plan.
+> *(S7–S9)* 15 casing parts + 22 clips, all within 250³. Files are in `molds/Mug/exports/`; see `process-sheet.md` for the pour plan.

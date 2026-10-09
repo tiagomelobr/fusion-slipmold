@@ -252,20 +252,9 @@ def _max_value(path, unit, digits=2):
     return get
 
 
-def _thickest(rep):
-    m = _get(rep, "summary.material")
-    if not isinstance(m, dict) or not _is_num(m.get("thickestSectionMm")):
-        return None
-    out = _n(m["thickestSectionMm"], 1) + " mm"
-    return out + (" (limit %s mm)" % _n(m["limitMm"], 1) if _is_num(m.get("limitMm")) else "")
-
-
 def _casing_mass(rep):
     g = _get(rep, "summary.totalMassG")
-    if not _is_num(g):
-        return None
-    mat = _get(rep, "summary.material.material")
-    return "%s g" % _n(g, 0) + (" %s" % mat if mat else "")
+    return "%s g" % _n(g, 0) if _is_num(g) else None
 
 
 def _clips(rep):
@@ -355,7 +344,6 @@ KEY_FIELDS = {
                   ("Plaster behind the deepest socket", _num("summary.minBehindSocketMm", "mm")),
                   ("Max interference", _max_value("summary.interferenceCm3", "cm3"))],
     "s7_casings": [("Printed parts", _num("summary.nParts", "", 0)), ("Total casing mass", _casing_mass),
-                   ("Thickest section", _thickest),
                    ("Part interference", _num("summary.maxInterferenceMm3", "mm3", 2)),
                    ("Joints", _num("summary.nJoints", "", 0))],
     "s7_piece": [("Parts", _count("parts")), ("Joints", _count("joints")),
@@ -365,7 +353,7 @@ KEY_FIELDS = {
                  ("Flange stack", _num("summary.clip.stackMm", "mm")),
                  ("Snap strain (worst)", _num("summary.clip.snapStrainWorstPct", "%", 2))],
     "s9_export": [("Files", _files), ("Clips to print", _num("summary.clipCount", "", 0)),
-                  ("Plaster", _plaster_totals), ("Casing material", _text("summary.casingMaterial")),
+                  ("Plaster", _plaster_totals),
                   ("Print first (leak test)", _leak_test), ("Process sheet", _sheet)],
 }
 

@@ -36,30 +36,39 @@ frame), "lengthMm", "clamped": True} plus diagnostics (see build_joints). Flange
 are flush with the plate back (prints on the bed), so a lap plane lies at the plate face shifted
 by (casingBasePlate - flangeThickness) toward the plate back. A vertical plate (side core) and the
 base part (floor) meet in a horizontal sliding lap (lapKind "baseSlide"): the floor's flange band
-extends under the plate foot, the plate stands on it and slides off along its pull; taped, no ridge,
-"clamped": False (no clip: a plate printed back down cannot carry a flange past its back), so the
-floor prints plate back down with no downward flange.
+extends under the plate foot, the plate stands on it and slides off along its pull; taped, no ridge
+(a ridge across the slide would lock it). The plate carries a ledge at its foot behind its back
+(flangeWidth deep, flangeThickness high) lying on a matching extension of the floor's flange band, and
+short clips pushed on from the ledge edge clamp the two (ledge 2026-10-08), so the floor prints plate
+back down with no downward flange and the plate prints standing on its foot.
 
-L6 print: plates and cores lie plate back on the bed (release -> +Z), sectors stand on the foot
-flange (cast orientation, foot lap plane -> z = 0). bed_fit, overhang helpers, PLA mass.
+L6 print: plates, floors and base cores lie plate back on the bed (release -> +Z); sectors and a vertical
+core with a ledge stand on their foot (cast orientation, foot lap plane -> z = 0; the core's spare step,
+the knife ledge, then needs build-plate supports). bed_fit, overhang helpers, part mass.
+Labels (moldkit.core.labels): plan_labels places one engraved label per part.
 """
 import math
 
 from moldkit.core import clips as CL
+from moldkit.core import dovetail as DV
 from moldkit.core import fit as F
 from moldkit.core import geom2d
+from moldkit.core import labels as LB
 
 DEFAULTS = {
     "casingWall": 2.4, "casingBasePlate": 4.8,"casingRingSectors": 4, "casingFreeboard": 10.0,
     "fillLineDepth": 0.6, "fillLineHeight": 1.0, "flangeThickness": 4.0, "flangeWidth": 15.0,
     "bedX": 260.0, "bedY": 260.0, "bedZ": 260.0, "bedMargin": 5.0, "nozzle": 0.4,
     "casingDraftWarnDeg": 3.0, "casingDraftFailDeg": 1.0,
-    "plaDensity": 1.24, "petgDensity": 1.27, "petgSectionMm": 50.0, "overhangMaxDeg": 45.0,
+    "filamentDensity": 1.27, "overhangMaxDeg": 45.0,
     "pullTolDeg": 0.5, "sectorTiltDeg": 45.0, "arcSectorDeg": 90.0,
     "squareTolDeg": 1.0, "flankDeg": 45.0, "flankTolDeg": 0.5,
 }
 GROOVE_WALL_MIN_MM = 1.2   # PRN-10: groove walls >= 1.2 mm and 3 nozzle lines (groove_wall)
 GROOVE_FLOOR_MIN_MM = 1.2  # PRN-10: flange skin under a groove; 0.6 mm (3 mm flange) was a likely leak
+TEXT_DEFAULTS = {"clipRailStyle": "dovetail"}  # Text parameters plan_clips reads (casing_params passes them)
+PLAN_DEFAULTS = {"_doveStd": None,  # set by plan_pieces: the mold's standard dovetail clip lengths
+                 "_roundStd": None}  # and its round clip length and radii {"L", "radii"}
 RIDGE_RULES = ("safe", "pair", "order")
 RING_SECTORS_MIN = 3       # a closed ring of 2 half-ring sectors barely drafts
 _PERMISSIVE = {"square": 0, "flank45": 1, "none": 2}
@@ -67,10 +76,13 @@ _ZTOL = 1e-3
 
 
 def resolve_params(params=None):
-    """DEFAULTS and the clip parameters (clips.PARAM_DEFAULTS: plan_clips sizes the clip sites with them)
-    overridden by params (keys with or without the 'mold_' prefix)."""
+    """DEFAULTS and the clip parameters (clips.PARAM_DEFAULTS and dovetail.PARAM_DEFAULTS: plan_clips sizes
+    the clip sites with them) overridden by params (keys with or without the 'mold_' prefix)."""
     out = dict(DEFAULTS)
     out.update(CL.PARAM_DEFAULTS)
+    out.update(DV.PARAM_DEFAULTS)
+    out.update(TEXT_DEFAULTS)
+    out.update(PLAN_DEFAULTS)
     for k, v in (params or {}).items():
         k = k[5:] if k.startswith("mold_") else k
         if k in out:
@@ -691,6 +703,81 @@ def _foot_end_kinds(index, nsec, closed):
     return ("lap" if index == 1 else "radial", "lap" if index == nsec else "radial")
 
 
+def foot_round_clips(j, sec, end_kinds, outline, centre, base_z, up_z, of, p, dq, cq):
+    """Round clips on a clamped foot joint of a circular outline (clipRailStyle dovetail; moldkit.core.dovetail
+    round clips): the run between the crossing flanges (clipEndOffset beyond their outer faces, as the short
+    clips), stations along it (notch, tapered head and groove, lug), every clip sliding clockwise seen from cast
+    up. -> plan {"type": "round", "stations": [{"notchDeg", "headDeg", "lugDeg", "pieces": [[deg0, deg1, s]]}],
+    ...} with one site per station (frame as a straight dovetail clip at its leading end: x inward, y cast up,
+    z = x cross y back along the arc); None when the outline is not a circle about the plan centre or no
+    station fits (the caller falls back to the short clips)."""
+    if getattr(outline, "kind", None) != "circle" or math.hypot(centre[0] - outline.cc[0], centre[1] - outline.cc[1]) > 0.01:
+        return None
+    ft, lapd = p["flangeThickness"], p["casingBasePlate"] - p["flangeThickness"]
+    D = dq["clipDoveDepth"]
+    z_lap = base_z - up_z * lapd
+    z_face = base_z + up_z * (ft - lapd)
+    b0, b1 = sec["fromDeg"], sec["toDeg"]
+    run = [b0, b1]
+    for k, (b, kind) in enumerate(((b0, end_kinds[0]), (b1, end_kinds[1]))):
+        if kind is None:
+            continue
+        dist = (ft if kind == "radial" else ft - lapd) + cq["clipEndOffset"]
+        r_in = outline.ray(centre, b, z_face, of - D)
+        trim = math.degrees(math.asin(min(1.0, dist / r_in)))
+        run[k] = b + trim if k == 0 else b - trim
+    if run[1] - run[0] <= 1e-6:
+        return None
+    mid = 0.5 * (run[0] + run[1])
+    R = outline.ray(centre, mid, z_face, of)
+    # the stack's outer edge follows the outline's draft: its radius change per mm of cast height (S7 builds the
+    # flanges as cones of the outline); the round clip's profile leans with it (dovetail.shear)
+    lean = (R - outline.ray(centre, mid, z_lap - up_z * ft, of)) / (2.0 * ft)
+    run_len = R * math.radians(run[1] - run[0])
+    rq = DV.round_params(dq)
+    std = p.get("_roundStd") or {}
+    L = std.get("L") or DV.round_length(rq, [run_len])
+    if not L:
+        return None
+    lay = DV.round_layout(rq, run_len, L)
+    if not lay:
+        return None
+    Rc = DV.choose_radius(R, std.get("radii"), L, rq["roundSagTol"])
+    sg = -float(up_z)                    # mold azimuth direction of the slide (clockwise about cast up)
+    start = run[1] if sg < 0 else run[0]
+
+    def deg(u):
+        return start + sg * math.degrees(u / R)
+
+    def rng(u0, u1):
+        a, b = deg(u0), deg(u1)
+        return [round(min(a, b), 6), round(max(a, b), 6)]
+
+    out = {"type": "round", "sides": 2, "groove": True, "runDeg": [round(run[0], 6), round(run[1], 6)],
+           "radiusMm": round(R, 4), "edgeLean": round(lean, 6), "lengthMm": round(run_len, 3),
+           "faceZp": round(ft - lapd, 6),
+           "taper": rq["clipDoveTaper"], "seatGapMm": rq["seatGapMm"], "runMm": round(L + rq["seatGapMm"], 3),
+           "roundRuns": [round(run_len, 3)], "roundRadii": [round(R, 4)], "stations": [], "sites": []}
+    for i, st in enumerate(lay):
+        h0 = st["head"][0]
+        out["stations"].append({"notchDeg": rng(*st["notch"]), "headDeg": rng(*st["head"]), "lugDeg": rng(*st["lug"]),
+                                "pieces": [rng(ua, ub) + [sm] for ua, ub, sm in DV.round_pieces(rq, h0, st["head"][1])]})
+        bl = math.radians(deg(st["lead"]))
+        x = [-math.cos(bl), -math.sin(bl), 0.0]
+        y = [0.0, 0.0, float(up_z)]
+        z = _cross(x, y)
+        o = [outline.cc[0] + R * math.cos(bl), outline.cc[1] + R * math.sin(bl), z_lap]
+        out["sites"].append({"joint": j["id"], "piece": j["piece"], "index": i + 1, "kind": "round",
+                             "clip": DV.round_key(L, Rc, rq["clipDoveTaper"], lean), "sides": 2, "groove": True,
+                             "mirror": False, "taper": rq["clipDoveTaper"], "lengthMm": round(L, 1), "sTop": 0.0,
+                             "sBottom": round(L, 3), "runMm": round(L + rq["seatGapMm"], 3), "radiusMm": round(R, 4),
+                             "clipRadiusMm": Rc, "edgeLean": round(lean, 6), "atDeg": round(math.degrees(bl), 4),
+                             "sagMm": 0.0,
+                             "origin": _clean(o, 6), "x": _clean(x), "y": _clean(y), "z": _clean(z)})
+    out["count"] = len(out["sites"])
+    return out
+
+
 def foot_clips(j, sec, end_kinds, outline, centre, base_z, up_z, of, p, cq):
     """Short snap clips on a clamped foot joint (moldkit.core.clips): the bead run on the sector foot's top
     face (clipEndOffset beyond the crossing flanges' outer faces) and the clip sites spread on it.
@@ -808,22 +895,181 @@ def rail_clips(j, sides, centre, base_z, up_z, top_zp, p, cq):
     return out
 
 
+def dove_clips(j, sides, centre, base_z, up_z, top_zp, p, cq, dq):
+    """Dovetail clips on a straight vertical joint (clipRailStyle dovetail; moldkit.core.dovetail): a tapered
+    dovetail head on each free flange face from the run start up to railTopGap below the casing top, a stop lug
+    under the run (lugHeight), and one clip covering the run (stacked when longer than the clip maximum).
+    Site frame: z = up the seam, x inward (perpendicular to the edge in the joint plane), y = z cross x
+    (+-the joint normal); origin at the clip's bottom end on the lap plane at the flange edge. A one-sided
+    clip (sides 1: A's face is a bed face) is mirrored when y points into A (mirror True)."""
+    ft, lapd = p["flangeThickness"], p["casingBasePlate"] - p["flangeThickness"]
+    path = j["path"]
+    lug1 = ft - lapd + dq["lugHeight"]
+    out = {"type": "dove", "sides": int(sides), "sites": []}
+    if len(path) != 2:
+        out.update(type="none", why="vertical seam is not straight: no dovetail clip (tape it)")
+        return out
+    p0, p1 = path
+    dz = p1[2] - p0[2]
+
+    def at(zp):
+        t = (base_z + up_z * zp - p0[2]) / dz
+        return [p0[k] + t * (p1[k] - p0[k]) for k in range(3)]
+
+    top = top_zp - cq["railTopGap"]
+    a, b = at(lug1), at(top)
+    e = _unit(_sub(b, a))
+    yn = _unit(j["plane"]["normal"])
+    x = _unit(_cross(yn, e))
+    mid = at(0.5 * (lug1 + top_zp))
+    if x[0] * (mid[0] - centre[0]) + x[1] * (mid[1] - centre[1]) > 0.0:
+        x = _mul(x, -1.0)
+    # on a tapered outline the run's end is tilted to the level lug: start where the head's lowest corner
+    # (x 0 .. clipDoveDepth) clears the lug top
+    xup = x[2] * up_z
+    dip = max(0.0, -min(0.0, dq["clipDoveDepth"] * xup))
+    a = _add(a, _mul(e, dip / max(e[2] * up_z, 1e-9)))
+    full = math.dist(a, b)
+    rq = DV.run_params(dq, full)
+    clips = DV.run_clips(rq, full) if rq else []
+    out["lengthMm"] = round(full, 3)
+    if not clips:
+        out.update(type="none", why="vertical run %.1f mm leaves a clip under %.0f mm: no dovetail clip (tape it)"
+                   % (full, dq["minLength"]))
+        return out
+    run = full
+    if rq is dq and len(clips) == 1:  # one clip at the default taper: a standard length, the head from the top
+        lmax = clips[0]["lengthMm"]
+        L = DV.choose_length(lmax, p.get("_doveStd"), dq["clipDoveReuse"])
+        run = L + dq["seatGapMm"]
+        a = _sub(b, _mul(e, run))
+        clips = [{"index": 1, "sTop": 0.0, "sBottom": round(L, 3), "lengthMm": round(L, 1)}]
+        out["maxClipMm"] = [lmax]
+    z0 = (a[2] - base_z) * up_z
+    out.update(lugZp=[round(z0 - dq["lugHeight"], 6), round(z0, 6)], headZp=[round(z0, 6), round(top, 6)],
+               runMm=round(run, 3), taper=rq["clipDoveTaper"], seatGapMm=rq["seatGapMm"])
+    z = e
+    y = _cross(z, x)
+    mirror = sides == 1 and _dot(y, yn) < 0.0
+    for c in clips:
+        o = _sub(b, _mul(e, c["sBottom"]))
+        out["sites"].append({"joint": j["id"], "piece": j["piece"], "index": c["index"], "kind": "dove",
+                             "clip": DV.clip_key(c["lengthMm"], sides, c["sBottom"], mirror, rq["clipDoveTaper"]),
+                             "sides": int(sides), "mirror": mirror, "taper": rq["clipDoveTaper"], "lengthMm": c["lengthMm"], "sTop": c["sTop"], "sBottom": c["sBottom"],
+                             "runMm": round(run, 3), "sagMm": 0.0, "origin": _clean(o, 6), "x": _clean(x),
+                             "y": _clean(y), "z": _clean(z)})
+    out["count"] = len(out["sites"])
+    return out
+
+
+def ledge_dove_clips(j, inward, up_z, p, dq):
+    """Dovetail clips on a core ledge (lapKind baseSlide, clipRailStyle dovetail): two clips, one sliding in from
+    each end of the straight ledge edge toward the middle. The ledge top (the core) carries the head, the floor's
+    underside (its print-bed face) a recessed groove for the clip's tongue (dovetail.tongue_section). Each half
+    has a head and groove from its end for the clip plus its seat gap, then a stop lug. Site frame: z = against
+    the slide (from the clip's leading, wide end back toward the entry end, as up a vertical run), x inward
+    (toward the plate back), y = z cross x; the clip is mirrored when y points down (its head side is +y). -> plan {"type": "dove", "ledge", "groove", "halves": [{"headMm", "lugMm"}] (along
+    the path from its first point), ...}."""
+    p0, p1 = j["path"][0], j["path"][-1]
+    full = math.dist(p0, p1)
+    e = _unit(_sub(p1, p0))
+    out = {"type": "dove", "ledge": True, "groove": True, "sides": 2, "lengthMm": round(full, 3), "sites": []}
+    half = full / 2.0 - dq["lugHeight"] / 2.0
+    rq = DV.run_params(dq, half)
+    clips = DV.run_clips(rq, half) if rq else []
+    if len(clips) != 1:
+        out.update(type="none", why="ledge %.1f mm: no dovetail clip pair fits (each half %s)" % (
+            full, "too short" if not clips else "longer than %.0f mm" % dq["maxLength"]))
+        return out
+    lmax = clips[0]["lengthMm"]
+    L = DV.choose_length(lmax, p.get("_doveStd"), dq["clipDoveReuse"]) if rq is dq else lmax
+    head = L + rq["seatGapMm"]
+    lh = dq["lugHeight"]
+    x = _unit([inward[0], inward[1], 0.0])
+    upv = [0.0, 0.0, float(up_z)]
+    halves = [{"headMm": [0.0, round(head, 4)], "lugMm": [round(head, 4), round(head + lh, 4)]},
+              {"headMm": [round(full - head, 4), round(full, 4)], "lugMm": [round(full - head - lh, 4), round(full - head, 4)]}]
+    for k, (end, slide) in enumerate(((p0, e), (p1, _mul(e, -1.0)))):
+        z = _mul(slide, -1.0)  # the clip's z runs from its leading (wide) end back toward the entry end
+        y = _cross(z, x)
+        mirror = _dot(y, upv) < 0.0
+        o = _add(end, _mul(slide, L))
+        out["sites"].append({"joint": j["id"], "piece": j["piece"], "index": k + 1, "kind": "dove",
+                             "clip": DV.clip_key(L, 2, L, mirror, rq["clipDoveTaper"], groove=True), "sides": 2,
+                             "groove": True, "mirror": mirror, "taper": rq["clipDoveTaper"], "lengthMm": round(L, 1),
+                             "sTop": 0.0, "sBottom": round(L, 3), "runMm": round(head, 3), "sagMm": 0.0,
+                             "origin": _clean(o, 6), "x": _clean(x), "y": _clean(y), "z": _clean(z)})
+    out.update(halves=halves, runMm=round(head, 3), taper=rq["clipDoveTaper"], seatGapMm=rq["seatGapMm"],
+               count=len(out["sites"]))
+    if rq is dq:
+        out["maxClipMm"] = [lmax, lmax]
+    return out
+
+
+def ledge_clips(j, inward, up_z, p, cq):
+    """Short snap clips on a core ledge (the clamped sliding lap, lapKind "baseSlide"): j["path"] is the
+    straight ledge edge on the lap plane; the run keeps clipEndOffset from both ledge ends. Site frame as on
+    a foot: x = inward (toward the plate back), y = cast up (the ledge top carries the bead; the floor back
+    is flat), z = x cross y; origin on the lap plane at the ledge edge, back by half the clip width."""
+    W = cq["clipWidth"]
+    p0, p1 = j["path"][0], j["path"][-1]
+    full = math.dist(p0, p1)
+    e = _unit(_sub(p1, p0))
+    m = cq["clipEndOffset"]
+    out = {"type": "short", "sides": 1, "runMm": [round(m, 4), round(full - m, 4)],
+           "faceZp": round(p["flangeThickness"] - (p["casingBasePlate"] - p["flangeThickness"]), 6), "sites": []}
+    run = full - 2.0 * m
+    out["lengthMm"] = round(max(run, 0.0), 3)
+    at = CL.spread(run, W, cq["clipSpacingMax"]) if run > 0.0 else []
+    if not at:
+        out.update(type="none", why="ledge run %.1f mm < clip width %.1f mm" % (max(run, 0.0), W))
+        return out
+    out["pitchMm"] = round(at[1] - at[0], 3) if len(at) > 1 else None
+    x = _unit([inward[0], inward[1], 0.0])
+    y = [0.0, 0.0, float(up_z)]
+    z = _cross(x, y)
+    for i, s in enumerate(at):
+        c = _add(p0, _mul(e, m + s))
+        o = _sub(c, _mul(z, W / 2.0))
+        out["sites"].append({"joint": j["id"], "piece": j["piece"], "index": i + 1, "kind": "short",
+                             "clip": CL.SHORT, "sides": 1, "lengthMm": W, "atMm": round(m + s, 4), "sagMm": 0.0,
+                             "origin": _clean(o, 6), "x": _clean(x), "y": _clean(y), "z": _clean(z)})
+    out["count"] = len(out["sites"])
+    return out
+
+
+def _stands_on_ledge(part_id, joints):
+    """A core with a ledge on the floor (the B part of a baseSlide lap) prints standing on its foot."""
+    return any(k.get("lapKind") == "baseSlide" and k["parts"][1] == part_id for k in joints)
+
+
 def plan_clips(joints, byid, nsec, closed, outline, centre, base_z, up_z, top_zp, of, p):
-    """j["clip"] for every joint (short clips on feet, rails on straight vertical joints, none on the
-    rest) -> the largest foot-site sag (for the stand)."""
+    """j["clip"] for every joint (short clips on feet and core ledges, rails on straight vertical joints,
+    none on the rest) -> the largest foot-site sag (for the stand)."""
     cq = CL.clip_params(p)
+    dove = str(p.get("clipRailStyle") or "dovetail").strip().lower() == "dovetail"
+    dq = DV.dove_params(p) if dove else None
     sag = 0.0
     for j in joints:
         if not j.get("clamped", True):
             j["clip"] = {"type": "none", "why": "not clamped (taped)", "sites": []}
+        elif j.get("lapKind") == "baseSlide":
+            inward = _mul(byid[j["parts"][1]]["pull"], -1.0)
+            j["clip"] = (ledge_dove_clips(j, inward, up_z, p, dq) if dove else ledge_clips(j, inward, up_z, p, cq))
         elif j["kind"] == "foot":
             sec = byid[j["parts"][1]]["sector"]
-            j["clip"] = foot_clips(j, sec, _foot_end_kinds(sec["index"], nsec, closed), outline, centre, base_z,
-                                   up_z, of, p, cq)
+            ends = _foot_end_kinds(sec["index"], nsec, closed)
+            rnd = foot_round_clips(j, sec, ends, outline, centre, base_z, up_z, of, p, dq, cq) if dove else None
+            j["clip"] = rnd or foot_clips(j, sec, ends, outline, centre, base_z, up_z, of, p, cq)
             sag = max([sag] + [s["sagMm"] for s in j["clip"]["sites"]])
         elif abs(_unit(j["plane"]["normal"])[2]) < 1e-6:
             sides = 1 if byid[j["parts"][0]]["role"] in ("core", "plate") else 2
-            j["clip"] = rail_clips(j, sides, centre, base_z, up_z, top_zp, p, cq)
+            if dove and sides == 1 and _stands_on_ledge(byid[j["parts"][0]]["id"], joints):
+                sides = 2  # a core standing on its ledge prints on its foot: its back is no bed face
+            if dove:
+                j["clip"] = dove_clips(j, sides, centre, base_z, up_z, top_zp, p, cq, dq)
+            else:
+                j["clip"] = rail_clips(j, sides, centre, base_z, up_z, top_zp, p, cq)
         else:
             j["clip"] = {"type": "none", "why": "%s joint: no clip design" % j["kind"], "sites": []}
     return sag
@@ -989,7 +1235,7 @@ def _plan_piece(piece, outline, p, ridge_rule, nsec_want):
                 V, fv, Hb, fh = hv
                 pl = lap_plane(Hb, fh)
                 sliding_base_lap(add("lap", Hb["id"], V["id"], pl,
-                                     base_lap_path(pt, d, fv, pl, outline, centre, off_flange, bp, rel[fv["id"]])))
+                                     ledge_path(pt, pl, outline, centre, bounds, off_flange, bp + fw, rel[fv["id"]])), p)
                 continue
             pl = lap_plane(A, fa)
             sh = _add(_sub(pl["origin"], fa["plane"]["origin"]), _mul(rel[fb["id"]], -(bp + fw)))
@@ -1004,22 +1250,15 @@ def _plan_piece(piece, outline, p, ridge_rule, nsec_want):
                 path = [_add(pt, _mul(d, (z - pt[2]) / d[2])) for z in (base_z, top_z)]
             add("lap", A["id"], B["id"], pl, [_add(x, sh) for x in path])
 
-    # clips (moldkit.core.clips): beads, lugs and sites per clamped joint; the stand under the base part
-    # lifts it so the foot clips' flat arm wraps under its back
+    # clips (moldkit.core.clips, moldkit.core.dovetail): heads, beads, lugs and sites per clamped joint (no stand
+    # part since 2026-10-08: the base rests on the bench, the clips' lower arms just under its back)
     top_zp = up[2] * (screed_z - base_z) + p["casingFreeboard"]
-    sag = plan_clips(joints, byid, nsec, closed, outline, centre, base_z, up[2], top_zp, off_flange, p)
-    if any(j["clip"]["type"] == "short" for j in joints):
-        cq = CL.clip_params(p)
-        so = CL.stand_offset(cq, off_flange, sag)
-        st = {"outerOffsetMm": round(so, 4), "innerOffsetMm": round(so - cq["standWall"], 4),
-              "heightMm": cq["standHeight"], "wallMm": cq["standWall"], "sagMm": round(sag, 4)}
-        down = _clean(_mul(up, -1.0))
-        parts.append({"id": pid + "_stand", "piece": pid, "role": "stand", "isBase": False, "faces": [],
-                      "pull": down, "release": down, "pullCast": _clean(mat_dir(M, down)), "stand": st,
-                      "_flat": []})
+    plan_clips(joints, byid, nsec, closed, outline, centre, base_z, up[2], top_zp, off_flange, p)
+    plan_labels(parts, joints, outline, centre, bounds, closed, base_z, up[2], top_zp, off_band, off_flange, p)
 
     # print orientation + estimated bed fit (the adapter re-checks with the real bodies)
     region = _piece_region(outline, centre, bounds, base_z, screed_z, closed)
+    ledge = next((j for j in joints if j.get("lapKind") == "baseSlide"), None)
     for q in parts:
         if q["role"] == "stand":  # flat as it stands under the base (cast frame)
             R = [row[:3] for row in M[:3]]
@@ -1044,6 +1283,12 @@ def _plan_piece(piece, outline, p, ridge_rule, nsec_want):
                                 base_part is not byid[q["id"]])
             ref = _sub(f["plane"]["origin"], _mul(q["release"], bp)) if f else None
             mode = "plateBackOnBed"
+            if ledge is not None and q["id"] in ledge["parts"]:  # the ledge / the floor extension under it
+                lz = [z_lap + up[2] * ft] if q["id"] == ledge["parts"][1] else [base_z - up[2] * bp]
+                pts = pts + [[x[0], x[1], z] for x in ledge["path"] for z in [z_lap] + lz]
+                if q["id"] == ledge["parts"][1]:  # the core stands on its foot (its ledge cannot lie on the bed)
+                    R = [row[:3] for row in M[:3]]
+                    ref, mode = [0.0, 0.0, z_lap], "footOnBed"
         rp = [mat_dir(_mat(R), x) for x in pts]
         zmin = mat_dir(_mat(R), ref)[2] if ref is not None else min(x[2] for x in rp)
         lo = [min(x[k] for x in rp) for k in range(3)]
@@ -1071,29 +1316,104 @@ def _plan_piece(piece, outline, p, ridge_rule, nsec_want):
         "checks": {"sectorDraftMinDeg": min(drafts) if drafts else None, "status": status, "bedFit": bed}}
 
 
-def base_lap_path(pt, d, fv, plane, outline, centre, off, bp, release):
-    """Path of the horizontal lap between a vertical plate (face fv, plaster release `release`) and the
-    base part: the line under the plate back (face moved back by casingBasePlate) at the lap height,
-    across the flange chord. pt, d: the line where the two face planes meet."""
-    back = _mul(release, -bp)
+def ledge_path(pt, plane, outline, centre, bounds, off, back, release):
+    """Edge of the ledge of a vertical core plate standing on the base part (lapKind "baseSlide"): the line
+    on the lap plane `back` mm behind the plate face (casingBasePlate + flangeWidth), across the plate's
+    lateral extent (the outline + off at both arc ends, as the builder's lateral limits). pt: a point on the
+    line where the plate face and the base face planes meet; release: the plaster's release from the plate
+    face (the plate back lies along -release)."""
     zl = plane["origin"][2]
-    dd = (d[0], d[1])
-    q = (pt[0] + back[0], pt[1] + back[1])
-    tq = (centre[0] - q[0]) * dd[0] + (centre[1] - q[1]) * dd[1]
-    q0 = (q[0] + tq * dd[0], q[1] + tq * dd[1])
-    zs = min(max(pt[2], outline.zb), outline.ztop)
-    t0, t1 = outline.chord(q0, dd, zs, off)
-    return [[q0[0] + t * dd[0], q0[1] + t * dd[1], zl] for t in (t0, t1)]
+    zs = min(max(zl, outline.zb), outline.ztop)
+    a = math.radians(bounds[0])
+    u = (math.cos(a), math.sin(a))
+    q = (pt[0] - release[0] * back, pt[1] - release[1] * back)
+    tq = (centre[0] - q[0]) * u[0] + (centre[1] - q[1]) * u[1]
+    q0 = (q[0] + tq * u[0], q[1] + tq * u[1])
+    s0 = -(outline.ray(centre, bounds[0] + 180.0, zs, 0.0) + off)
+    s1 = outline.ray(centre, bounds[0], zs, 0.0) + off
+    return [[q0[0] + s * u[0], q0[1] + s * u[1], zl] for s in (s0, s1)]
 
 
-def sliding_base_lap(j):
+def sliding_base_lap(j, p):
     """Mark a vertical plate <-> base part lap as the horizontal sliding lap (repair 2026-10-05): the base
-    part extends under the plate foot, the plate slides off along its pull, so no ridge (taped)
-    and no clip: the plate cannot carry a flange past its back (it prints plate back down), and the
-    clipped arc-end laps hold it."""
-    j.update({"ridge": "none", "seal": "tape", "clamped": False, "lapKind": "baseSlide",
-              "note": "horizontal lap under the plate foot; unclamped (held by the clipped arc-end laps)"})
+    part extends under the plate foot, the plate slides off along its pull, so no ridge (taped: a ridge
+    across the slide would lock it). Ledge (2026-10-08): the plate carries a ledge at its foot behind its
+    back (flangeWidth x flangeThickness) on an extension of the base part's flange band; short clips pushed
+    on from the ledge edge (j["path"]) clamp the two, so the plate prints standing on its foot."""
+    j.update({"ridge": "none", "seal": "tape", "clamped": True, "lapKind": "baseSlide",
+              "ledge": {"widthMm": p["flangeWidth"], "thicknessMm": p["flangeThickness"]},
+              "note": "horizontal lap under the plate foot; the plate's ledge on the base extension, short clips"})
     return j
+
+
+def plan_labels(parts, joints, outline, centre, bounds, closed, base_z, up_z, top_zp, ob, of, p):
+    """q["label"] (moldkit.core.labels placement) for every casing part: a sector on its band's outer face
+    between its flanges, above the foot clips; a vertical core on its plate back above the ledge, inside the
+    arc-end rail clips; the base part on its back inside the stand ring (a floor: the half disc on the piece
+    side, text up toward the core); the stand on one line around its ring, opposite the open side. Cast
+    heights zp as in the builder (lap plane L, plate back B, casing top T)."""
+    cq = CL.clip_params(p)
+    m = LB.LABEL["marginMm"]
+    ft, bp = p["flangeThickness"], p["casingBasePlate"]
+    L, B, T = -(bp - ft), -bp, top_zp
+    up = [0.0, 0.0, float(up_z)]
+    over = ft + cq["beadHeight"] + cq["clipArm"]  # a clip's arm top over the foot / ledge lap plane
+
+    def zm(zp):
+        return base_z + up_z * zp
+
+    stand = next((q["stand"] for q in parts if q["role"] == "stand"), None)
+    has_ledge = any(j.get("lapKind") == "baseSlide" for j in joints)
+    zf = L + ft  # the stand ring's offsets are taken at the foot face
+    for q in parts:
+        role = q["role"]
+        if role == "sector":
+            b0, b1 = q["sector"]["fromDeg"], q["sector"]["toDeg"]
+            az = 0.5 * (b0 + b1)
+            z0, z1 = L + over + m, T - m
+            z = zm(0.5 * (z0 + z1))
+            r = outline.ray(centre, az, z, ob)
+            half = 0.5 * (b1 - b0) - math.degrees((ft + cq["beadHeight"] + cq["clipArm"] + m) / r)
+            n2 = outline.normal2d(centre, az, z)
+            q["label"] = LB.radial(outline.point(centre, az, z, ob), [n2[0], n2[1], 0.0], up, LB.arc_width(r, half),
+                                   z1 - z0, ob, [z0 - 1.0, z1 + 1.0])
+        elif role == "core" and not q["isBase"]:
+            f = next((f for f in q["_flat"] if abs(_unit(f["plane"]["normal"])[2]) < 1e-9), None)
+            if f is None:
+                continue
+            rel = _unit([q["release"][0], q["release"][1], 0.0])
+            z0, z1 = L + (ft if has_ledge else 0.0) + m, T - m
+            z = zm(0.5 * (z0 + z1))
+            o = f["plane"]["origin"]
+            t = rel[0] * (centre[0] - o[0]) + rel[1] * (centre[1] - o[1]) + bp
+            org = [centre[0] - rel[0] * t, centre[1] - rel[1] * t, z]
+            half = min(outline.ray(centre, b, zm(z0), 0.0) for b in (bounds[0], bounds[0] + 180.0)) + of \
+                - CL.barb(cq)["xTip"] - m
+            q["label"] = LB.plane(org, _mul(rel, -1.0), up, 2.0 * half, z1 - z0)
+        elif q["isBase"]:
+            off = (stand["innerOffsetMm"] if stand else of) - m
+            n = 24
+            rho = min(outline.ray(centre, bounds[0] + (bounds[-1] - bounds[0]) * s / n, zm(zf), off) for s in range(n + 1))
+            if closed:
+                w, hb, _c = LB.disc_box(rho)
+                a = math.radians(0.5 * (bounds[0] + bounds[1]))
+                q["label"] = LB.plane([centre[0], centre[1], zm(B)], [0.0, 0.0, -up_z], [math.cos(a), math.sin(a), 0.0],
+                                      w, hb)
+            else:
+                w, hb, c = LB.disc_box(rho, half=True)
+                a = math.radians(bounds[0] + 90.0)  # into the half disc, the piece side
+                u = [math.cos(a), math.sin(a), 0.0]
+                q["label"] = LB.plane([centre[0] + u[0] * c, centre[1] + u[1] * c, zm(B)], [0.0, 0.0, -up_z],
+                                      _mul(u, -1.0), w, hb)
+        elif role == "stand" and stand:
+            so, sh = stand["outerOffsetMm"], stand["heightMm"]
+            az = 0.5 * (bounds[0] + bounds[-1]) if not closed else 0.5 * (bounds[0] + bounds[1])
+            r = outline.ray(centre, az, zm(zf), so)
+            n2 = outline.normal2d(centre, az, zm(zf))
+            pt = outline.point(centre, az, zm(zf), so)
+            q["label"] = LB.radial([pt[0], pt[1], zm(B - sh / 2.0)], [n2[0], n2[1], 0.0], up,
+                                   LB.arc_width(r, 0.5 * (bounds[-1] - bounds[0])), sh - 1.0, so,
+                                   [B - sh - 1.0, B + 1.0], ref_zp=zf, n_lines=1)
 
 
 def _piece_region(outline, centre, bounds, z0, z1, closed):
@@ -1134,11 +1454,36 @@ def _plate_points(outline, q, f, centre, bounds, base_z, top_z, off, bp, ft, reg
     return face + back + (region if q["role"] == "core" else [])
 
 
+def plan_pieces(pieces, outline, params=None, ridge_rule="safe"):
+    """plan_piece of every piece (in order), the dovetail clip lengths made standard over all of them: a first
+    pass collects each straight run's longest clip and each round foot run and radius; dovetail.standard_lengths
+    picks the fewest straight lengths serving them (clipDoveReuse), round_length the one round clip length and
+    round_radii the radius classes; a second pass plans with those (p["_doveStd"], p["_roundStd"])."""
+    outline = cast_outline(outline)
+    p = resolve_params(params)
+    plans = [plan_piece(pc, outline, p, ridge_rule) for pc in pieces]
+    clips = [j.get("clip") or {} for pl in plans for j in pl["joints"]]
+    lm = [v for c in clips for v in c.get("maxClipMm") or []]
+    runs = [v for c in clips for v in c.get("roundRuns") or []]
+    radii = [v for c in clips for v in c.get("roundRadii") or []]
+    if not lm and not runs:
+        return plans
+    dq = DV.dove_params(p)
+    p2 = dict(p)
+    if lm:
+        p2["_doveStd"] = DV.standard_lengths(lm, dq["clipDoveReuse"])
+    if runs:
+        rq = DV.round_params(dq)
+        L = DV.round_length(rq, runs)
+        if L:
+            p2["_roundStd"] = {"L": L, "radii": DV.round_radii(radii, L, rq["roundSagTol"])}
+    return [plan_piece(pc, outline, p2, ridge_rule) for pc in pieces]
+
+
 def plan_casings(pieces, outline, params=None, ridge_rule="safe"):
     """Plans of every piece: {pieces: [plan], parts: [...], joints: [...], nParts, nJoints,
     plannedOrders: {piece: [ids]}, status}."""
-    outline = cast_outline(outline)
-    plans = [plan_piece(pc, outline, params, ridge_rule) for pc in pieces]
+    plans = plan_pieces(pieces, outline, params, ridge_rule)
     parts = [q for pl in plans for q in pl["parts"]]
     joints = [j for pl in plans for j in pl["joints"]]
     st = [pl["checks"]["status"] for pl in plans]
@@ -1231,44 +1576,6 @@ def nozzle_multiple(wall_mm, params=None, tol=1e-6):
     return abs(k - round(k)) < tol and round(k) >= 1
 
 
-def pla_mass_g(volume_mm3, params=None):
-    """Upper-bound PLA mass (solid volume x plaDensity g/cm3)."""
-    return round(volume_mm3 / 1000.0 * resolve_params(params)["plaDensity"], 2)
-
-
-MATERIALS = ("PETG", "PLA")  # mold_casingMaterial choices; clips are always PETG
-CLIP_MATERIAL = "PETG"
-
-
-def material_key(word, default="PETG"):
-    """mold_casingMaterial value ('PETG', "pla", None) -> "PETG" | "PLA" (ValueError otherwise)."""
-    w = (str(word).strip().strip("'\"").strip() if word is not None else "") or default
-    if w.upper() not in MATERIALS:
-        raise ValueError("mold_casingMaterial %r: expected one of %s" % (word, " | ".join(MATERIALS)))
-    return w.upper()
-
-
-def part_name(material, part_id):
-    """Body / file name of a printed part: the material first ("PETG_side1_core")."""
-    return "%s_%s" % (material, part_id)
-
-
-def casing_material(thickest_section_mm, params=None, chosen="PETG"):
-    """The casing material (mold_casingMaterial, default PETG: heat deflection about 75 C against PLA's
-    58 C; setting plaster warms the casing to about 40-55 C) and the PRN-04 check: a warning when PLA is
-    chosen and the thickest plaster section exceeds petgSectionMm (unvalidated heuristic)."""
-    lim = resolve_params(params)["petgSectionMm"]
-    mat = material_key(chosen)
-    warn = None
-    if mat == "PLA" and thickest_section_mm > lim:
-        warn = ("thickest plaster section %.0f mm > %.0f mm with PLA casings: print them in PETG "
-                "(mold_casingMaterial 'PETG'; unvalidated heuristic, PRN-04)" % (thickest_section_mm, lim))
-    return {"material": mat, "thickestSectionMm": round(thickest_section_mm, 2), "limitMm": lim,
-            "suggested": "PETG", "warning": warn, "note": "PETG preferred for heat; PRN-04 heuristic"}
-
-
-def mass_g(volume_mm3, material, params=None):
-    """Solid mass (g) of a printed part in its material."""
-    p = resolve_params(params)
-    dens = p["petgDensity"] if material == "PETG" else p["plaDensity"]
-    return round(volume_mm3 / 1000.0 * dens, 1)
+def mass_g(volume_mm3, params=None):
+    """Solid mass (g) of a printed part: an upper bound (solid volume x filamentDensity g/cm3)."""
+    return round(volume_mm3 / 1000.0 * resolve_params(params)["filamentDensity"], 1)

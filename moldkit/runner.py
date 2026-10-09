@@ -16,7 +16,7 @@ There are no approval gates: the chain runs every stale stage and stops only on 
 status and first messages come from mold.json "pipeline" (moldkit.core.state), never from runs/.
 
 moldkit.fusion.runner_host.make_runner() binds it to the live design. Options: saveAfterStage (True),
-s7PerPiece (False: S7 builds every piece in one step; True: one piece per step after a reset of the S7+
+s7PerPiece (False: S7 builds every piece in one step; True: per piece a labels, a build and a checks step after a reset of the S7+
 outputs, then the {"check": true} aggregation step), stageArgs ({stage: args} for the stages),
 maxRepeats (2: a stage still first in the plan after this many passing runs is an error).
 """
@@ -257,8 +257,8 @@ class Runner:
                 return self._result(PIPE.S7, "error", ["Stopped: " + res["message"]],
                                     error=self._error(res["message"], PIPE.S7))
             pieces = [q.get("id") for q in self._mold().get("pieces") or [] if q.get("id")]
-            # two steps per piece (about 2 and 4 s): build its casing, then its checks
-            self._s7 = {"todo": [(pid, ph) for pid in pieces for ph in ("build", "checks")], "done": []}
+            # three steps per piece (about 5, 4 and 4 s): its label solids, its casing, then its checks
+            self._s7 = {"todo": [(pid, ph) for pid in pieces for ph in ("labels", "build", "checks")], "done": []}
         todo = self._s7["todo"]
         if todo:
             pid, phase = todo[0]

@@ -183,6 +183,62 @@ def mold_component(d, create=False):
     return occ, occ.component
 
 
+# Printed parts carried a material prefix until 2026-10-08 ("PETG_Casings", "PETG_side1_core", "PETG_clip_short");
+# older documents keep those names until S7 / S8 build again. Lookups go by the slipmold attributes first.
+LEGACY_NAME_PREFIXES = ("PETG_", "PLA_")
+
+
+def unprefixed(name):
+    """A component or body name without the old material prefix ("PETG_side1_core" -> "side1_core")."""
+    s = str(name or "")
+    for p in LEGACY_NAME_PREFIXES:
+        if s.startswith(p):
+            return s[len(p):]
+    return s
+
+
+def sub_components(slip, role, name):
+    """[(occurrence, component)] of the SlipMold sub-components that are a stage's component: tagged with the
+    slipmold role `role` (first), or named `name` or its older material-prefixed form ("PETG_Casings")."""
+    tagged, named = [], []
+    for occ in slip.occurrences:
+        comp = occ.component
+        if get_attr(comp, "role") == role:
+            tagged.append((occ, comp))
+        elif unprefixed(comp.name) == name:
+            named.append((occ, comp))
+    return tagged + named
+
+
+def sub_component(slip, role, name):
+    """(occurrence, component) of the first of sub_components(), (None, None) when there is none."""
+    found = sub_components(slip, role, name)
+    return found[0] if found else (None, None)
+
+
+def drop_name_prefixes(comp, name, stage, role, key):
+    """Give a stage component the name `name` and each of its bodies tagged stage/role the value of its `key`
+    attribute (the part id or the clip key; else its name without the old prefix), and drop the bodies' old
+    "material" attribute. -> [old names changed]."""
+    out = []
+    if comp.name != name:
+        out.append(comp.name)
+        comp.name = name
+    for b in comp.bRepBodies:
+        if get_attr(b, "stage") == stage and get_attr(b, "role") == role:
+            want = get_attr(b, key) or unprefixed(b.name)
+            if b.name != want:
+                out.append(b.name)
+                b.name = want
+            try:
+                old = b.attributes.itemByName(ATTR_GROUP, "material")
+                if old:
+                    old.deleteMe()
+            except Exception:
+                pass
+    return out
+
+
 def delete_stage_outputs(d, first_stage):
     """Delete every timeline item tagged with first_stage or a later stage (newest first)."""
     doomed = set(STAGE_ORDER[STAGE_ORDER.index(first_stage):])
@@ -336,12 +392,12 @@ def mold_values(d, defaults=None):
 
 def resolved(d, defaults=None):
     """moldkit.core.resolve.resolve() of the live mold_* parameters and the user config profiles:
-    {"values": {short name: value}, "source", "overrides", "unknown", "problems", "clipMaterial"}."""
+    {"values": {short name: value}, "source", "overrides", "unknown", "problems", "clipFilament"}."""
     from moldkit.core import resolve as R
 
     defaults = defaults or P.load_defaults()
     cfg = get_config()
-    return R.resolve(mold_values(d, defaults), defaults, cfg.get("printer"), cfg.get("materials"))
+    return R.resolve(mold_values(d, defaults), defaults, cfg.get("printer"), R.filament_config(cfg))
 
 
 def param_hashes(d, defaults=None):

@@ -12,7 +12,7 @@ from moldkit.core import params as P  # noqa: E402
 from moldkit.core import resolve as R  # noqa: E402
 
 DEFAULTS = P.load_defaults()
-INPUTS = ["plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "casingMaterial", "shrinkagePct"]
+INPUTS = ["plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "shrinkagePct"]
 
 
 def res(present=None, **kw):
@@ -28,7 +28,7 @@ class TierTest(unittest.TestCase):
         for n, _rule in R.DERIVED:
             self.assertIn(entries[n]["tier"], ("auto", "profile"), n)  # profile: the printer fit (PRN-22)
 
-    def test_the_seven_inputs(self):
+    def test_the_six_inputs(self):
         names = [n for n, e in R.live_entries(DEFAULTS).items() if R.tier(e) == "input"]
         self.assertEqual(sorted(names), sorted(INPUTS))
         self.assertEqual(R.input_names(DEFAULTS), [DEFAULTS["prefix"] + n for n in names])
@@ -144,7 +144,7 @@ class DerivedTest(unittest.TestCase):
             r = res({"clipPreload": preload})
             v = r["values"]
             self.assertEqual(r["problems"], [], preload)
-            q = CL.clip_params(v, r["clipMaterial"])
+            q = CL.clip_params(v, r["clipFilament"])
             rows = {c["check"]: c for c in CL.clip_checks(q, 8.0)}
             for name in ("snapStrain:p%.1f" % preload, "clipForce:short", "clipForce:rail"):
                 self.assertTrue(rows[name]["ok"], (preload, rows[name]))
@@ -156,7 +156,7 @@ class DerivedTest(unittest.TestCase):
     def test_mug_failure_cannot_happen_with_the_engine_arm(self):
         # Mug 01.1 stopped at snapStrain:p0.7 = 2.1 % with an old 3.5 mm arm; auto gives 2.4 mm (1.44 %)
         r = res({"clipWidth": 18.0})
-        q = CL.clip_params(r["values"], r["clipMaterial"])
+        q = CL.clip_params(r["values"], r["clipFilament"])
         self.assertEqual(r["values"]["clipArm"], 2.4)
         self.assertLessEqual(CL.clip_spec(q, 8.0, 0.7, 1, 18.0)["snapStrainWorstPct"], 1.5)
 
@@ -166,10 +166,20 @@ class DerivedTest(unittest.TestCase):
         r = res({"clipPreload": 0.05})
         self.assertTrue(any(p.startswith("clipSpacingMax:") for p in r["problems"]), r["problems"])
 
-    def test_material_profile_override(self):
-        stiff = res(materials={"PETG": {"strainMaxPct": 2.0}})
-        self.assertEqual(stiff["clipMaterial"]["strainMaxPct"], 2.0)
+    def test_clip_filament_override(self):
+        self.assertEqual(res()["clipFilament"], {"modulusMPa": [1000.0, 1200.0, 1500.0], "strainMaxPct": 1.5})
+        stiff = res(filament={"strainMaxPct": 2.0})
+        self.assertEqual(stiff["clipFilament"]["strainMaxPct"], 2.0)
         self.assertGreater(stiff["values"]["clipArm"], res()["values"]["clipArm"])
+
+    def test_filament_config_reads_new_and_older_configs(self):
+        self.assertEqual(R.filament_config({"clipFilament": {"strainMaxPct": 1.4}}), {"strainMaxPct": 1.4})
+        self.assertEqual(R.filament_config({"materials": {"PETG": {"strainMaxPct": 1.3}}}), {"strainMaxPct": 1.3})
+        self.assertEqual(R.filament_config({"clipFilament": {"strainMaxPct": 1.4},
+                                            "materials": {"PETG": {"strainMaxPct": 1.3}}}), {"strainMaxPct": 1.4})
+        for cfg in (None, {}, {"materials": {"PLA": {"strainMaxPct": 1.0}}}, {"materials": "bad"},
+                    {"clipFilament": "bad"}):
+            self.assertIsNone(R.filament_config(cfg), cfg)
 
     def test_printer_profile_and_override_order(self):
         self.assertEqual(res(printer={"bedX": 220})["values"]["bedX"], 220.0)
@@ -199,11 +209,25 @@ class HashTest(unittest.TestCase):
         self.assertEqual(base["layout"], wall["layout"])
         self.assertNotEqual(base["plaster"], wall["plaster"])  # plasterWall and the derived plasterBase
 
-    def test_clip_material_in_the_clip_scopes(self):
+    def test_clip_filament_in_the_clip_scopes(self):
         base = R.scoped_hashes(res(), DEFAULTS)
-        soft = R.scoped_hashes(res(materials={"PETG": {"modulusMPa": [900, 1000, 1100]}}), DEFAULTS)
+        soft = R.scoped_hashes(res(filament={"modulusMPa": [900, 1000, 1100]}), DEFAULTS)
         self.assertEqual(base["pieces"], soft["pieces"])
         self.assertNotEqual(base["clips"], soft["clips"])
+
+    def test_retired_casing_material_is_ignored(self):
+        # older designs still have the input mold_casingMaterial (retired 2026-10-08)
+        for word in ("PETG", "PLA", "'PLA'", "ABS"):
+            r = res({"mold_casingMaterial": word, "mold_plasterWall": 30.0})
+            self.assertEqual(r["unknown"], {}, word)
+            self.assertEqual(r["problems"], [], word)
+            self.assertNotIn("casingMaterial", r["values"])
+            self.assertEqual(R.scoped_hashes(r, DEFAULTS), R.scoped_hashes(res({"mold_plasterWall": 30.0}), DEFAULTS))
+        self.assertEqual(res({"casingMaterial": "PLA"})["values"]["seamClearance"], 0.16)  # no PLA fit any more
+        self.assertEqual(R.retired_names(["mold_plasterWall", "mold_casingMaterial", "casingMaterial"]),
+                         ["mold_casingMaterial", "mold_casingMaterial"])
+        self.assertEqual(R.retired_names({"mold_layout": "'auto'"}), [])
+        self.assertNotIn("casingMaterial", R.live_entries(DEFAULTS))
 
     def test_float_noise_does_not_change_a_hash(self):
         a = R.scoped_hashes(res({"plasterWall": 25.0}), DEFAULTS)
@@ -212,7 +236,7 @@ class HashTest(unittest.TestCase):
 
 
 class PrinterFitTest(unittest.TestCase):
-    """PRN-22: printed clearances follow the nozzle, the calibrated fit offset and the casing material."""
+    """PRN-22: printed clearances follow the nozzle and the calibrated fit offset."""
 
     def fits(self, present=None, **printer):
         v = res(present, printer=printer)["values"]
@@ -227,10 +251,10 @@ class PrinterFitTest(unittest.TestCase):
         self.assertEqual(self.fits(nozzle=0.6), (0.185, 0.75, 0.535))  # 2 x 0.36 = 0.72 -> 0.75
         self.assertEqual(self.fits(nozzle=0.8), (0.21, 1.0, 0.56))      # 2 x 0.48 = 0.96 -> 1.0
 
-    def test_fit_offset_and_material(self):
+    def test_fit_offset(self):
         self.assertEqual(self.fits(fitOffset=0.1)[0], 0.26)
         self.assertEqual(self.fits(fitOffset=-0.3)[0], R.SEAM_CLEARANCE_MIN)
-        self.assertEqual(self.fits({"casingMaterial": "PLA"})[0], 0.11)
+        self.assertEqual(self.fits(fitOffset=-0.05)[0], 0.11)
         self.assertEqual(self.fits(fitOffset=0.1)[1], 0.5)  # Z gaps count layers, not the XY offset
 
     def test_calibrated_profile_and_mold_override_win(self):

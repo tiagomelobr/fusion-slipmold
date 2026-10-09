@@ -28,15 +28,14 @@ GROUP_INFO = {
     "natches": "The spherical keys that register the plaster pieces to each other.",
     "casing": "The 3D-printed casing (mother mold) walls and fill line.",
     "seams": "Flanges, ridges and grooves where casing parts meet.",
-    "clips": "The PETG clips that hold casing flanges together.",
+    "clips": "The printed clips that hold casing flanges together.",
     "printer": "Your printer: bed size, safety margin and nozzle.",
 }
 # scope -> first stage that must run again when a parameter of that scope changes
 SCOPE_STAGE = {"plug": PIPE.S2, "layout": PIPE.S3, "plaster": PIPE.S4, "pieces": PIPE.S5, "casing": PIPE.S7,
                "clips": PIPE.S8}
 # the inputs in the order the docs list them (most often changed first); others follow in defaults.json order
-INPUT_ORDER = ("plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "casingMaterial",
-               "shrinkagePct")
+INPUT_ORDER = ("plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "shrinkagePct")
 STAGE_TITLE = {PIPE.S2: "S2", PIPE.S3: "S3", PIPE.S4: "S4", PIPE.S5: "S5", PIPE.S7: "S7", PIPE.S8: "S8"}
 STAGE_ORDER = {s: i for i, s in enumerate(PIPE.STAGE_NAMES)}
 
@@ -192,15 +191,14 @@ def render(defaults):
         L.append("| `%s%s` | %s | %s | %s | %s |" % (P_, p["name"], default_expr(p), unit(p), describe(p),
                                                     p.get("rule", "")))
     L.append("")
-    materials = defaults.get("materials") or {}
-    if materials:
-        L += ["The clip material's constants are in the `materials` block of `moldkit/defaults.json`; the `\"materials\"` "
-              "key of the same config file overrides them, for example `{\"materials\": {\"PETG\": {\"strainMaxPct\": "
-              "1.4}}}`.", "",
-              "| Material | Modulus low / mid / high (MPa) | Strain limit (%) | Description |", "|---|---|---|---|"]
-        for name, m in materials.items():
-            L.append("| %s | %s | %s | %s |" % (name, " / ".join("%g" % x for x in m.get("modulusMPa", [])),
-                                                m.get("strainMaxPct", ""), esc(m.get("desc", ""))))
+    fil = defaults.get("clipFilament") or {}
+    if fil:
+        L += ["The clip filament's stiffness, which sizes the clip arms, is in the `clipFilament` block of "
+              "`moldkit/defaults.json`; the `\"clipFilament\"` key of the same config file overrides it, for example "
+              "`{\"clipFilament\": {\"strainMaxPct\": 1.4}}`.", "",
+              "| Modulus low / mid / high (MPa) | Strain limit (%) | Description |", "|---|---|---|"]
+        L.append("| %s | %s | %s |" % (" / ".join("%g" % x for x in fil.get("modulusMPa", [])),
+                                       fil.get("strainMaxPct", ""), esc(fil.get("desc", ""))))
         L.append("")
 
     # ---- the engine's values

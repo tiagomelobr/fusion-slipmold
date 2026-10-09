@@ -6,7 +6,8 @@ module only decides. State keys (all optional except where noted):
   params     {mold_*: expression} live user parameters (required: S1 and block checks)
   values     {mold_*: value} the same parameters as Fusion evaluates them (mm, deg, numbers, unquoted text);
              the hashes resolve these (moldkit.core.resolve); default: params parsed
-  printer    the user config "printer" profile overrides {name: number}; materials: its "materials"
+  printer    the user config "printer" profile overrides {name: number}; filament: its clip filament override
+             (resolve.filament_config)
   defaults   defaults.json content (for the parameter groups; default: moldkit/defaults.json)
   mold       mold.json content; its "pipeline" entry (moldkit.core.state) holds each stage's last status,
              run number and kept report keys. The run reports in runs/ are never read.
@@ -53,8 +54,13 @@ STEP_SECONDS = 4.0  # time budget of one S3/S8 call (the add-in's target is abou
 # per-piece results carry their build, repair 2 R1/R7; 4: ridgeCount small ridges per seam with the junction
 # rule, seal kit v3 port 2026-10-06; 5: clip beads, stop lugs, edge chamfers and the stand; 6: printer fit
 # PRN-22 2026-10-07 -- grooves 0.5 mm deep past the ridge, nozzle-aware groove walls, clip openings by fit;
-# 7: fewer sectors when only that keeps every sector seam ridged (the Mug bottom: 3), 2026-10-07).
-CASING_BUILD = 7
+# 7: fewer sectors when only that keeps every sector seam ridged (the Mug bottom: 3), 2026-10-07;
+# 8: side cores get a ledge on a floor extension with short clips and print on their foot, engraved part
+# labels, part names without the material, 2026-10-08; 9: dovetail heads and stop lugs on straight seams
+# for the dovetail clips, clipRailStyle, 2026-10-08; 10: standard dovetail clip lengths, two-sided laps on
+# standing cores, dovetail clips on core ledges with a recessed groove in the floor's underside, 2026-10-08;
+# 11: round clip stations on circular foot seams -- stepped curved heads, lugs, grooves, notch pockets).
+CASING_BUILD = 11
 # Layouts S5 can split today (moldkit.fusion.s5_split.SUPPORTED); S3 may still propose the others.
 SPLIT_LAYOUTS = ("dropOut", "sides2", "sides2Bottom")
 _STAGE_RE = re.compile(r"^s(\d+)_")
@@ -92,13 +98,13 @@ def resolved(state, defaults=None):
     values = state.get("values")
     if values is None:
         values = R.present_values(state.get("params") or {}, defaults)
-    return R.resolve(values, defaults, state.get("printer"), state.get("materials"))
+    return R.resolve(values, defaults, state.get("printer"), state.get("filament"))
 
 
-def current_hashes(values, defaults, printer=None, materials=None):
+def current_hashes(values, defaults, printer=None, filament=None):
     """Scoped hashes of the resolved live parameters (every params.HASH_SCOPES scope plus "plug" = ware +
     spare). values: {mold_*: value or expression}."""
-    res = R.resolve(R.present_values(values, defaults), defaults, printer, materials)
+    res = R.resolve(R.present_values(values, defaults), defaults, printer, filament)
     return R.scoped_hashes(res, defaults)
 
 
@@ -304,6 +310,10 @@ def s1_reasons(state):
     missing = [n for n in R.input_names(defaults) if n not in params]
     if missing:
         out.append("missing parameters: %s" % ", ".join(missing[:6]) + (" ..." if len(missing) > 6 else ""))
+    kept = mold.get("retiredKept") or []  # S1 could not delete them (referenced): no reason to run it again
+    retired = [n for n in R.retired_names(params, defaults["prefix"]) if n not in kept]
+    if retired:
+        out.append("retired parameters to delete: %s" % ", ".join(retired))
     stored = mold.get("params")
     if stored is None:
         out.append("no params in mold.json")

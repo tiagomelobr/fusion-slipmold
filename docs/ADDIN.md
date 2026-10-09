@@ -54,7 +54,8 @@ Behaviour worth knowing:
   S3 (the layout search), S8 (the clip site checks) and S9 (one part per step) are `CALL_PER_STEP` stages: a call
   ends partial after its time budget, and the next call resumes it (S3 from `runs/s3_cache.json`, S8 from the site
   checks in `mold.json`, S9 from `exportProgress`). With "Casings one piece per step (S7)" on, S7 is reset when it
-  is next, then run as two steps per piece (build, then checks) and one aggregate step; off, S7 runs in one step.
+  is next, then run as three steps per piece (label solids, build, then checks) and one aggregate step; off, S7
+  runs in one step.
   Measured on 2026-10-07/08, no saves: the Small Cup leak test 39 steps, the longest 4.4 s; Mug 01.1 41 steps, the
   longest 4.1 s, 40 s in all. A save adds about 1.5 s to its step. `runs/addin.log` lists every step with its wall
   time, for example `step 12: s3_moldability: partial (3.6 s) [3.9 s]`.
@@ -77,7 +78,7 @@ Behaviour worth knowing:
 
 | Where | Keys |
 |---|---|
-| `%APPDATA%/SlipMold/config.json` (`~/.slipmold/config.json` when APPDATA is unset) | `moldsDir`, `saveAfterStage`, `s7PerPiece`, `printer` (the printer profile, mm: `{"nozzle": 0.6, "fitOffset": 0.05, "bedX": 220}`; Make mold sets nozzle and fitOffset), `materials` (clip material constants: `{"PETG": {"strainMaxPct": 1.4}}`) |
+| `%APPDATA%/SlipMold/config.json` (`~/.slipmold/config.json` when APPDATA is unset) | `moldsDir`, `saveAfterStage`, `s7PerPiece`, `printer` (the printer profile, mm: `{"nozzle": 0.6, "fitOffset": 0.05, "bedX": 220}`; Make mold sets nozzle and fitOffset), `clipFilament` (the clip filament stiffness: `{"strainMaxPct": 1.4}`) |
 | environment variable `MOLDKIT_MOLDS_DIR` | folder that receives `<design>/` (read at call time, wins over the config) |
 | `addin/SlipMold/SlipMold.config.json` (copy mode only) | `repo`: the repository path |
 

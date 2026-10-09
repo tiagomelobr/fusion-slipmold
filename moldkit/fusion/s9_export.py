@@ -32,7 +32,7 @@ While parts are being written mold.json "export" is a status-partial entry (repa
 failed run never leaves a finished export behind). The finish call writes exports/process-sheet.html
 (moldkit.core.process; the run's warnings from mold.json pipeline on top), removes stale part files and an
 old process-sheet.md, re-reads the smallest file per kind (casing, clip) and writes the manifest (file, part,
-piece, role, material, count, bbox mm, volume cm3, mesh checks, mesh settings, bytes) to the report data
+piece, role, count, bbox mm, volume cm3, mesh checks, mesh settings, bytes) to the report data
 (kept in the pipeline state) and mold.json "export".
 
 args:
@@ -114,30 +114,27 @@ def merged_settings(defaults, mold):
 
 
 def file_name(part, fmt):
-    """Export file name of a part row {name, role, material, count}: the material first (S7 / S8 body
-    names already start with it), clips with their count ("PETG_clip_short_x12.3mf")."""
+    """Export file name of a part row {name, role, count}: the body name, clips with their count
+    ("clip_short_x12.3mf")."""
     ext = "." + fmt
-    name, mat = part["name"], part.get("material")
-    if mat and not name.startswith(mat + "_"):
-        name = "%s_%s" % (mat, name)
     if part["role"] == "clip":
-        return "%s_x%d%s" % (name, int(part.get("count") or 1), ext)
-    return name + ext
+        return "%s_x%d%s" % (part["name"], int(part.get("count") or 1), ext)
+    return part["name"] + ext
 
 
-def part_rows(mold, casing_material):
-    """Printed parts from mold.json casings + clips: [{name, piece, role, material, count, kind, printMode}]
-    (casing parts and stands once each; every S8 clip body once with its count, spares included)."""
+def part_rows(mold):
+    """Printed parts from mold.json casings + clips: [{name, id, piece, role, count, kind, printMode}] (casing
+    parts and stands once each; every S8 clip body once with its count, spares included). id: the part id or
+    clip key the body is tagged with (live_bodies)."""
     rows = []
     for q in (mold.get("casings") or {}).get("parts") or []:
-        rows.append({"name": q["name"], "piece": q["piece"], "role": q["role"],
-                     "material": q.get("material") or casing_material,
-                     "count": 1, "kind": "casing", "printMode": (q.get("print") or {}).get("mode")})
+        rows.append({"name": q["name"], "id": q.get("id") or C.unprefixed(q["name"]), "piece": q["piece"],
+                     "role": q["role"], "count": 1, "kind": "casing", "printMode": (q.get("print") or {}).get("mode")})
     for c in (mold.get("clips") or {}).get("bodies") or []:
         if isinstance(c, dict) and c.get("name"):
-            rows.append({"name": c["name"], "piece": None, "role": "clip", "material": c.get("material") or "PETG",
-                         "count": int(c.get("count") or 1), "kind": "clip", "printMode": c.get("printMode"),
-                         "spare": bool(c.get("spare"))})
+            rows.append({"name": c["name"], "id": c.get("key") or C.unprefixed(c["name"]), "piece": None,
+                         "role": "clip", "count": int(c.get("count") or 1), "kind": "clip",
+                         "printMode": c.get("printMode"), "spare": bool(c.get("spare"))})
     return rows
 
 
@@ -306,7 +303,8 @@ def _bbox_mm(b):
 
 
 def live_bodies(d):
-    """{name: body} of the s7 casing parts and s8 clip bodies in SlipMold sub-components."""
+    """{part id or clip key: body} of the s7 casing parts and s8 clip bodies in SlipMold sub-components, by
+    their "part" / "clip" attribute (else the body name without an older material prefix)."""
     _occ, slip = C.mold_component(d)
     out = {}
     if slip is None:
@@ -314,8 +312,10 @@ def live_bodies(d):
     for occ in slip.allOccurrences:
         for b in occ.component.bRepBodies:
             st, role = C.get_attr(b, "stage"), C.get_attr(b, "role")
-            if (st == "s7" and role == "casingPart") or (st == "s8" and role == "clipPart"):
-                out[b.name] = b
+            if st == "s7" and role == "casingPart":
+                out[C.get_attr(b, "part") or C.unprefixed(b.name)] = b
+            elif st == "s8" and role == "clipPart":
+                out[C.get_attr(b, "clip") or C.unprefixed(b.name)] = b
     return out
 
 
@@ -451,10 +451,9 @@ def run(args):
     ndeg = float(exp.get("normalDeviationDeg", 10))
     cap = int(args.get("maxTriangles") or exp.get("maxTriangles") or DEFAULT_MAX_TRIANGLES)
     ladder = mesh_ladder(dev_mm, ndeg)
-    casing_mat = (((mold.get("casings") or {}).get("checks") or {}).get("material") or {}).get("material", "PLA")
-    parts = part_rows(mold, casing_mat)
+    parts = part_rows(mold)
     bodies = live_bodies(d)
-    gone = [q["name"] for q in parts if q["name"] not in bodies]
+    gone = [q["name"] for q in parts if q["id"] not in bodies]
     if gone:
         report.fail(r, "bodies missing in the design: %s" % ", ".join(gone[:8]))
         return r
@@ -467,7 +466,7 @@ def run(args):
         load_progress(mold.get("exportProgress"), hashes["clips"], fmt)
     keys, sizes, m4s = {}, {}, {}
     for q in parts:
-        b = bodies[q["name"]]
+        b = bodies[q["id"]]
         m4s[q["name"]] = json.loads(C.get_attr(b, "printTransform") or "null")
         keys[q["name"]] = part_key(q, fmt, dev_mm, ndeg, cap, m4s[q["name"]], b.volume)
         path = os.path.join(exp_dir, file_name(q, fmt))
@@ -495,7 +494,7 @@ def run(args):
     # mark the export unfinished before the first file changes (repair M5)
     C.write_mold_json(d, {"export": export_in_progress(hashes["clips"], len(parts) - len(pending), len(parts))})
     tbm = adsk.fusion.TemporaryBRepManager.get()
-    b = bodies[name]
+    b = bodies[q["id"]]
     att = prog["attempts"].get(name)
     level0 = start_level(att, len(ladder))
     res = mesh_part(tbm, b, m4s[name], ladder, level0, cap, t0, budget)
@@ -595,14 +594,10 @@ def _finish(r, ctx, pending):
             removed.append(f)
 
     # process sheet
-    s4sum = C.stage_report("s4_plaster").get("summary") or {}
-    thick = max((s4sum.get("wall3d") or {}).get("maxMm") or 0.0,
-                (values.get("plasterBase") or 0.0) + ((mold.get("layout") or {}).get("bottomSplitMm") or 0.0))
-    pieces = [{"id": q["id"], "volumeCm3": q.get("volumeCm3") or 0.0, "thickestSectionMm": thick}
-              for q in mold.get("pieces") or []]
+    pieces = [{"id": q["id"], "volumeCm3": q.get("volumeCm3") or 0.0} for q in mold.get("pieces") or []]
     clips = (mold.get("clips") or {})
     sheet_parts = [{"name": x["name"], "piece": x["piece"], "role": x["role"], "volumeCm3": x["volumeCm3"],
-                    "material": x["material"], "count": x["count"],
+                    "count": x["count"],
                     "orientation": x.get("printMode") if x["kind"] == "clip" else None}
                    for x in manifest]
     nozzle = values.get("nozzle") or 0.4
@@ -613,15 +608,19 @@ def _finish(r, ctx, pending):
                                   "bodies": [b for b in clips.get("bodies") or [] if isinstance(b, dict)]},
                            orders=casing_orders(mold), plaster_order=plaster_order(mold), settings=settings,
                            nozzle_mm=nozzle, casing_wall_mm=values.get("casingWall"),
-                           exports=["%s (%s, %s, x%d)" % (x["file"], x["material"], x["role"], x["count"])
+                           exports=["%s (%s, x%d)" % (x["file"], x["role"], x["count"])
                                     for x in manifest],
                            joints=joints, fit=printer_fit(values, ctx.get("nozzleOverride", False)),
                            run_warnings=run_warnings(C.read_mold_json(), r["warnings"]))
     modes = {x["name"]: x.get("printMode") for x in manifest}
+    roles = {x["name"]: x.get("role") for x in manifest}
     for row in sheet["parts"]:
         mode = modes.get(row["name"]) or ""
         if mode.startswith("lapFaceOnBed"):
             row["orientation"] = "on its lap face (%s), plate edge up" % mode.split(":", 1)[-1]
+        elif mode == "footOnBed" and roles.get(row["name"]) == "core":
+            row["orientation"] = ("standing on its foot, ledge on the bed; support the spare step (knife ledge) "
+                                  "from the build plate")
         elif mode == "footOnBed":
             row["orientation"] = "standing on the foot flange"
         elif mode == "standFlat":
@@ -639,7 +638,7 @@ def _finish(r, ctx, pending):
     if tl1 != ctx["tl0"]:
         report.fail(r, "timeline count changed %d -> %d (S9 must not modify the design)" % (ctx["tl0"], tl1))
     man_out = [{"file": x["file"], "part": x["name"], "piece": x["piece"], "role": x["role"], "kind": x["kind"],
-                "material": x["material"], "count": x["count"], "sizeMm": x["sizeMm"], "bboxMm": x["bboxMm"],
+                "count": x["count"], "sizeMm": x["sizeMm"], "bboxMm": x["bboxMm"],
                 "volumeCm3": x["volumeCm3"], "meshVolumeCm3": x["meshVolumeCm3"], "triangles": x["triangles"],
                 "shells": x["shells"], "bytes": x["bytes"], "mesh": x["mesh"], "printMode": x.get("printMode")}
                for x in manifest]
@@ -657,7 +656,7 @@ def _finish(r, ctx, pending):
                     "maxTriangles": max(x["triangles"] for x in manifest), "clipCount": clips.get("total"),
                     "reread": reread, "removed": removed, "timeline": [ctx["tl0"], tl1],
                     "processSheet": html_path.replace("\\", "/"), "plasterTotals": sheet["totals"],
-                    "casingMaterial": sheet["casingMaterial"]["material"], "leakTest": leak, "seconds": round(time.perf_counter() - t0, 2)}
+                    "leakTest": leak, "seconds": round(time.perf_counter() - t0, 2)}
     r["data"] = {"manifest": man_out, "checks": checks, "sheet": {k: sheet[k] for k in ("pieces", "totals", "orders",
                                                                                        "plasterOrder", "clips")}}
     return r

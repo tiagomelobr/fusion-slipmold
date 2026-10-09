@@ -27,18 +27,20 @@ natch forms and plug details are exact:
   Clip features (moldkit.core.clips, sites planned by casing.plan_clips): a 30/50-deg bead on the
   sector foot's top over the foot clip run and 45-deg edge chamfers (top 0.6, base back 0.35 x 0.6) so
   the short clips push on from the flange edge; beads on the vertical flange faces from the stop lugs
-  (lugHeight above the foot) to the top, for the rail clips slid down from the top; the stand part
-  ("<piece>_stand", standHeight ring under the base) so the foot clips' flat arm wraps under the base.
-  The stand takes no part in the release search or the cavity check.
+  (lugHeight above the foot) to the top, for the rail clips slid down from the top (clipRailStyle snap), or
+  instead tapered dovetail heads over the same run with a stop lug under it (clipRailStyle dovetail,
+  moldkit.core.dovetail; the edge corner chamfered). No stand part (removed 2026-10-08).
 Checks: L4 release order search (TemporaryBRep moves 0.05 / 0.2 / 1.0 cm along each part's pull
 against the piece and the parts still present, tolerance releaseToleranceCm3); L5 cavity gap,
 part-piece and part-part interference; L6 bed fit in print orientation, overhang area beyond
-45 deg, nozzle multiples, PLA mass, material suggestion.
+45 deg, nozzle multiples, part mass.
 
 args: {} all pieces in one call | {"piece": id} one piece (build + its checks; replaces only that
 piece's casing; mold.json "casings" becomes status partial, so S8 / S9 / the pipeline refuse it until
-the check call) | {"piece": id, "phase": "build"} only builds that piece's casing, and {"piece": id,
-"phase": "checks"} then runs its checks (two steps of about 2-4 s instead of one; the checks reuse the build's
+the check call) | {"piece": id, "phase": "labels"} makes that piece's engraved label solids and keeps them in
+memory for its build (about 1 s a label; the build makes them itself when they are missing) |
+{"piece": id, "phase": "build"} only builds that piece's casing, and {"piece": id,
+"phase": "checks"} then runs its checks (steps of about 5, 5 and 2 s instead of one; the checks reuse the build's
 temporary bodies kept in memory, or rebuild them off the design when the add-in reloaded moldkit in between) |
 {"check": true} aggregate the per-piece results (runs/s7_casings.<piece>.json) into runs/s7_casings.json and
 mold.json "casings" (read-only for the design). A pass / warn aggregate deletes the per-piece files. Use the
@@ -57,11 +59,13 @@ from moldkit import pipeline as PIPE
 from moldkit.core import casing as K
 from moldkit.core import clips as CL
 from moldkit.core import demold as DM
+from moldkit.core import dovetail as DV
+from moldkit.core import labels as LB
 from moldkit.core import params as P
 from moldkit.core import report
 from moldkit.fusion import context as C
 from moldkit.fusion import frame as F
-from moldkit.fusion import materials as MAT
+from moldkit.fusion import labels as FL
 
 STAGE = "s7"
 STAGE_NAME = "s7_casings"
@@ -72,7 +76,8 @@ BIG = 2000.0  # mm, half-space box size
 # {"piece": id, "phase": "build"} -> what its "checks" call needs: {piece: {"key", "plan", "extra", "tb"}}
 # (temporary BRep bodies; kept between the steps of one add-in chain, rebuilt when missing)
 _BUILT = {}
-PHASES = (None, "build", "checks")
+PHASES = (None, "labels", "build", "checks")
+_LABELS = {}  # piece -> {"key", "tools", "rows"}: label solids of the labels phase, for the next build
 VOLUME_TOL_CM3 = 1e-3
 OVERHANG_WARN_MM2 = 50.0
 
@@ -319,8 +324,11 @@ def _tanv(b):
     return (-math.sin(math.radians(b)), math.cos(math.radians(b)))
 
 
-def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n):
-    """Temporary bodies {part id: body} of one piece's casing. ex: {inset, slab, fillHeight}."""
+def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n, labels=None):
+    """Temporary bodies {part id: body} of one piece's casing. ex: {inset, slab, fillHeight}. labels:
+    {part id: label solid placed on the part's plan label (moldkit.fusion.labels)}, engraved into the part;
+    without it (the checks' rebuild) the parts are left plain but the cavity envelope still loses the label
+    boxes."""
     up = plan["up"][2]
     G = Geo(tbm, ol, plan["baseZ"], up, plan["centre"])
     parts = {q["id"]: q for q in plan["parts"]}
@@ -373,12 +381,20 @@ def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n):
     zc = 0.0
     if ex.get("chamfer") and min(abs(plan["baseZ"] - ol.zb), abs(plan["baseZ"] - ol.ztop)) < 1e-3:
         zc = float(ex["chamfer"])
-    # base part (vertical core: the floor's flange band runs on under the core plate foot, d 0..bp;
-    # horizontal sliding lap at zp = L, nothing below the plate back, so the floor prints back down)
+    # base part (vertical core: the floor's flange band runs on under the core plate foot, d 0..bp, and
+    # under its ledge to bp + flangeWidth; horizontal sliding lap at zp = L, nothing below the plate back,
+    # so the floor prints back down)
+    ledge = vcore and any(j.get("lapKind") == "baseSlide" for j in plan["joints"])
+    lw = p["flangeWidth"] if ledge else 0.0
+    foot = None
+    if ledge:  # the plug under the piece's base face down to the lap plane: the core prints on its foot
+        foot = G.inter(G.copy(plug_n), G.prism([(d, "<=", 0.0)], L, 0.0))
     bb = G.union(G.cone(L, 0.0, 0.0), G.cone(B, L, of))
     if vcore:
         G.inter(bb, G.le(d, 0.0))
-        G.union(bb, G.prism([(d, ">=", 0.0), (d, "<=", bp)] + lat, B, L))
+        G.union(bb, G.prism([(d, ">=", 0.0), (d, "<=", bp + lw)] + lat, B, L))
+    if foot is not None:
+        G.cut(bb, foot)
     slab = G.cone(0.0, s, -inset)
     if vcore:
         G.inter(slab, G.le(d, 0.0))
@@ -402,6 +418,8 @@ def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n):
         cs = G.inter(G.cone(s, H, -inset), G.prism([(d, ">=", -s), (d, "<=", 0.0)], s - 1.0, H + 1.0))
         G.cut(cs, plug)
         G.union(plate, cs, piece_region(G.copy(plug_n)))
+        if ledge:  # the ledge behind the plate back on the floor extension (clear of the arc-end notches), and
+            G.union(plate, G.prism([(d, ">=", bp - 0.5), (d, "<=", bp + lw)] + lat, L, L + ft), foot)  # the plug foot
         out[core["id"]] = G.cut(plate, piece)
 
     # sectors
@@ -490,11 +508,58 @@ def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n):
                           "count": len(starts)})
 
     clip_log, chamfers = clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T)
+    # engraved labels (moldkit.core.labels): label solid x the skin under the label surface
+    depth = LB.LABEL["depthMm"]
+    boxes, engraved, plain = None, [], {}
+    for q in plan["parts"]:
+        lab = q.get("label")
+        if not lab or q["id"] not in out:
+            continue
+        skin = label_skin(G, lab, depth)
+        boxes = _join_opt(G, boxes, label_box(G, lab, G.copy(skin)))
+        tool = (labels or {}).get(q["id"])
+        if tool is not None:
+            plain[q["id"]] = G.copy(out[q["id"]])  # for the overhang check: the letters' roofs print as ledges
+            G.cut(out[q["id"]], G.inter(G.copy(tool), skin))
+            engraved.append(q["id"])
     envelope = cavity_envelope(G, plan, parts, p, d, lat, ends, H, T, ex["fillHeight"])
     if chamfers is not None:  # the clip edge chamfers are meant to be open
         G.cut(envelope, chamfers)
+    if boxes is not None:  # and so are the engraved labels
+        G.cut(envelope, boxes)
     return out, {"ridges": ridge_log, "clipFeatures": clip_log, "booleans": G.booleans, "envelope": envelope,
-                 "clearance": clear, "piece": piece, "H": H, "T": T}
+                 "clearance": clear, "piece": piece, "H": H, "T": T, "engraved": engraved, "plain": plain}
+
+
+LABEL_REACH_MM = 20.0  # half the label solid's through-depth (moldkit.fusion.labels.EXTRUDE_MM / 2)
+
+
+def _join_opt(G, acc, body):
+    return body if acc is None else G.union(acc, body)
+
+
+def label_skin(G, lab, depth):
+    """The layer `depth` deep under a label's surface (1 mm proud of it, to cut cleanly): a slab under a
+    planar face, or the shell between the outline offsets offsetMm + 1 and offsetMm - depth over zp."""
+    if lab["kind"] == "radial":
+        z0, z1 = lab["zp"]
+        ref = lab.get("refZp")
+        return G.cut(G.cone(z0, z1, lab["offsetMm"] + 1.0, ref_zp=ref),
+                     G.cone(z0 - 1.0, z1 + 1.0, lab["offsetMm"] - depth, ref_zp=ref))
+    n, o = lab["n"], lab["origin"]
+    h = n[0] * o[0] + n[1] * o[1] + n[2] * o[2]
+    return G.inter(G.hs3(n, h + 1.0), G.hs3([-x for x in n], -(h - depth)))
+
+
+def label_box(G, lab, skin):
+    """skin limited to the label's box (maxW x maxH + 1 mm around, LABEL_REACH_MM along its normal): the
+    engraving's region, cut from the cavity envelope."""
+    o = lab["origin"]
+    for v, half in ((lab["x"], lab["maxW"] / 2.0 + 1.0), (lab["y"], lab["maxH"] / 2.0 + 1.0),
+                    (lab["n"], LABEL_REACH_MM)):
+        k = v[0] * o[0] + v[1] * o[1] + v[2] * o[2]
+        G.inter(skin, G.hs3(v, k + half), G.hs3([-x for x in v], -(k - half)))
+    return skin
 
 
 def clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T):
@@ -515,7 +580,28 @@ def clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T):
     for j in plan["joints"]:
         cj = j.get("clip") or {}
         A, Bp = j["parts"]
-        if cj.get("type") == "short":
+        if cj.get("type") == "short" and j.get("lapKind") == "baseSlide":
+            # core ledge (straight): w = inward from the ledge edge (d = bp + flangeWidth), s = along the edge
+            de = bp + p["flangeWidth"]
+            p0, p1 = j["path"][0], j["path"][-1]
+            ln = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+            s = E_dot(((p1[0] - p0[0]) / ln, (p1[1] - p0[1]) / ln), p0)
+            r0, r1 = cj["runMm"]
+            run = [(s, ">=", r0), (s, "<=", r1)]
+            md, mz = E_mul(d, -1.0), E_ZP
+            bead = G.prism([(E_add(d, E_mul(mz, k1)), "<=", de - bx[0] + k1 * zf),
+                            (E_add(md, E_mul(mz, k2)), "<=", bx[3] - de + k2 * zf)] + run, zf - 0.05, zf + h)
+            G.union(out[Bp], bead)
+            top = G.prism([(E_add(md, E_mul(mz, -1.0)), "<=", e - de - zf), (d, "<=", de + 1.0)] + run, zf - e, zf + 1.0)
+            eb = cq["backChamferRun"]
+            back = G.prism([(E_add(md, E_mul(mz, eb / e)), "<=", eb - de + eb / e * B), (d, "<=", de + 1.0)] + run,
+                           B - 1.0, B + e)
+            G.cut(out[Bp], top)
+            G.cut(out[A], back)
+            for x in (top, back):
+                chamfers = x if chamfers is None else G.union(chamfers, x)
+            log.append({"joint": j["id"], "type": "short", "beadOn": Bp, "runMm": [round(r0, 3), round(r1, 3)]})
+        elif cj.get("type") == "short":
             a0, a1 = cj["runDeg"]
             bead = G.cut(G.cone(zf - 0.05, zf + h, of - bx[0] + 0.05 * k1, of - bx[1], ref_zp=zf),
                          G.cone(zf - 1.0, zf + h + 1.0, of - bx[3] - k2, of - bx[2] + k2, ref_zp=zf))
@@ -550,6 +636,129 @@ def clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T):
                                (w, "<=", of - bx[0])], l0, l1)
                 G.union(out[part], bead, lug)
             log.append({"joint": j["id"], "type": "rail", "beadOn": [q for q, _s in faces], "lugZp": [l0, l1]})
+        elif cj.get("type") == "round":
+            # round clips (moldkit.core.dovetail) per station on a circular foot: the dovetail head on the sector
+            # foot's top in stepped pieces (one taper step each; lean and edge chamfer as cones about the axis), the
+            # stop lug, the stepped groove in the base's underside, the notch's tongue pocket (open to the edge) and
+            # a 45-degree chamfer on the underside's edge; x = of - off inward from the flange edge at each height (the
+            # edge leans with the outline's draft; the clip's profile leans with it)
+            rq = DV.with_taper(DV.dove_params(p), cj["taper"])
+            D, tA, tT, ch = rq["clipDoveDepth"], rq["tanA"], rq["tanT"], rq["edgeChamfer"]
+            head = cj["runMm"]
+            lug_up = DV.lug_section(rq, head)["y"][1] - ft
+            xl, xr = DV.groove_x(rq)
+            dep_e = DV.groove_depth(rq, 0.0, head)
+            pc = rq["pocketClear"]
+            x_in = xr + rq["clearMm"] + (dep_e + pc) * tA + pc
+            for stn in cj["stations"]:
+                for a0, a1, sm in stn["pieces"]:
+                    cs = sm * tT
+                    hm = D * tA + cs
+                    piece = G.cut(G.cone(zf - 0.05, zf + hm + 0.01, of),
+                                  G.cone(zf - 1.0, zf + hm + 1.0, of - D),
+                                  G.cone(zf - 0.05, zf + hm + 0.01, of - D - (cs + 0.05) / tA,
+                                         of - D - (cs - hm - 0.01) / tA))
+                    zc0 = zf + hm - ch
+                    G.cut(piece, G.cut(G.cone(zc0, zf + hm + 1.0, of + 5.0),
+                                       G.cone(zc0, zf + hm + 1.0, of, of - (ch + 1.0) / (1.0 - tA))))
+                    G.union(out[Bp], G.inter(piece, G.wedge(a0, a1)))
+                    dep = DV.groove_depth(rq, sm, head)
+                    groove = G.inter(G.cut(G.cone(B - 1.0, B + dep, of - xl - tA, of - xl + dep * tA),
+                                           G.cone(B - 1.0, B + dep, of - xr + tA, of - xr - dep * tA)),
+                                     G.wedge(a0, a1))
+                    G.cut(out[A], groove)
+                    chamfers = groove if chamfers is None else G.union(chamfers, G.copy(groove))
+                lug = G.inter(G.cut(G.cone(zf - 0.05, zf + lug_up, of),
+                                    G.cone(zf - 1.0, zf + lug_up + 1.0, of - D)), G.wedge(*stn["lugDeg"]))
+                G.union(out[Bp], lug)
+                pocket = G.inter(G.cut(G.cone(B - 1.0, B + dep_e + pc, of + 1.0),
+                                       G.cone(B - 2.0, B + dep_e + pc + 1.0, of - x_in)),
+                                 G.wedge(*stn["notchDeg"]))
+                span = stn["notchDeg"] + stn["headDeg"] + stn["lugDeg"]
+                # 0.8 high x 0.6 wide (37 deg from vertical): with the edge's draft lean it still prints under 45 deg
+                edge = G.inter(G.cut(G.cone(B - 1.0, B + ch, of + 5.0),
+                                     G.cone(B - 1.0, B + ch, of - 0.75 * (ch + 1.0), of)), G.wedge(min(span), max(span)))
+                for x in (pocket, edge):
+                    G.cut(out[A], x)
+                    chamfers = x if chamfers is None else G.union(chamfers, G.copy(x))
+            log.append({"joint": j["id"], "type": "round", "headOn": Bp, "grooveIn": A, "stations": len(cj["stations"]),
+                        "radiusMm": cj["radiusMm"], "taper": rq["clipDoveTaper"]})
+        elif cj.get("type") == "dove" and cj.get("ledge"):
+            # core ledge, dovetail clips from both ends (moldkit.core.dovetail): x = de - d inward from the ledge
+            # edge, sh = distance from the half's own end along the edge; the head on the ledge top (core), the
+            # recessed groove and an edge chamfer in the floor's underside (its bed face stays flat)
+            dq = DV.with_taper(DV.dove_params(p), cj["taper"])
+            de = bp + p["flangeWidth"]
+            p0, p1 = j["path"][0], j["path"][-1]
+            full = math.hypot(p1[0] - p0[0], p1[1] - p0[1])
+            s = E_dot(((p1[0] - p0[0]) / full, (p1[1] - p0[1]) / full), p0)
+            D, tA, tT, ch = dq["clipDoveDepth"], dq["tanA"], dq["tanT"], dq["edgeChamfer"]
+            head = cj["runMm"]
+            lug_top = DV.lug_section(dq, head)["y"][1]
+            gmin = dq["grooveMin"]
+            xl, xr = DV.groove_x(dq)
+            md = E_mul(d, -1.0)
+            for k, hv in enumerate(cj["halves"]):
+                sh = s if k == 0 else E_add(E_mul(s, -1.0), E_const(full))
+                h0, h1 = hv["headMm"]
+                run = [(s, ">=", h0), (s, "<=", h1)]
+                cap = G.prism([(d, "<=", de), (d, ">=", de - D),
+                               (E_add(E_ZP, E_mul(d, -tA), E_mul(sh, -tT)), "<=", L + ft + (D - de) * tA),
+                               (E_add(E_ZP, E_mul(d, 1.0 - tA), E_mul(sh, -tT)), "<=",
+                                L + ft + D * tA - ch + de * (1.0 - tA))] + run,
+                              zf - 0.05, zf + D * tA + head * tT + 1.0)
+                l0, l1 = hv["lugMm"]
+                lug = G.prism([(d, "<=", de), (d, ">=", de - D), (s, ">=", l0), (s, "<=", l1)], zf - 0.05, L + lug_top)
+                G.union(out[Bp], cap, lug)
+                groove = G.prism([(E_add(E_ZP, E_mul(sh, tT)), "<=", B + gmin + head * tT),
+                                  (E_add(md, E_mul(E_ZP, tA)), ">=", xl - de + B * tA),
+                                  (E_add(md, E_mul(E_ZP, -tA)), "<=", xr - de - B * tA)] + run,
+                                 B - 1.0, B + gmin + head * tT + 0.01)
+                G.cut(out[A], groove)
+                chamfers = groove if chamfers is None else G.union(chamfers, G.copy(groove))
+            edge = G.prism([(E_add(md, E_ZP), "<=", ch - de + B), (d, "<=", de + 1.0), (s, ">=", -1.0),
+                            (s, "<=", full + 1.0)], B - 1.0, B + ch)
+            G.cut(out[A], edge)
+            chamfers = edge if chamfers is None else G.union(chamfers, G.copy(edge))
+            log.append({"joint": j["id"], "type": "dove", "ledge": True, "headOn": Bp, "grooveIn": A,
+                        "headMm": round(head, 3), "halves": cj["halves"], "taper": dq["clipDoveTaper"]})
+        elif cj.get("type") == "dove":
+            # dovetail head (moldkit.core.dovetail) on each free face: x = of - w inward from the flange edge,
+            # v from the lap plane, s = z1 - zp down the run (per mm of the seam's own length: / ez)
+            dq = DV.with_taper(DV.dove_params(p), cj["taper"])
+            u = E_dot(j["plane"]["normal"], j["plane"]["origin"])
+            if j["kind"] == "radial":
+                b = parts[A]["sector"]["toDeg"]
+            else:
+                mid = j["path"][len(j["path"]) // 2]
+                az = math.degrees(math.atan2(mid[1] - c[1], mid[0] - c[0]))
+                b = min(ends, key=lambda x: abs(((az - x + 180.0) % 360.0) - 180.0))
+            w = E_add(E_dot(_dirv(b), c), E_mul(G.R(b, 0.0), -1.0))
+            (l0, l1), (z0, z1) = cj["lugZp"], cj["headZp"]
+            ez = abs(cj["sites"][0]["z"][2]) if cj["sites"] else 1.0
+            D, tA, tT, ch = dq["clipDoveDepth"], dq["tanA"], dq["tanT"] / ez, dq["edgeChamfer"]
+            lug_top = DV.lug_section(dq, cj["runMm"])["y"][1]
+            faces = [(Bp, 1.0)] + ([(A, -1.0)] if cj["sides"] == 2 else [])
+            for part, sg in faces:
+                v = E_mul(u, sg)
+                head = G.prism([(v, ">=", ft - 0.05), (w, "<=", of), (w, ">=", of - D),
+                                (E_add(v, E_mul(w, -tA), E_mul(E_ZP, tT)), "<=", ft + (D - of) * tA + z1 * tT),
+                                (E_add(v, E_mul(w, 1.0 - tA), E_mul(E_ZP, tT)), "<=",
+                                 ft + D * tA - ch + of * (1.0 - tA) + z1 * tT)], z0, z1)
+                proud = lug_top - ft     # 45-degree underside: v <= lug_top - (l1 - zp)
+                lug = G.prism([(v, ">=", ft - 0.05), (v, "<=", lug_top), (w, ">=", of - D), (w, "<=", of),
+                               (E_add(v, E_mul(E_ZP, -1.0)), "<=", lug_top - l1)], min(l0, l1 - proud), l1)
+                G.union(out[part], head, lug)
+            if cj["sides"] == 1:
+                # the flat (bed) face's flange edge gets the same 45-degree chamfer as a head's edge, clearing
+                # the clip's root chamfer on that side
+                va = E_mul(u, -1.0)
+                flat = G.prism([(E_add(va, w), ">=", ft - ch + of), (va, "<=", ft + 1.0), (w, "<=", of + 1.0)],
+                               min(l0, l1 - (lug_top - ft)) - 1.0, z1 + cq["railTopGap"] + 1.0)
+                G.cut(out[A], flat)
+                chamfers = flat if chamfers is None else G.union(chamfers, G.copy(flat))
+            log.append({"joint": j["id"], "type": "dove", "headOn": [q for q, _s in faces], "lugZp": [l0, l1],
+                        "headZp": [z0, z1], "taper": dq["clipDoveTaper"], "lugTopMm": round(lug_top, 3)})
     stand = next((q for q in plan["parts"] if q["role"] == "stand"), None)
     if stand is not None:
         s = stand["stand"]
@@ -558,9 +767,9 @@ def clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T):
         # outline taper moves the section at the base back by up to tan(draft) x 2 flangeThickness)
         ring = G.cut(G.cone(B - sh, B, so, ref_zp=zf), G.cone(B - sh - 1.0, B + 1.0, si, ref_zp=zf))
         if d is not None:  # open arc: the ring ends under the core strip, closed by a bar along the plate back
-            G.inter(ring, G.le(d, bp))
-            G.union(ring, G.prism([(d, ">=", bp - s["wallMm"]), (d, "<=", bp)] + [(x, op, so) for x, op, _v in lat],
-                                  B - sh, B))
+            d0, d1 = s.get("ledgeBarMm") or (bp - s["wallMm"], bp)  # with a ledge: under the floor extension
+            G.inter(ring, G.le(d, d1))
+            G.union(ring, G.prism([(d, ">=", d0), (d, "<=", d1)] + [(x, op, so) for x, op, _v in lat], B - sh, B))
         out[stand["id"]] = ring
         log.append({"part": stand["id"], "type": "stand", "outerOffsetMm": so, "heightMm": sh})
     return log, chamfers
@@ -673,6 +882,7 @@ def overhang_class(nz, max_deg=45.0, tol_deg=0.5, ceiling_deg=85.0):
 
 
 LEDGE_MM = 0.8  # a ceiling at most 2 x nozzle wide prints as a plain overhang of one or two extrusions
+STEP_MM = 0.2   # a ceiling's neighbour face staying this close to its height is a step of the same roof
 BRIDGE_SPAN_MM = 10.0
 
 
@@ -712,11 +922,13 @@ def _face_samples(f, n=6):
 
 
 def _ceiling_support(f, R, z_mm):
-    """(width mm ~ 2 A / P, fraction of the boundary length bordering faces that descend below z_mm)."""
+    """(width mm ~ 2 A / P, fraction of the boundary length bordering faces that descend below z_mm). An edge onto
+    a face that stays within STEP_MM of z_mm (a step of a stepped roof, e.g. a dovetail groove built in 0.05 mm
+    taper steps) neither supports nor counts: the steps print as one roof between the walls."""
     perim = sup = 0.0
     for e in f.edges:
         ln = e.length * 10.0
-        perim += ln
+        step = False
         for g in e.faces:
             if g == f:
                 continue
@@ -724,6 +936,9 @@ def _ceiling_support(f, R, z_mm):
             if zs and min(zs) < z_mm - 0.1:
                 sup += ln
                 break
+            if zs and max(abs(z - z_mm) for z in zs) <= STEP_MM:
+                step = True
+        perim += 0.0 if step else ln
     width = 2.0 * f.area * 100.0 / perim if perim > 1e-9 else 0.0
     return width, (sup / perim if perim > 1e-9 else 0.0)
 
@@ -766,12 +981,13 @@ def overhang_eval(body, R, zmin_mm):
             "bedAreaMm2": round(bed, 1), "maxOverhangDeg": round(worst, 1)}
 
 
-def print_eval(tbm, body, part, plan, p, joints):
+def print_eval(tbm, body, part, plan, p, joints, plain=None):
     """Choose the print orientation (planner's; else a lap face on the bed when something hangs below
-    the planned bed face), then bed fit and overhangs on the real body."""
+    the planned bed face), then bed fit and overhangs on the real body (overhangs on `plain`, the part
+    before its label was engraved, when given: 0.6 mm deep letter roofs print as ledges)."""
     R0 = [row[:3] for row in part["print"]["transform"][:3]]
     bp = p["casingBasePlate"]
-    if part["role"] == "sector":
+    if part["print"]["mode"] == "footOnBed":  # sectors and a core with a ledge
         z_lap = plan["baseZ"] - plan["up"][2] * lap_offset(p)
         ref0 = [plan["centre"][0], plan["centre"][1], z_lap]
     else:
@@ -810,7 +1026,7 @@ def print_eval(tbm, body, part, plan, p, joints):
     R, lo, hi = best["R"], best["lo"], best["hi"]
     tr = [-(lo[0] + hi[0]) / 2.0, -(lo[1] + hi[1]) / 2.0, -lo[2]]
     size = [hi[0] - lo[0], hi[1] - lo[1], hi[2] - lo[2]]
-    ov = overhang_eval(body, R, lo[2])
+    ov = overhang_eval(plain if plain is not None else body, R, lo[2])
     return {"mode": best["mode"], "transform": [[round(x, 9) + 0.0 for x in row] for row in _m4(R, tr)],
             "sizeMm": [round(x, 2) for x in size], "bedFit": K.bed_fit(size, p), "hangMm": best["hangMm"],
             "cleared": orientation_cleared(best["hangMm"]),
@@ -825,8 +1041,9 @@ def orientation_cleared(hang_mm, tol=HANG_TOL_MM):
     return hang_mm <= tol
 
 
-def print_warnings(part_id, pe, warn_mm2):
-    """L6 warnings of one part's print evaluation (pure)."""
+def print_warnings(part_id, pe, warn_mm2, role=None):
+    """L6 warnings of one part's print evaluation (pure). A core standing on its foot names the likely
+    overhang: the spare step (the knife ledge) over the plug."""
     out = []
     if not pe.get("cleared", True):
         out.append("%s: no print orientation clears the bed face (%.1f mm hangs below it in %s): needs supports"
@@ -835,26 +1052,38 @@ def print_warnings(part_id, pe, warn_mm2):
         out.append("%s: %s hangs %.1f mm below the planned bed face; printed %s" % (
             part_id, pe["plannedMode"], pe["plannedHangMm"], pe["mode"]))
     if pe["overhangAreaMm2"] > warn_mm2:
-        out.append("%s: %.0f mm2 overhang beyond 45 deg or cantilevered in print orientation (max %.1f deg)" % (
-            part_id, pe["overhangAreaMm2"], pe["maxOverhangDeg"]))
+        msg = "%s: %.0f mm2 overhang beyond 45 deg or cantilevered in print orientation (max %.1f deg)" % (
+            part_id, pe["overhangAreaMm2"], pe["maxOverhangDeg"])
+        if role == "core" and pe["mode"] == "footOnBed":
+            msg += ("; the core prints standing on its foot (ledge): support the spare step (the knife ledge) "
+                    "from the build plate and sand its underside flat")
+        out.append(msg)
     return out
 
 
 # ---------------------------------------------------------------- params and design access
 def casing_params(vals):
     """casing.DEFAULTS overridden by the resolved parameter values (resolve.resolve()["values"]), plus the
-    other resolved values and casingMaterial ("PETG" | "PLA"; ValueError on another word)."""
-    p = K.resolve_params({k: v for k, v in vals.items() if isinstance(v, (int, float))})
+    other resolved values."""
+    p = K.resolve_params({k: v for k, v in vals.items() if isinstance(v, (int, float)) or k in K.TEXT_DEFAULTS})
     p.update({k: v for k, v in vals.items() if k not in p and v is not None})
-    p["casingMaterial"] = K.material_key(vals.get("casingMaterial"))
     return p
 
 
 def _casings_comp(slip):
-    for occ in slip.occurrences:
-        if C.get_attr(occ.component, "role") == "casingComponent":
-            return occ, occ.component
-    return None, None
+    """(occurrence, component) of the casing component: tagged casingComponent, else named "Casings" or its
+    older material-prefixed name ("PETG_Casings")."""
+    return C.sub_component(slip, "casingComponent", COMPONENT)
+
+
+def live_parts(comp):
+    """{part id: body} of the casing parts in the casing component (by their "part" attribute; a body
+    without it by its name without the old material prefix)."""
+    out = {}
+    for b in (comp.bRepBodies if comp else ()):
+        if C.get_attr(b, "stage") == STAGE and C.get_attr(b, "role") == "casingPart":
+            out[C.get_attr(b, "part") or C.unprefixed(b.name)] = b
+    return out
 
 
 def _load(path):
@@ -933,11 +1162,15 @@ def cavity_eval(tbm, envelope, parts, piece_n, clearance):
             "error": None}
 
 def piece_checks(r, tbm, plan, bodies, piece_n, extra, p, tol, joints):
-    """L4-L6 on the built native bodies -> piece result dict (checks appended to r)."""
+    """L4-L6 on the built native bodies -> piece result dict (checks appended to r). The release search,
+    interference and cavity checks use each part as built before its label was engraved (extra "plain"):
+    the engraving only removes material from an outer face, and its letters make every boolean slow."""
     pid = plan["piece"]
     checks = []
     t0 = time.time()
     byid = {q["id"]: q for q in plan["parts"]}
+    plain = extra.get("plain") or {}
+    work = {k: plain.get(k, b) for k, b in bodies.items()}
     for c in K.seam_checks(p, joints):  # PRN-09/10: groove floor, flange width vs the ridge zone + clip jaw
         _check(r, checks, "%s:%s" % (c["check"], pid), c["ok"], c["value"], c["limit"],
                message=None if c["ok"] else c["message"])
@@ -951,10 +1184,10 @@ def piece_checks(r, tbm, plan, bodies, piece_n, extra, p, tol, joints):
                "solid %s, lumps %d" % (b.isSolid, b.lumps.count), "1 solid lump")
     # L4 release order search
     def check_pair(part, other):
-        tgt = piece_n if other == DM.CAST else bodies[other]
+        tgt = piece_n if other == DM.CAST else work[other]
         for step in STEPS_CM:
             try:
-                v = _intersect_cm3(tbm, _moved_copy(tbm, bodies[part], byid[part]["pull"], step), tgt)
+                v = _intersect_cm3(tbm, _moved_copy(tbm, work[part], byid[part]["pull"], step), tgt)
             except Exception as exc:
                 return {"status": "unknown", "against": other, "stepMm": step * 10, "error": str(exc)[:100]}
             if v is None:
@@ -977,15 +1210,15 @@ def piece_checks(r, tbm, plan, bodies, piece_n, extra, p, tol, joints):
     t1 = time.time()
     inter = {}
     for i, a in enumerate(all_ids):
-        v = _intersect_cm3(tbm, tbm.copy(bodies[a]), piece_n)
+        v = _intersect_cm3(tbm, tbm.copy(work[a]), piece_n)
         inter["%s|piece" % a] = None if v is None else round(v * 1000, 4)
         for b in all_ids[i + 1:]:
-            v = _intersect_cm3(tbm, tbm.copy(bodies[a]), bodies[b])
+            v = _intersect_cm3(tbm, tbm.copy(work[a]), work[b])
             inter["%s|%s" % (a, b)] = None if v is None else round(v * 1000, 4)
     for k, v in inter.items():  # an unknown result never passes (repair M2)
         _check(r, checks, "interference:" + k, interference_ok(v, tol * 1000), "unknown (boolean failed)"
                if v is None else v, tol * 1000)
-    cav = cavity_eval(tbm, extra["envelope"], [bodies[a] for a in ids], piece_n, extra.get("clearance"))
+    cav = cavity_eval(tbm, extra["envelope"], [work[a] for a in ids], piece_n, extra.get("clearance"))
     gap = cav["leakMm3"]
     _check(r, checks, "cavityGap:" + pid, cavity_ok(gap), "unknown (%s)" % cav["error"] if gap is None else gap,
            "%s mm3" % CAVITY_TOL_MM3)
@@ -995,16 +1228,15 @@ def piece_checks(r, tbm, plan, bodies, piece_n, extra, p, tol, joints):
     rows = []
     for q in plan["parts"]:
         b = bodies[q["id"]]
-        pe = print_eval(tbm, b, q, plan, p, joints)
+        pe = print_eval(tbm, b, q, plan, p, joints, (extra.get("plain") or {}).get(q["id"]))
         _check(r, checks, "bedFit:" + q["id"], pe["bedFit"]["fits"], pe["sizeMm"], pe["bedFit"]["limitMm"],
                message=None if pe["bedFit"]["fits"] else K.bed_fit_message(
                    "casing part %s (piece %s, %s)" % (b.name, pid, q["role"]), pe["bedFit"], p))
-        for w in print_warnings(q["id"], pe, OVERHANG_WARN_MM2):
+        for w in print_warnings(q["id"], pe, OVERHANG_WARN_MM2, q["role"]):
             report.warn(r, w)
         vol = b.volume
         row = {"id": q["id"], "name": b.name, "piece": pid, "role": q["role"], "isBase": q["isBase"],
-               "material": p["casingMaterial"], "pull": q["pull"], "volumeCm3": round(vol, 3),
-               "massG": K.mass_g(vol * 1000, p["casingMaterial"], p),
+               "pull": q["pull"], "volumeCm3": round(vol, 3), "massG": K.mass_g(vol * 1000, p),
                "bboxMm": C.bbox_mm(b), "print": pe}
         if q["role"] == "sector":
             row.update({"sector": q["sector"], "draftDeg": q["draftDeg"], "draftStatus": q["draftStatus"]})
@@ -1055,17 +1287,13 @@ def aggregate(r, d, mold, phash, piece_ids, defaults, p, live_bodies):
         for msg in result_problems(pr, phash):
             report.fail(r, msg)
         for row in pr["parts"]:
-            b = live_bodies.get(row["name"])
+            b = live_bodies.get(row.get("id") or C.unprefixed(row["name"]))
             ok = b is not None and abs(b.volume - row["volumeCm3"]) <= VOLUME_TOL_CM3
             _check(r, checks, "body:" + row["name"], ok, None if b is None else round(b.volume, 3), row["volumeCm3"])
         for w in pr.get("warnings", []):
             report.warn(r, w)
     parts = [dict(row, printTransform=row["print"]["transform"]) for pr in results for row in pr["parts"]]
     joints = [j for pr in results for j in pr["joints"]]
-    s4sum = C.stage_report("s4_plaster").get("summary") or {}
-    thick = max((s4sum.get("wall3d") or {}).get("maxMm") or 0.0,
-                (p.get("plasterBase") or 0.0) + ((mold.get("layout") or {}).get("bottomSplitMm") or 0.0))
-    material = K.casing_material(thick, p, p.get("casingMaterial", "PETG"))
     summary = {
         "pieces": piece_ids, "nParts": len(parts), "nJoints": len(joints), "jointKinds": joint_kinds(joints),
         "parts": [{"name": q["name"], "role": q["role"], "pull": [round(x, 4) for x in q["pull"]],
@@ -1080,15 +1308,13 @@ def aggregate(r, d, mold, phash, piece_ids, defaults, p, live_bodies):
         "maxInterferenceMm3": max((v for pr in results for v in pr["interferenceMm3"].values() if v is not None),
                                   default=None),
         "sectorDraftsDeg": {q["name"]: q["draftDeg"] for q in parts if q["role"] == "sector"},
-        "totalMassG": round(sum(q["massG"] for q in parts), 1), "material": material,
+        "totalMassG": round(sum(q["massG"] for q in parts), 1),
         "clipSites": {k: sum(1 for j in joints for x in (j.get("clip") or {}).get("sites") or [] if x["kind"] == k)
-                      for k in ("short", "rail")},
+                      for k in ("short", "rail", "dove", "round")},
         "nozzle": nozzle_report(p), "paramHash": phash,
     }
     if not all(v["multiple"] for v in summary["nozzle"].values()):
         report.warn(r, "not a nozzle multiple: %s" % [k for k, v in summary["nozzle"].items() if not v["multiple"]])
-    if material["warning"]:
-        report.warn(r, material["warning"])
     status = r["status"] if r["status"] in ("pass", "warn") else "fail"
     entry = {"status": status, "paramHash": phash, "build": PIPE.CASING_BUILD, "date": datetime.date.today().isoformat(),
              "pieces": piece_ids, "ridgeRule": "safe", "parts": parts, "joints": joints,
@@ -1097,7 +1323,7 @@ def aggregate(r, d, mold, phash, piece_ids, defaults, p, live_bodies):
                         "maxInterferenceMm3": summary["maxInterferenceMm3"],
                         "failed": [ck["check"] for pr in results for ck in pr["checks"] if not ck["ok"]] +
                                   [ck["check"] for ck in checks if not ck["ok"]],
-                        "material": material, "nozzle": summary["nozzle"]}}
+                        "nozzle": summary["nozzle"]}}
     summary["moldJson"] = C.write_mold_json(d, {"casings": entry})
     if status in ("pass", "warn"):
         summary["partialsDeleted"] = delete_partials(piece_ids)
@@ -1144,8 +1370,7 @@ def run(args):
             report.error(r, "parameter check: %s" % e)
             return r
         _co, comp = _casings_comp(slip)
-        live = {b.name: b for b in comp.bRepBodies} if comp else {}
-        aggregate(r, d, mold, phash, piece_ids, defaults, p, live)
+        aggregate(r, d, mold, phash, piece_ids, defaults, p, live_parts(comp))
         r["summary"]["seconds"] = round(time.time() - t0, 2)
         return r
 
@@ -1156,7 +1381,7 @@ def run(args):
         return r
     phase = args.get("phase")
     if phase not in PHASES or (phase and not args.get("piece")):
-        report.error(r, "phase %r needs a piece and is 'build' or 'checks'" % phase)
+        report.error(r, "phase %r needs a piece and is 'labels', 'build' or 'checks'" % phase)
         return r
     if args.get("piece"):
         r["reportPath"] = None  # the per-piece result goes to runs/s7_casings.<piece>.json
@@ -1189,16 +1414,23 @@ def run(args):
     nat = mold.get("natches") or {}
     ex = {"inset": chamfer + 2.0, "chamfer": chamfer, "slab": (nat.get("hd") or 3.5) + (nat.get("c") or 0.5) + 1.0,
           "fillHeight": K.DEFAULTS["fillLineHeight"]}
-    plans = {pid: K.plan_piece(descs[pid], ol, p, "safe") for pid in todo}
+    # every piece is planned (cheap) so the dovetail clip lengths are standard over the whole mold
+    allp = {pl["piece"]: pl for pl in K.plan_pieces([descs[k] for k in descs], ol, p, "safe")}
+    plans = {pid: allp[pid] for pid in todo}
     tbm = adsk.fusion.TemporaryBRepManager.get()
     timings = {}
+    if phase == "labels":  # the label solids alone (about 1 s a label): the build step reuses them
+        pid = args["piece"]
+        tools, rows = make_labels(d, plans, [pid])
+        _LABELS.clear()
+        _LABELS[pid] = {"key": _labels_key(phash, pid), "tools": tools.get(pid, {}), "rows": rows}
+        r["summary"] = {"piece": pid, "phase": "labels", "paramHash": phash, "labels": len(tools.get(pid, {})),
+                        "skipped": [x["part"] for x in rows if x.get("skipped")], "seconds": round(time.time() - t0, 2)}
+        return r
     if phase == "checks":
         pid = args["piece"]
         _co, comp = _casings_comp(slip)
-        bodies = {}
-        for b in (comp.bRepBodies if comp else ()):
-            if C.get_attr(b, "stage") == STAGE and C.get_attr(b, "role") == "casingPart" and C.get_attr(b, "piece") == pid:
-                bodies[C.get_attr(b, "part")] = b
+        bodies = {k: b for k, b in live_parts(comp).items() if C.get_attr(b, "piece") == pid}
         missing = [q["id"] for q in plans[pid]["parts"] if q["id"] not in bodies]
         if missing:
             report.error(r, "piece %s: casing parts %s not built; run its build phase first" % (pid, missing))
@@ -1211,6 +1443,7 @@ def run(args):
             t = time.time()
             plan = plans[pid]
             _temps, extra = build_piece(tbm, plan, descs[pid], ol, p, ex, pieces[pid], plug_n)
+            extra["plain"] = _temps  # built without labels
             tb = None
             timings["rebuild:" + pid] = round(time.time() - t, 2)
         built = {pid: (plan, bodies, extra, tb)}
@@ -1246,10 +1479,20 @@ def run(args):
             C.tag(occ_c, STAGE, "casingComponent")
             comp_created = True
         timings["prepare"] = round(time.time() - t, 2)
+        t = time.time()
+        memo = _LABELS.pop(args["piece"], None) if args.get("piece") else None
+        if memo and memo["key"] == _labels_key(phash, args["piece"]):
+            label_tools, label_rows = {args["piece"]: memo["tools"]}, memo["rows"]
+        else:  # no labels phase before (or moldkit reloaded since): make them here
+            label_tools, label_rows = make_labels(d, plans, todo)
+        timings["labels"] = round(time.time() - t, 2)
+        for row in label_rows:
+            if row.get("skipped"):
+                report.warn(r, "%s: no label (%s)" % (row["part"], row["skipped"]))
         for pid in todo:
             t = time.time()
             plan = plans[pid]
-            temps, extra = build_piece(tbm, plan, descs[pid], ol, p, ex, pieces[pid], plug_n)
+            temps, extra = build_piece(tbm, plan, descs[pid], ol, p, ex, pieces[pid], plug_n, label_tools.get(pid))
             tb = round(time.time() - t, 2)
             base = comp.features.baseFeatures.add()
             base.startEdit()
@@ -1282,16 +1525,25 @@ def run(args):
             timings["build:" + pid] = round(time.time() - t, 2)
         if cp is not None:
             cp.commit()
-        mat = p["casingMaterial"]
-        comp.name = K.part_name(mat, COMPONENT)
+            for o, c in C.sub_components(slip, "casingComponent", COMPONENT):  # an older casing component left
+                if o.name != occ_c.name:  # behind ("PETG_Casings"); nested occurrences have no entityToken
+                    try:
+                        o.deleteMe()
+                    except Exception:
+                        report.warn(r, "could not delete the older casing component %s: delete it by hand" % c.name)
+        comp.name = COMPONENT
         for pid, (plan, bodies, extra, tb) in built.items():
             extra["base"].name = "s7_casing_" + pid
             for q in plan["parts"]:
                 b = bodies[q["id"]]
-                b.name = K.part_name(mat, q["id"])
-                MAT.assign(d, b, mat)
-                C.tag(b, STAGE, "casingPart", piece=pid, part=q["id"], partRole=q["role"], material=mat,
+                b.name = q["id"]
+                lab = next((x for x in label_rows if x["part"] == q["id"] and x.get("hMm")), None)
+                C.tag(b, STAGE, "casingPart", piece=pid, part=q["id"], partRole=q["role"],
                       pull=",".join("%.6g" % v for v in q["pull"]))
+                if lab:
+                    C.set_attr(b, "label", " / ".join(lab["lines"]))
+                    C.set_attr(b, "labelMm", lab["hMm"])
+        C.drop_name_prefixes(comp, COMPONENT, STAGE, "casingPart", "part")  # the other pieces' older names
     except Exception:
         import traceback
         if cp is not None:
@@ -1308,7 +1560,7 @@ def run(args):
                 except Exception:
                     pass
             left = d.timeline.count
-        report.error(r, "rolled back (timeline count %d): %s" % (left, traceback.format_exc(limit=5)))
+        report.error(r, "rolled back (timeline count %d): %s" % (left, traceback.format_exc(limit=-8)))
         return r
     if phase == "build":
         pid = args["piece"]
@@ -1320,6 +1572,36 @@ def run(args):
         return r
     return _checks(r, args, t0, built, descs, pieces, tbm, p, tol, phash, timings, comp, d, mold, piece_ids,
                    defaults)
+
+
+def make_labels(d, plans, todo):
+    """Label solids of the pieces in todo (moldkit.fusion.labels), placed on their plan labels: the design
+    name over the part name -> ({piece: {part id: body}}, rows [{"piece", "part", "lines", "hMm", "wMm"} or
+    {"piece", "part", "lines", "skipped"}])."""
+    name = C.doc_name()
+    keys, specs = [], []
+    for pid in todo:
+        for q in plans[pid]["parts"]:
+            lab = q.get("label")
+            if lab:
+                keys.append((pid, q["id"], lab))
+                specs.append({"lines": LB.lines(name, q["id"], lab["lines"]), "maxW": lab["maxW"], "maxH": lab["maxH"]})
+    got = FL.make_bodies(d, specs) if specs else []
+    tools, rows = {}, []
+    for (pid, part, lab), spec, g in zip(keys, specs, got):
+        if g is None:
+            rows.append({"piece": pid, "part": part, "lines": spec["lines"],
+                         "skipped": "%.0f x %.1f mm free: too small for %.0f mm text" % (
+                             lab["maxW"], lab["maxH"], LB.LABEL["hMinMm"])})
+            continue
+        tools.setdefault(pid, {})[part] = FL.place(g["body"], lab)
+        rows.append({"piece": pid, "part": part, "lines": g["lines"], "hMm": g["hMm"], "wMm": g["wMm"]})
+    return tools, rows
+
+
+def _labels_key(phash, pid):
+    """Identity of a piece's label solids (labels phase -> build): parameters, design name, piece."""
+    return [phash, C.doc_name(), pid]
 
 
 def _built_key(phash, bodies):
@@ -1349,6 +1631,8 @@ def _checks(r, args, t0, built, descs, pieces, tbm, p, tol, phash, timings, comp
             C.set_attr(bodies[q["id"]], "printMode", q["print"]["mode"])
         res.update({"status": pr["status"], "warnings": pr["warnings"], "errors": pr["errors"], "paramHash": phash,
                     "build": PIPE.CASING_BUILD,
+                    "labels": {q["id"]: [C.get_attr(bodies[q["id"]], "label"), C.get_attr(bodies[q["id"]], "labelMm")]
+                               for q in plan["parts"] if C.get_attr(bodies[q["id"]], "label")},
                     "booleans": extra["booleans"], "buildSeconds": tb, "date": datetime.date.today().isoformat()})
         res["timings"]["check"] = round(time.time() - t, 2)
         report.write(dict(res, stage=STAGE_NAME, summary={"piece": pid, "status": pr["status"]}), partial_path(pid))
@@ -1365,11 +1649,10 @@ def _checks(r, args, t0, built, descs, pieces, tbm, p, tol, phash, timings, comp
                     "cavityGapMm3": {pid: res["cavityGapMm3"] for pid, res in results.items()},
                     "timings": timings}
     if not args.get("piece"):
-        live = {b.name: b for b in comp.bRepBodies}
         status_before = r["status"]
         agg = report.new(STAGE_NAME)
         agg["status"] = status_before if status_before in ("pass", "warn") else "fail"
-        aggregate(agg, d, C.read_mold_json() or mold, phash, piece_ids, defaults, p, live)
+        aggregate(agg, d, C.read_mold_json() or mold, phash, piece_ids, defaults, p, live_parts(comp))
         agg["summary"]["build"] = r["summary"]
         agg["warnings"] = r["warnings"] + [w for w in agg["warnings"] if w not in r["warnings"]]
         agg["errors"] = r["errors"] + agg["errors"]

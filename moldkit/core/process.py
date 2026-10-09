@@ -1,11 +1,11 @@
-"""S9 process sheet (pure Python, no adsk): plaster batches, materials, print settings, HTML.
+"""S9 process sheet (pure Python, no adsk): plaster batches, print settings, HTML.
 
 Inputs are plain dicts (lengths mm, volumes cm3). `settings` is defaults.json "settings" (or
 mold.json settings): process (plaster, consistency, dryPlasterGPerCm3, overagePct,
 wetDensityGPerCm3, mixWaterTempC, shopTempMaxC, wetPieceWeightWarnKg, layerFine, layerDraft,
-plaDensity, petgDensity, casingMaterialDefault, clipMaterial).
+filamentDensity).
 
-Rules: L10 (process sheet), PRN-04 (casing material heuristic; clips always PETG), PRN-08 (fine
+Rules: L10 (process sheet), PRN-04 (thermal advice: setting plaster warms the casings), PRN-08 (fine
 layers for working-face parts, draft for sectors and stands), PRN-09 (the ridged seams seal once
 clipped; tape only the lines without a ridge or a clip; never oil or sealant on working-face surfaces),
 PRN-16 (walls are nozzle multiples), PRN-18 (a leak test of one piece's casing prints first).
@@ -16,11 +16,9 @@ those blocks (exports/process-sheet.html). Inline `code` spans in the block text
 from moldkit.core import fit as F
 from moldkit.core import htmlpage as H
 
-PETG_SECTION_MM = 50.0  # PRN-04: thickest plaster section above which PETG is suggested (unvalidated)
 PROCESS_FALLBACK = {"plaster": "USG No. 1 Pottery Plaster", "consistency": 70, "dryPlasterGPerCm3": 0.985,
                     "overagePct": 15, "wetDensityGPerCm3": 1.58, "mixWaterTempC": 21, "shopTempMaxC": 24,
-                    "wetPieceWeightWarnKg": 6.0, "casingMaterialDefault": "PETG", "clipMaterial": "PETG",
-                    "layerFine": 0.12, "layerDraft": 0.24, "plaDensity": 1.24, "petgDensity": 1.27}
+                    "wetPieceWeightWarnKg": 6.0, "layerFine": 0.12, "layerDraft": 0.24, "filamentDensity": 1.27}
 FINE_ROLES = ("core", "plate", "floor")
 ROLE_ORIENTATION = {
     "core": "plate back on the bed, working face up",
@@ -31,6 +29,24 @@ ROLE_ORIENTATION = {
     "clip": "flat: C profile on the bed",
 }
 DRAFT_ROLES = ("sector", "stand")
+
+
+SHORT_TEXT = ("Short clips (curved foot seams): push each on from the flange edge, square to the seam, until the barb "
+              "snaps behind the bead; the flat arm goes under the base. Short "
+              "clips carry their preload as spine grooves (1, 2, 3 = 0.5, 0.7, 0.9 mm). ")
+ROUND_TEXT = ("Round clips (curved foot seams, `clip_round_...`): at each notch (a gap in the foot's dovetail ledge, a "
+              "pocket under the base) push the clip on radially, wide end toward the ledge and the tongue up into the "
+              "pocket, then slide it along the seam clockwise seen from the open (cast) top, onto the ledge, until "
+              "it stops moving: tap it with a mallet (it can never pass the stop lug). Every round clip slides the "
+              "same way. ")
+RAIL_TEXT = ("Rail clips (straight vertical seams): slide each down from the top, lead-in end first, until it rests "
+             "on the stop lugs, the lower rail first. `_flat` rails go where one flange is a core or plate. ")
+DOVE_TEXT = ("Dovetail clips (straight vertical seams, one per seam, named by length): slide each down from the top, "
+             "wide end down, over the dovetail ledge. It runs loose, then grips about 8 mm above the stop lug: push, "
+             "then tap the top with a mallet until it stops moving (it can never pass the lug). `_flat` clips go "
+             "where one flange is a plate, `_m` ones on the mirrored side. A core's foot ledge takes a `_g` / `_g_m` "
+             "pair, one slid in from each end, wide end first, its tongue in the groove under the floor, until both "
+             "stop at the middle lug. ")
 
 
 def _proc(settings):
@@ -63,31 +79,13 @@ def plaster_batch(volume_cm3, settings=None):
                         % (wet, pr["wetPieceWeightWarnKg"])) if warn else None}
 
 
-# ---------------------------------------------------------------- materials (PRN-04)
-def casing_material(thickest_section_mm=None, settings=None, mix_water_c=None, room_c=None):
-    """{"material", "reasons", "heuristic": True}: PLA by default; PETG suggested when the thickest
-    plaster section exceeds 50 mm, the mix water is warmer than mixWaterTempC or the room warmer than
-    shopTempMaxC (unvalidated heuristics, PRN-04 corrected). Unknown inputs are not held against PLA."""
-    pr = _proc(settings)
-    reasons = []
-    limit = float(pr.get("petgSectionMm", PETG_SECTION_MM))
-    if thickest_section_mm is not None and float(thickest_section_mm) > limit:
-        reasons.append("thickest plaster section %.0f mm > %.0f mm" % (float(thickest_section_mm), limit))
-    if mix_water_c is not None and float(mix_water_c) > pr["mixWaterTempC"]:
-        reasons.append("mix water %.0f C > %.0f C" % (float(mix_water_c), pr["mixWaterTempC"]))
-    if room_c is not None and float(room_c) > pr["shopTempMaxC"]:
-        reasons.append("room %.0f C > %.0f C" % (float(room_c), pr["shopTempMaxC"]))
-    material = "PETG" if reasons else pr["casingMaterialDefault"]
-    return {"material": material, "reasons": reasons, "heuristic": True,
-            "alternative": "PLA with fan or cool-water-bath cooling" if reasons else None}
+# ---------------------------------------------------------------- print
+def density(settings=None):
+    """Print filament density (g/cm3) for the part masses."""
+    return _proc(settings)["filamentDensity"]
 
 
-def density(material, settings=None):
-    pr = _proc(settings)
-    return pr["petgDensity"] if str(material).upper() == "PETG" else pr["plaDensity"]
-
-
-def print_settings(role, settings=None, nozzle_mm=0.4, wall_mm=None, material=None):
+def print_settings(role, settings=None, nozzle_mm=0.4, wall_mm=None):
     """Print settings for a part role: core | plate | floor | sector | stand | clip.
 
     Working-face parts (core, plates, floor) and the clips print at layerFine, sectors and stands at
@@ -95,10 +93,8 @@ def print_settings(role, settings=None, nozzle_mm=0.4, wall_mm=None, material=No
     (PRN-08/L6); walls snap to nozzle multiples."""
     pr = _proc(settings)
     role = str(role)
-    if material is None:
-        material = pr["clipMaterial"] if role == "clip" else pr["casingMaterialDefault"]
     layer = F.scaled_layer(pr["layerDraft"] if role in DRAFT_ROLES else pr["layerFine"], nozzle_mm)
-    out = {"role": role, "material": material, "layerMm": layer, "supports": False,
+    out = {"role": role, "layerMm": layer, "supports": False,
            "orientation": ROLE_ORIENTATION.get(role, "flat side on the bed")}
     if wall_mm is not None and nozzle_mm:
         lines = max(1, int(round(float(wall_mm) / float(nozzle_mm))))
@@ -111,12 +107,12 @@ def print_settings(role, settings=None, nozzle_mm=0.4, wall_mm=None, material=No
 # ---------------------------------------------------------------- sheet
 def joint_notes(joints):
     """Assembly notes for the lines to tape (S7 joint table): clamped joints without a ridge (none on
-    the default layouts since S7 picks a sector count that keeps every sector seam ridged) or without a clip design, and unclamped
-    sliding laps (a side core standing on its floor band)."""
+    the default layouts since S7 picks a sector count that keeps every sector seam ridged) or without a clip design, and the
+    sliding laps (a side core standing on its floor band: clipped on the core's ledge, or unclamped in older plans)."""
     plain, bare, slide = {}, [], {}
     for j in joints or []:
         clip = j.get("clip") or {}
-        if not j.get("clamped", True):
+        if not j.get("clamped", True) or j.get("lapKind") == "baseSlide":
             slide.setdefault(j.get("piece"), []).append(j)
             continue
         if j.get("ridge") == "none":
@@ -132,9 +128,16 @@ def joint_notes(joints):
             j.get("piece"), j.get("kind"), j["id"], j["clip"].get("why") or "no clip design"))
     for pid, js in slide.items():
         for j in js:
-            out.append("%s: %s stands on %s (%s): horizontal lap, no clip and no ridge; tape the line from outside "
-                       "(the back and both ends) before closing the casing; it slides off along the core pull when "
-                       "demolding." % (pid, j["parts"][1], j["parts"][0], j["id"]))
+            n = len((j.get("clip") or {}).get("sites") or [])
+            if j.get("clamped", True) and n:
+                out.append("%s: %s stands on %s (%s): horizontal lap with no ridge; tape the line from outside (the "
+                           "ledge edge and both ends), then push the %d short clips onto the core's ledge; take them "
+                           "off first when demolding, the core slides off along its pull."
+                           % (pid, j["parts"][1], j["parts"][0], j["id"], n))
+            else:
+                out.append("%s: %s stands on %s (%s): horizontal lap, no clip and no ridge; tape the line from "
+                           "outside (the back and both ends) before closing the casing; it slides off along the core "
+                           "pull when demolding." % (pid, j["parts"][1], j["parts"][0], j["id"]))
     return out
 
 
@@ -168,18 +171,21 @@ def leak_test_piece(piece_ids, parts, joints):
     return min(ids, key=lambda pid: (-len(kinds.get(pid, ())), vol.get(pid, 0.0), ids.index(pid)))
 
 
+def _has_clip(s, prefix):
+    """Whether the clip bodies include one whose key or name starts with prefix."""
+    return any(str(b.get("key") or b.get("name") or "").startswith(prefix) for b in s["clips"].get("bodies") or [])
+
+
 def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=None, settings=None,
-                nozzle_mm=0.4, casing_wall_mm=None, conditions=None, exports=None, joints=None, fit=None,
-                run_warnings=None):
+                nozzle_mm=0.4, casing_wall_mm=None, exports=None, joints=None, fit=None, run_warnings=None):
     """Process-sheet data.
 
-    pieces        [{"id", "volumeCm3", "thickestSectionMm"?}] plaster pieces
-    parts         [{"name", "piece", "role", "volumeCm3"?, "material"?, "count"?, "orientation"?}] printed
+    pieces        [{"id", "volumeCm3"}] plaster pieces
+    parts         [{"name", "piece", "role", "volumeCm3"?, "count"?, "orientation"?}] printed
                   parts (casing parts, stands, clip bodies)
     clips         {"total", "perPiece": {piece: n}, "bodies": [S8 body rows]} (mold.json "clips")
     orders        {piece: [part names in removal order]} (S7 release orders)
     plaster_order [piece ids] plaster demold order (e.g. bottom, side1, side2)
-    conditions    {"mixWaterC", "roomC"} optional, for the material heuristic
     exports       [file names] (manifest)
     joints        S7 joint table (clip sites per piece, the leak-test piece, the lines to tape)
     fit           {"fitOffset", "seamClearance", "grooveBottomGap", "nozzleConfirmed"} the printer fit the
@@ -190,11 +196,9 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
     pr = _proc(settings)
     clips = clips or {}
     orders = orders or {}
-    cond = conditions or {}
     rows = []
     totals = {"dryPlasterG": 0.0, "waterG": 0.0, "wetKg": 0.0}
     warnings = []
-    thickest = None
     for pc in pieces or []:
         b = plaster_batch(pc.get("volumeCm3") or 0.0, settings)
         b["id"] = pc.get("id")
@@ -205,22 +209,17 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
         totals["wetKg"] += raw * pr["wetDensityGPerCm3"] / 1000.0  # unrounded sums (repair 2: not the rounded rows)
         if b["warning"]:
             warnings.append("%s: %s" % (pc.get("id"), b["warning"]))
-        t = pc.get("thickestSectionMm")
-        if t is not None:
-            thickest = max(thickest or 0.0, float(t))
-    mat = casing_material(thickest, settings, cond.get("mixWaterC"), cond.get("roomC"))
     part_rows = []
     for pt in parts or []:
         role = pt.get("role") or "core"
-        material = pt.get("material") or (pr["clipMaterial"] if role == "clip" else mat["material"])
         wall = casing_wall_mm if role in ("core", "plate", "floor", "sector") else None
-        ps = print_settings(role, settings, nozzle_mm, wall, material)
+        ps = print_settings(role, settings, nozzle_mm, wall)
         row = dict(ps, name=pt.get("name"), piece=pt.get("piece"), count=int(pt.get("count") or 1))
         if pt.get("orientation"):  # a part that prints unlike its role (rail clips standing, laps on a face)
             row["orientation"] = pt["orientation"]
         if pt.get("volumeCm3") is not None:
             row["volumeCm3"] = _r(pt["volumeCm3"], 2)
-            row["massG"] = _r(float(pt["volumeCm3"]) * density(material, settings))
+            row["massG"] = _r(float(pt["volumeCm3"]) * density(settings))
         part_rows.append(row)
     bodies = [b for b in clips.get("bodies") or [] if isinstance(b, dict)]
     counts = clip_counts(joints, bodies)
@@ -236,7 +235,7 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
     return {"design": design, "plaster": pr["plaster"], "consistency": pr["consistency"],
             "overagePct": pr["overagePct"], "pieces": rows,
             "totals": {k: _r(v, 2 if k == "wetKg" else 1) for k, v in totals.items()},
-            "casingMaterial": mat, "parts": part_rows,
+            "parts": part_rows,
             "clips": {"total": int(clips.get("total") or 0), "perPiece": dict(clips.get("perPiece") or {}),
                       "bodies": [dict(b) for b in bodies], "counts": counts},
             "orders": {k: list(v) for k, v in orders.items()}, "plasterOrder": list(plaster_order or []),
@@ -338,48 +337,44 @@ def sheet_blocks(sheet):
         names = [x["name"] for x in s["parts"] if x.get("piece") == pid and x["role"] != "clip"]
         asm = list(reversed(s["orders"].get(pid) or []))
         items.append((pid, ": %s; clips %s.%s" % (", ".join(names) or "-", _counted(counts.get(pid)),
-                                                   " Assembly order: stand -> %s." % " -> ".join(asm) if asm else "")))
+                                                   " Assembly order: %s." % " -> ".join(asm) if asm else "")))
     B.append(("ul", items))
     B += [("p", "Assemble each casing in the order listed (the demold order of section 5 reversed): the base goes "
-                "back down on its stand, and each next part moves in along its pull, so its grooves slide over the "
+                "down first, and each next part moves in along its pull, so its grooves slide over the "
                 "ridges. Then fit the clips."),
-          ("p", "Short clips (curved foot seams): push each on from the flange edge, square to the seam, until the "
-                "barb snaps behind the bead; the flat arm goes under the base, which the stand lifts off the bench. "
-                "Rail clips (straight vertical seams): slide each down from the top, lead-in end first, until it "
-                "rests on the stop lugs, the lower rail first. `_flat` rails go where one flange is a core or plate. "
-                "Short clips carry their preload as spine grooves (1, 2, 3 = 0.5, 0.7, 0.9 mm). %d clips in total, "
-                "all PETG." % s["clips"]["total"]),
+          ("p", (ROUND_TEXT if _has_clip(s, "clip_round") else "")
+                + (SHORT_TEXT if _has_clip(s, "clip_short") else "")
+                + (DOVE_TEXT if _has_clip(s, "clip_dove") else RAIL_TEXT if _has_clip(s, "clip_rail") else "")
+                + "%d clips in total." % s["clips"]["total"]),
           ("p", "The ridged seams seal once clipped: no clay. Tape from outside only the lines listed below. Never "
                 "oil, sealant or hot glue on surfaces that form the plaster's working face."),
           ("p", "Fill to the debossed fill line, screed the open face flat.")]
     if s.get("jointNotes"):
         B.append(("ul", list(s["jointNotes"])))
-    B += [("h2", "5. Demold"), ("p", "Casing parts, per piece, in this order:")]
+    B += [("h2", "5. Demold"), ("p", "Clips off first (dovetail clips: tap each back the way it went on; round clips: "
+                                     "tap each back along the seam to its notch and lift it off; short clips: pry one "
+                                     "arm). "
+                                     "Then the casing parts, per piece, in this order:")]
     order = [pid for pid in pieces if pid in s["orders"]] + sorted(set(s["orders"]) - set(pieces))
     B.append(("ul", ["%s: %s" % (pid, " -> ".join(s["orders"][pid])) for pid in order]))
     if s["plasterOrder"]:
         B.append(("p", "Plaster pieces off the cast (mold opening order): %s." % " -> ".join(s["plasterOrder"])))
-    rows = [[x["name"], x.get("piece") or "-", str(x.get("count", 1)), x["material"], _fmt(x["layerMm"], 2),
+    rows = [[x["name"], x.get("piece") or "-", str(x.get("count", 1)), _fmt(x["layerMm"], 2),
              "%d x nozzle" % x["wallLines"] if x.get("wallLines") else "-", x["orientation"], _fmt(x.get("massG"), 1)]
             for x in s["parts"]]
     B += [("h2", "6. Printed parts"),
-          ("table", ["Part", "Piece", "Qty", "Material", "Layer mm", "Walls", "Orientation", "Mass g each"], rows,
-           (2, 4, 7), None)]
-    m = s["casingMaterial"]
+          ("table", ["Part", "Piece", "Qty", "Layer mm", "Walls", "Orientation", "Mass g each"], rows,
+           (2, 3, 6), None)]
     B += [("p", "No supports on any part. Fine layers (%s mm) for cores, plates, floors and clips, draft layers "
                 "(%s mm) for sectors and stands. Mass uses solid volume (upper bound)." % (_fmt(s["layers"]["fine"], 2),
                                                                                _fmt(s["layers"]["draft"], 2)))]
     B += printer_blocks(s)
-    B += [
-          ("p", "Casing material: %s%s (unvalidated heuristic, PRN-04). Clips always PETG." %
-           (m["material"], (" because " + "; ".join(m["reasons"]) + "; or " + m["alternative"]) if m["reasons"]
-            else ""))]
     th = s["thermal"]
     B += [("h2", "7. Thermal advice"),
           ("ul", ["Mix water at %s C (the low end of USG's range); never warm water." % _fmt(th["mixWaterC"]),
-                  "Room at most %s C while the plaster sets; above it use PETG casings or cool them."
-                  % _fmt(th["roomMaxC"]),
-                  "Never insulate (foam) or stack curing casings: the setting heat softens PLA."])]
+                  "Room at most %s C while the plaster sets; above it cool the casings (a fan or a cool water "
+                  "bath)." % _fmt(th["roomMaxC"]),
+                  "Never insulate (foam) or stack curing casings: the setting heat can soften the printed parts."])]
     if s["exports"]:
         B += [("h2", "8. Export manifest"), ("ul", list(s["exports"]))]
     return B

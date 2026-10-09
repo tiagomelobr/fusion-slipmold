@@ -1,12 +1,12 @@
 # Parameter reference
 
-Generated from `moldkit/defaults.json` by `python tools/gen_param_docs.py`: do not edit by hand. 53 parameters: 7 you set, 9 printer profile values and 37 engine values. The guide for using them is [USER_GUIDE.md](USER_GUIDE.md).
+Generated from `moldkit/defaults.json` by `python tools/gen_param_docs.py`: do not edit by hand. 61 parameters: 6 you set, 10 printer profile values and 45 engine values. The guide for using them is [USER_GUIDE.md](USER_GUIDE.md).
 
 Every parameter has a name `mold_<name>`, but only some are user parameters in the design:
 
-- **Parameters you set** (7): SlipMold creates them as user parameters. Edit them in Fusion's own Change Parameters dialog: SlipMold > Parameters opens it (and first creates any missing one), or use Modify > Change Parameters > User Parameters.
-- **Printer profile** (9): your printer's bed, nozzle and print clearances. They are not in the design: you set them once in the user config file and they apply to every mold.
-- **Engine values** (37): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).
+- **Parameters you set** (6): SlipMold creates them as user parameters. Edit them in Fusion's own Change Parameters dialog: SlipMold > Parameters opens it (and first creates any missing one), or use Modify > Change Parameters > User Parameters.
+- **Printer profile** (10): your printer's bed, nozzle and print clearances. They are not in the design: you set them once in the user config file and they apply to every mold.
+- **Engine values** (45): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).
 
 Each user parameter's comment starts with the group title in brackets, for example `[Plaster]`. Values are expressions with units, for example `25 mm` or `15 deg`, and may be formulas that use the model's own parameters (`mold_plasterWall = cupHeight / 4`); SlipMold compares the evaluated values, so a change of `cupHeight` alone is seen through the model it reshapes (everything runs again), and after changing a parameter that does not shape the model use Reset from stage. Text parameters keep their single quotes (`'auto'`) and accept only the choices listed below; Make mold stops with a message before any stage runs when a Text value is not one of them. Changes apply on the next Make mold. The defaults below are research values (rule ids point to `docs/research/design-rules.md`); calibrate the ones marked in the description with the leak test (process sheet section 1: one piece's casing printed first). Model sizes are in millimetres whatever the document unit.
 
@@ -30,7 +30,7 @@ Stage names: S2 plug, S3 moldability, S4 plaster, S5 split and natches, S6 verif
 
 ## Parameters you set
 
-These 7 are the only `mold_` user parameters SlipMold creates. Change them in Change Parameters; the defaults are a good start.
+These 6 are the only `mold_` user parameters SlipMold creates. Change them in Change Parameters; the defaults are a good start.
 
 | Parameter | Default | Unit | Group | Runs again | Description | Rule |
 |---|---|---|---|---|---|---|
@@ -39,7 +39,6 @@ These 7 are the only `mold_` user parameters SlipMold creates. Change them in Ch
 | `mold_spareStepOut` | `10 mm` | mm | Spare | S2 onward | Outward step at rim height = flat plaster knife ledge for trimming | CER-12 |
 | `mold_layout` | `'auto'` | text | Layout | S3 onward | Plaster piece layout: auto (S3 picks the best) \| dropOut \| sides2 \| sides2Bottom \| sides3Bottom \| sides4Bottom. Choices: `'auto'`, `'dropOut'`, `'sides2'`, `'sides2Bottom'`, `'sides3Bottom'`, `'sides4Bottom'` | SW-13 |
 | `mold_splitAzimuth` | `0 deg` | deg | Layout | S3 onward | Azimuth of the first vertical split plane, used with a fixed layout or a turned (revolved) ware; with layout auto on any other ware S3 searches the azimuth itself | CER-06 |
-| `mold_casingMaterial` | `'PETG'` | text | Casing | S7 onward | Casing print material, the prefix of every casing part name: PETG (recommended: heat deflection about 75 C; setting plaster warms the casing to 40-55 C) \| PLA (58 C). Choices: `'PETG'`, `'PLA'` | PRN-04 |
 | `mold_shrinkagePct` | `0` | - | Ware | S2 onward | Linear shrinkage % the plug is scaled up for, by 1/(1-s). 0 = model already at greenware size (no scale feature) | CER-01 |
 
 ## Printer profile
@@ -63,12 +62,13 @@ To change one value for a single mold instead, add the user parameter (for examp
 | `mold_bedMargin` | `5 mm` | mm | Safety margin inside the bed limits | PRN-15 |
 | `mold_nozzle` | `0.4 mm` | mm | Nozzle diameter (the Make mold dialog asks for it): walls and ridges snap to whole lines, layer heights scale with it, printed clearances open 0.125 mm per mm over 0.4 | PRN-16 |
 | `mold_fitOffset` | `0 mm` | mm | Per-side fit correction from your tolerance test: + loosens every printed fit (ridge grooves, clip openings and barbs), - tightens; 0 for a calibrated printer | PRN-22 |
+| `mold_printTolerance` | `0.05 mm` | mm | Dimensional accuracy of your printer, +- per side: dovetail clip clearances are 2x this, and the clip seats this much x 2 x the taper above its stop lug | PRN-22 |
 
-The clip material's constants are in the `materials` block of `moldkit/defaults.json`; the `"materials"` key of the same config file overrides them, for example `{"materials": {"PETG": {"strainMaxPct": 1.4}}}`.
+The clip filament's stiffness, which sizes the clip arms, is in the `clipFilament` block of `moldkit/defaults.json`; the `"clipFilament"` key of the same config file overrides it, for example `{"clipFilament": {"strainMaxPct": 1.4}}`.
 
-| Material | Modulus low / mid / high (MPa) | Strain limit (%) | Description |
-|---|---|---|---|
-| PETG | 1000 / 1200 / 1500 | 1.5 | Clip arm material: elastic modulus low / mid / high and the bending strain it takes without whitening |
+| Modulus low / mid / high (MPa) | Strain limit (%) | Description |
+|---|---|---|
+| 1000 / 1200 / 1500 | 1.5 | Clip filament stiffness: elastic modulus low / mid / high (MPa) and the bending strain (%) a clip arm takes without whitening |
 
 ## Engine values (override per mold)
 
@@ -157,7 +157,7 @@ A change of a value in this group runs again: S7 onward (S7, S8, S9).
 
 ### Clips
 
-The PETG clips that hold casing flanges together.
+The printed clips that hold casing flanges together.
 
 A change of a value in this group runs again: S7 onward (S7, S8, S9).
 
@@ -165,14 +165,22 @@ A change of a value in this group runs again: S7 onward (S7, S8, S9).
 |---|---|---|---|---|
 | `mold_clipSpacingMax` | `25 mm` (derived) | mm | Max centre spacing of the short snap clips along a foot seam (force: about 5.8 N per clip). Derived: one short clip's arm force / the seam's force demand, to whole mm (never below clipWidth) | PRN-12 |
 | `mold_clipEndOffset` | `10 mm` | mm | Foot bead run and clips kept this far from a crossing flange's outer face | PRN-12 |
-| `mold_clipArm` | `2.4 mm` (derived) | mm | Clip arm thickness (PETG; 20 mm free length). Derived: the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip material's limit | PRN-13 |
+| `mold_clipArm` | `2.4 mm` (derived) | mm | Clip arm thickness (20 mm free length). Derived: the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip filament's strain limit | PRN-13 |
 | `mold_clipWidth` | `16 mm` | mm | Short snap clip width along the seam | PRN-13 |
 | `mold_clipPreload` | `0.7 mm` | mm | Short clip preload per arm; spares at 0.5 and 0.9 mm are printed to compare in the leak test | PRN-13 |
 | `mold_clipRailPreload` | `0.8 mm` | mm | Rail clip preload per arm (vertical seams) | PRN-13 |
 | `mold_clipRailMax` | `60 mm` | mm | Longest rail clip; longer vertical seams get several stacked rails | PRN-13 |
 | `mold_lugHeight` | `3 mm` | mm | Stop lugs on the vertical flanges above the foot; the lowest rail clip rests on them | PRN-13 |
-| `mold_standHeight` | `5 mm` | mm | Printed stand under the base part, so the foot clips' flat arm wraps under its back | PRN-13 |
-| `mold_standWall` | `4 mm` | mm | Stand ring wall width | PRN-13 |
+| `mold_clipRailStyle` | `'dovetail'` | text | Clips on straight vertical seams: dovetail (one tapered clip per seam slides down a dovetail ledge until tight; Meshcast style) \| snap (rail clips over beads, kit v3). Choices: `'dovetail'`, `'snap'` | PRN-13 |
+| `mold_clipDoveDepth` | `6 mm` | mm | Dovetail head depth from the flange edge (the clip walls cover it) | PRN-13 |
+| `mold_clipDoveAngle` | `15 deg` | deg | Dovetail lean of the head face: the head is thicker at the flange edge, so the clip cannot be pulled off sideways | PRN-13 |
+| `mold_clipDoveTaper` | `80` | - | Taper of the dovetail ledge and clip, per face: 1 mm thicker per this many mm down the seam (self-locking) | PRN-13 |
+| `mold_clipDoveWall` | `2.4 mm` | mm | Dovetail clip side wall thickness | PRN-13 |
+| `mold_clipDoveSpine` | `2 mm` | mm | Dovetail clip spine thickness; it bears on the ledge edge and its bending is the clip's spring | PRN-13 |
+| `mold_clipDoveReuse` | `12 mm` | mm | Clip reuse: a straight seam may take a standard dovetail clip up to this much shorter than it allows, so equal clips serve several seams (fewer sizes to print) | PRN-13 |
+| `mold_clipRoundTaper` | `40` | - | Taper of the round clips (curved foot seams), per face: 1 mm thicker per this many mm along the arc; steeper than the straight clips so more stations fit (seat gap 4 mm) | PRN-13 |
+| `mold_clipRoundMax` | `30 mm` | mm | Longest round clip considered; the mold's one round clip length (16 mm up to this) is the one that clamps the most arc over all foot seams | PRN-13 |
+| `mold_clipDoveInterference` | `0.1 mm` | mm | Squeeze per head face when the dovetail clip is seated (about 8 mm of travel after it first grips) | PRN-13 |
 
 ## Settings that are not Fusion parameters
 
@@ -199,12 +207,9 @@ These live in the `settings` block of `moldkit/defaults.json` and apply to every
 | process | `mixWaterTempC` | `21` |
 | process | `shopTempMaxC` | `24` |
 | process | `wetPieceWeightWarnKg` | `6.0` |
-| process | `casingMaterialDefault` | `PETG` |
-| process | `clipMaterial` | `PETG` |
 | process | `layerFine` | `0.12` |
 | process | `layerDraft` | `0.24` |
-| process | `plaDensity` | `1.24` |
-| process | `petgDensity` | `1.27` |
+| process | `filamentDensity` | `1.27` |
 | export | `format` | `3mf` |
 | export | `surfaceDeviationMm` | `0.01` |
 | export | `normalDeviationDeg` | `10` |

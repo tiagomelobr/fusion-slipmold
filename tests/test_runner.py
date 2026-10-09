@@ -18,8 +18,8 @@ MOLD = {"params": {"mold_layout": "'auto'"},
         "layout": {"name": "sides2Bottom", "pieces": 3, "azimuthDeg": 0.0, "bottomSplitMm": 5.0,
                    "bottomVariant": "plate"},
         "pieces": [{"id": "bottom"}, {"id": "side1"}],
-        "export": {"dir": "exports", "files": ["PETG_bottom_core.3mf", "PETG_bottom_stand.3mf",
-                                               "PETG_clip_short_x78.3mf"]}}
+        "export": {"dir": "exports", "files": ["bottom_core.3mf", "bottom_stand.3mf",
+                                               "clip_short_x78.3mf"]}}
 
 
 def regen(ran=None, status="pass", plan=(), call_again=False, errors=None, stale=None, blocked=None):
@@ -225,16 +225,17 @@ class StepTest(Base):
                                   "summary": {"ran": [[PI.S7, "warn"]], "plan": [PI.S8]}},
         }
         r = self.runner([regen((PI.S8, "pass"), plan=[PI.S9])], answers, s7PerPiece=True)
-        steps = [r.step() for _ in range(5)]  # per piece a build and a checks step, then the aggregate
+        steps = [r.step() for _ in range(7)]  # per piece a labels, a build and a checks step, then the aggregate
         c = steps[-1]
-        self.assertEqual([x["status"] for x in steps[:4]], ["partial"] * 4)
+        self.assertEqual([x["status"] for x in steps[:6]], ["partial"] * 6)
         self.assertTrue(all(x["callAgain"] for x in steps))
-        self.assertIn("bottom checks: pass (1 of 2 pieces checked)", steps[1]["text"])
+        self.assertIn("bottom checks: pass (1 of 2 pieces checked)", steps[2]["text"])
         self.assertEqual(c["status"], "warn")
         self.assertEqual(c["saved"], 5)
         calls = [(n, x.get("action") or (x.get("piece"), x.get("phase"))) for n, x in self.fake.calls]
-        self.assertEqual(calls, [("pipeline", "plan"), ("pipeline", "reset"), (PI.S7, ("bottom", "build")),
-                                 (PI.S7, ("bottom", "checks")), (PI.S7, ("side1", "build")),
+        self.assertEqual(calls, [("pipeline", "plan"), ("pipeline", "reset"), (PI.S7, ("bottom", "labels")),
+                                 (PI.S7, ("bottom", "build")), (PI.S7, ("bottom", "checks")),
+                                 (PI.S7, ("side1", "labels")), (PI.S7, ("side1", "build")),
                                  (PI.S7, ("side1", "checks")), ("pipeline", "run")])
         self.assertEqual(self.fake.calls[-1][1]["stageArgs"], {PI.S7: {"check": True}})
         self.assertEqual(self.saver.calls, ["SlipMold: s7_casings warn"])  # not after the reset nor per piece
@@ -262,7 +263,7 @@ class StepTest(Base):
                                               "stale": {PI.S7: ["clips changed"]}}},
         }
         r = self.runner([], answers, s7PerPiece=True)
-        for _ in range(4):
+        for _ in range(6):  # 2 pieces x (labels, build, checks)
             r.step()
         res = r.step()
         self.assertIn("still stale after running: clips changed", res["error"]["message"])

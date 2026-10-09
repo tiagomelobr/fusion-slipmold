@@ -6,6 +6,8 @@ import unittest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from moldkit.core import casing as C  # noqa: E402
+from moldkit.core import dovetail as DV  # noqa: E402
+from moldkit.core import clips as CL  # noqa: E402
 
 ZB, ZTOP, H = -10.0, 90.0, 5.0
 MUG = {"kind": "circle", "centre": [0.0, 0.0], "radius": 60.0, "draftDeg": 7.13, "taper": "wideTop",
@@ -35,7 +37,7 @@ class MugSides2BottomTest(unittest.TestCase):
         return sorted(q["role"] for q in self.pieces[pid]["parts"])
 
     def test_counts_and_status(self):
-        self.assertEqual(self.plan["nParts"], 15)     # 12 casing parts + a stand under each base (every piece has foot clips)
+        self.assertEqual(self.plan["nParts"], 12)     # 12 casing parts (no stand parts since 2026-10-08)
         self.assertEqual(self.plan["nJoints"], 18)
         self.assertEqual(self.plan["status"], "ok")
 
@@ -43,7 +45,7 @@ class MugSides2BottomTest(unittest.TestCase):
         b = self.pieces["bottom"]
         self.assertTrue(b["flipped"])
         self.assertEqual(b["screed"]["faceId"], "base")
-        self.assertEqual(self.roles("bottom"), ["core"] + ["sector"] * 3 + ["stand"])
+        self.assertEqual(self.roles("bottom"), ["core"] + ["sector"] * 3)
         self.assertEqual(b["checks"]["sectors"], {"count": 3, "preferred": 4, "unridged": []})
         core = b["parts"][0]
         self.assertEqual(core["id"], "bottom_core")
@@ -61,7 +63,7 @@ class MugSides2BottomTest(unittest.TestCase):
             s = self.pieces[pid]
             self.assertFalse(s["flipped"])
             self.assertEqual(s["screed"]["faceId"], "top")
-            self.assertEqual(self.roles(pid), ["core", "plate", "sector", "sector", "stand"])
+            self.assertEqual(self.roles(pid), ["core", "plate", "sector", "sector"])
             parts = {q["id"]: q for q in s["parts"]}
             self.assertEqual(sorted(parts[pid + "_core"]["faces"]), ["plug", "seam_" + ("side2" if ys > 0 else "side1")])
             floor = parts[pid + "_floor"]
@@ -93,7 +95,7 @@ class MugSides2BottomTest(unittest.TestCase):
             for k in ("id", "piece", "parts", "kind", "plane", "separationDeg", "ridge", "path", "lengthMm", "clamped",
                       "clip"):
                 self.assertIn(k, j)
-            if j["clamped"]:
+            if j["clamped"] and j.get("lapKind") != "baseSlide":  # the core slides off its ledge lap
                 self.assertTrue(j["opens"], j["id"])
             self.assertGreater(j["lengthMm"], 10.0)
             kinds.setdefault((j["piece"], j["kind"]), []).append(j)
@@ -127,15 +129,19 @@ class MugSides2BottomTest(unittest.TestCase):
             self.assertEqual(j["ridge"], "none")
         self.assertEqual(kinds[("side1", "radial")][0]["ridge"], "flank45")
         laps = {tuple(j["parts"]): j for j in kinds[("side1", "lap")]}
-        # core <-> floor: horizontal sliding lap under the core plate foot (repair: no downward floor flange)
+        # core <-> floor: horizontal sliding lap under the core plate foot (repair: no downward floor flange),
+        # clamped on the core's ledge: its path is the ledge edge, flangeWidth behind the plate back
         cf = laps[("side1_floor", "side1_core")]
         self.assertEqual((cf["ridge"], cf["seal"], cf["clamped"], cf["lapKind"]),
-                         ("none", "tape", False, "baseSlide"))
+                         ("none", "tape", True, "baseSlide"))
+        self.assertEqual(cf["ledge"], {"widthMm": 15.0, "thicknessMm": 4.0})
         self.assertEqual(cf["orderSeparationDeg"], 90.0)
         self.assertEqual(cf["plane"]["normal"], [0.0, 0.0, 1.0])
         self.assertAlmostEqual(cf["plane"]["origin"][2], H - 0.8)
-        self.assertTrue(all(abs(p[1] + 4.8) < 1e-9 and abs(p[2] - (H - 0.8)) < 1e-9 for p in cf["path"]))
-        self.assertTrue(all(j["clamped"] for j in self.plan["joints"] if j is not cf and j.get("lapKind") is None))
+        self.assertTrue(all(abs(p[1] + 19.8) < 1e-9 and abs(p[2] - (H - 0.8)) < 1e-9 for p in cf["path"]))
+        reach = C.cast_outline(MUG).ray([0.0, 0.0], 0.0, H - 0.8) + 2.4 / math.cos(math.radians(7.13)) + 15.0
+        self.assertEqual(sorted(round(p[0], 3) for p in cf["path"]), [round(-reach, 3), round(reach, 3)])
+        self.assertTrue(all(j["clamped"] for j in self.plan["joints"]))
         self.assertEqual(laps[("side1_core", "side1_sector1")]["ridge"], "flank45")
 
     def test_ridge_rules(self):
@@ -152,9 +158,11 @@ class MugSides2BottomTest(unittest.TestCase):
         self.assertEqual(core["print"]["mode"], "plateBackOnBed")
         self.assertAlmostEqual(C.mat_apply(T, [0, 0, H + 4.8])[2], 0.0)  # plate back on the bed
         self.assertAlmostEqual(C.mat_apply(T, [0, 0, H])[2], 4.8)  # working face up
-        sc = parts["side1_core"]["print"]["transform"]
-        self.assertAlmostEqual(C.mat_dir(sc, [0, 1, 0])[2], 1.0)
-        self.assertAlmostEqual(C.mat_apply(sc, [0, -4.8, 0])[2], 0.0)
+        sc = parts["side1_core"]["print"]  # the ledge: standing on its foot (the lap plane on the bed)
+        self.assertEqual(sc["mode"], "footOnBed")
+        self.assertAlmostEqual(C.mat_dir(sc["transform"], [0, 0, 1])[2], 1.0)
+        self.assertAlmostEqual(C.mat_apply(sc["transform"], [0, -4.8, H - 0.8])[2], 0.0)
+        self.assertGreaterEqual(sc["estimateSizeMm"][1], 4.8 + 15.0 + 60.0 * 0.9)  # ledge + plate + plug half
         fl = parts["side1_floor"]["print"]  # floor: plate back down, nothing hangs below it (repair)
         self.assertEqual(fl["mode"], "plateBackOnBed")
         self.assertAlmostEqual(C.mat_apply(fl["transform"], [0, 50.0, H - 4.8])[2], 0.0)
@@ -173,7 +181,7 @@ class DropOutTest(unittest.TestCase):
         pl = C.plan_piece(C.layout_pieces("dropOut", ZB, ZTOP)[0], MUG)
         self.assertTrue(pl["flipped"])
         roles = [q["role"] for q in pl["parts"]]
-        self.assertEqual(roles, ["core"] + ["sector"] * 3 + ["stand"])
+        self.assertEqual(roles, ["core"] + ["sector"] * 3)
         core = pl["parts"][0]
         self.assertTrue(core["isBase"])
         self.assertEqual(sorted(core["faces"]), ["plug", "top"])
@@ -244,22 +252,92 @@ class StandAndClipPlanTest(unittest.TestCase):
         cls.plan = C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG)
         cls.pieces = by_id(cls.plan)
 
-    def test_stand_part(self):
-        for pid, up in (("bottom", 1.0), ("side1", -1.0), ("side2", -1.0)):
-            piece = self.pieces[pid]
-            stand = piece["parts"][-1]
-            self.assertEqual((stand["id"], stand["role"]), (pid + "_stand", "stand"))
-            self.assertFalse(stand["isBase"])
-            self.assertEqual(stand["faces"], [])
-            self.assertEqual(stand["pull"], [0.0, 0.0, up])
-            st = stand["stand"]
-            self.assertEqual((st["heightMm"], st["wallMm"]), (5.0, 4.0))
-            self.assertAlmostEqual(st["outerOffsetMm"] - st["innerOffsetMm"], 4.0, 3)
-            self.assertGreater(st["sagMm"], 0.0)
-            self.assertEqual(stand["print"]["mode"], "standFlat")
-            self.assertTrue(stand["print"]["bedFit"]["fits"])
-            self.assertAlmostEqual(stand["print"]["estimateSizeMm"][2], 5.0)
-            self.assertNotIn(stand["id"], piece["plannedOrder"])
+    def test_no_stand_parts(self):
+        self.assertNotIn("stand", [q["role"] for pl in self.plan["pieces"] for q in pl["parts"]])
+
+    def test_round_foot_clips(self):
+        q = DV.round_params(DV.dove_params({}))
+        keys = set()
+        for j in self.plan["joints"]:
+            if j["kind"] != "foot":
+                continue
+            c = j["clip"]
+            self.assertEqual(c["type"], "round", j["id"])
+            self.assertEqual(c["count"], len(c["stations"]), j["id"])
+            a0, a1 = c["runDeg"]
+            for st, site in zip(c["stations"], c["sites"]):
+                keys.add(site["clip"])
+                for k in ("notchDeg", "headDeg", "lugDeg"):
+                    self.assertTrue(a0 - 1e-6 <= st[k][0] < st[k][1] <= a1 + 1e-6, (j["id"], k))
+                # notch, head and lug follow each other along the slide; the head spans the clip + seat gap
+                self.assertAlmostEqual(math.radians(st["headDeg"][1] - st["headDeg"][0]) * c["radiusMm"],
+                                       site["lengthMm"] + q["seatGapMm"], 3)
+                shared = set(st["notchDeg"]) & set(st["headDeg"])
+                self.assertEqual(len(shared), 1, j["id"])                      # notch runs into the head
+                # the leading end sits L into the head from the notch
+                self.assertAlmostEqual(math.radians(abs(site["atDeg"] - shared.pop())) * c["radiusMm"],
+                                       site["lengthMm"], 2)
+                self.assertEqual(sum(1 for _ in st["pieces"]), len(DV.round_pieces(q, 0.0, site["lengthMm"] + q["seatGapMm"])))
+        # one round clip per lean class: the upside-down bottom piece's feet lean the other way
+        self.assertEqual(len(keys), 2, keys)
+        self.assertEqual({k[-5:] for k in keys}, {"_lp13", "_ln13"})
+
+    def test_round_clips_slide_the_same_way_round(self):
+        for j in self.plan["joints"]:
+            if j["kind"] == "foot":
+                for st in j["clip"]["sites"]:
+                    # z = x cross y with x inward and y cast up is the tangent of increasing angle about cast up
+                    # (cast up x outward); z points back along the arc, so every clip slides clockwise
+                    out = [-v for v in st["x"]]
+                    ccw = [st["y"][1] * out[2] - st["y"][2] * out[1], st["y"][2] * out[0] - st["y"][0] * out[2],
+                           st["y"][0] * out[1] - st["y"][1] * out[0]]
+                    self.assertGreater(sum(a * b for a, b in zip(st["z"], ccw)), 0.99, j["id"])
+
+    def test_ledge_dove_clips(self):
+        q = DV.dove_params({})
+        for pid, ys in (("side1", 1.0), ("side2", -1.0)):
+            j = next(j for j in self.pieces[pid]["joints"] if j.get("lapKind") == "baseSlide")
+            c = j["clip"]
+            self.assertEqual((c["type"], c["sides"], c["groove"], c["count"]), ("dove", 2, True, 2))
+            full = math.dist(j["path"][0], j["path"][1])
+            head = c["runMm"]
+            self.assertEqual(c["halves"][0]["headMm"], [0.0, round(head, 4)])
+            self.assertEqual(c["halves"][1]["headMm"], [round(full - head, 4), round(full, 4)])
+            # each lug starts where its own head ends and stops short of the other head (they may merge mid-ledge)
+            self.assertLessEqual(c["halves"][0]["lugMm"][1], c["halves"][1]["headMm"][0] + 1e-6)
+            self.assertGreaterEqual(c["halves"][1]["lugMm"][0], c["halves"][0]["headMm"][1] - 1e-6)
+            a, b = c["sites"]
+            self.assertEqual({a["mirror"], b["mirror"]}, {False, True})          # a mirrored pair
+            self.assertEqual(a["clip"].replace("_m", ""), b["clip"].replace("_m", ""))
+            self.assertTrue(a["clip"].endswith("_g") or a["clip"].endswith("_g_m"))
+            for st, end in ((a, j["path"][0]), (b, j["path"][1])):
+                self.assertEqual(st["x"], [0.0, ys, 0.0])                        # inward: toward the plate back
+                self.assertAlmostEqual(abs(st["z"][0]), 1.0)                     # slides along the ledge
+                self.assertAlmostEqual(math.dist(st["origin"], end), st["lengthMm"], 3)   # bottom end L in
+                top = [st["origin"][i] + st["z"][i] * st["lengthMm"] for i in range(3)]
+                self.assertAlmostEqual(math.dist(top, end), 0.0, 3)              # z runs back to the entry end
+                self.assertAlmostEqual(st["sBottom"] + q["seatGapMm"], head, 3)
+            self.assertEqual(CL.clashes(c["sites"], {x["clip"]: DV.clip_spec(q, 2, x["lengthMm"], x["sBottom"],
+                                                                             x["mirror"], True) for x in c["sites"]}), [])
+
+    def test_ledge_clip_sites(self):
+        snap = by_id(C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG,
+                                    params={"clipRailStyle": "snap"}))
+        for pid, ys in (("side1", 1.0), ("side2", -1.0)):
+            j = next(j for j in snap[pid]["joints"] if j.get("lapKind") == "baseSlide")
+            c = j["clip"]
+            self.assertEqual((c["type"], c["sides"]), ("short", 1))
+            run = math.dist(j["path"][0], j["path"][1]) - 20.0       # clipEndOffset at both ends
+            self.assertEqual(c["count"], len(CL.spread(run, 16.0, 25.0)))
+            self.assertEqual(c["runMm"], [10.0, round(run + 10.0, 4)])
+            for st in c["sites"]:
+                self.assertEqual((st["kind"], st["clip"], st["sagMm"]), ("short", "clip_short", 0.0))
+                self.assertEqual(st["x"], [0.0, ys, 0.0])            # inward: toward the plate back
+                self.assertEqual(st["y"], [0.0, 0.0, 1.0])
+                self.assertAlmostEqual(st["origin"][1], -19.8 * ys, 6)  # on the ledge edge ...
+                self.assertAlmostEqual(st["origin"][2], H - 0.8, 6)     # ... on the lap plane
+                mid = st["origin"][0] + st["z"][0] * 8.0
+                self.assertLessEqual(abs(mid) + 8.0, abs(j["path"][0][0]) - 10.0 + 1e-6)
 
     def test_no_stand_without_foot_clips(self):
         small = dict(MUG, radius=8.0)       # foot runs shorter than a 16 mm clip
@@ -280,9 +358,27 @@ class StandAndClipPlanTest(unittest.TestCase):
                 continue
             self.assertEqual(c["count"], len(c["sites"]), j["id"])
             self.assertGreaterEqual(c["count"], 1, j["id"])
-            want = "short" if j["kind"] == "foot" else "rail"
+            want = "round" if j["kind"] == "foot" else "dove"
             self.assertEqual(c["type"], want, j["id"])
-        self.assertEqual(seen, {("foot", "short"), ("radial", "rail"), ("lap", "rail"), ("lap", "none")})
+        self.assertEqual(seen, {("foot", "round"), ("radial", "dove"), ("lap", "dove")})
+
+    def test_cores_on_a_ledge_get_two_sided_laps_and_shared_clips(self):
+        keys = {}
+        for j in self.plan["joints"]:
+            if j["kind"] == "lap" and not j.get("lapKind"):
+                self.assertEqual(j["clip"]["sides"], 2, j["id"])            # the side core stands on its foot
+            if j["kind"] in ("radial", "lap") and not j.get("lapKind") and j["piece"] != "bottom":
+                keys.setdefault(j["clip"]["sites"][0]["clip"], []).append(j["id"])
+        self.assertEqual(len(keys), 1, keys)                                 # side radials and laps: one clip
+
+    def test_snap_style_keeps_the_rails(self):
+        snap = C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG, params={"clipRailStyle": "snap"})
+        kinds = {(j["kind"], j["clip"]["type"]) for j in snap["joints"] if j["clamped"]}
+        self.assertEqual(kinds, {("foot", "short"), ("radial", "rail"), ("lap", "rail"), ("lap", "short")})
+        for j in snap["joints"]:
+            for st in j["clip"]["sites"]:
+                if st["kind"] == "rail":
+                    self.assertEqual(st["clip"], "clip_rail_%dmm%s" % (st["lengthMm"], "" if st["sides"] == 2 else "_flat"))
 
     def test_sites(self):
         ids = set()
@@ -296,9 +392,26 @@ class StandAndClipPlanTest(unittest.TestCase):
                 ids.add((st["joint"], st["index"]))
                 if st["kind"] == "short":
                     self.assertEqual((st["clip"], st["lengthMm"], st["sides"]), ("clip_short", 16.0, 1))
+                elif st["kind"] == "round":
+                    self.assertEqual(st["clip"], DV.round_key(st["lengthMm"], st["clipRadiusMm"], st["taper"],
+                                                              st["edgeLean"]))
+                    self.assertEqual(st["y"], [0.0, 0.0, st["y"][2]])            # y = cast up
+                    self.assertAlmostEqual(abs(st["y"][2]), 1.0)
                 else:
-                    self.assertRegex(st["clip"], r"^clip_rail_\d+mm(_flat)?$")
-                    self.assertEqual(st["clip"], "clip_rail_%dmm%s" % (st["lengthMm"], "" if st["sides"] == 2 else "_flat"))
+                    self.assertEqual(st["kind"], "dove")
+                    self.assertEqual(st["clip"], DV.clip_key(st["lengthMm"], st["sides"], st["sBottom"], st["mirror"],
+                                                             st["taper"], st.get("groove", False)))
+                    self.assertEqual(st["mirror"] and (st["sides"] == 1 or st.get("groove", False)), st["mirror"])
+                    # z up the seam in the cast frame (a piece poured upside down has it along -Z; a ledge clip
+                    # slides along the horizontal ledge), y = z x x
+                    if st.get("groove"):
+                        self.assertAlmostEqual(st["z"][2], 0.0)
+                    else:
+                        self.assertGreater(abs(st["z"][2]), 0.9)
+                    cr = [st["z"][1] * st["x"][2] - st["z"][2] * st["x"][1], st["z"][2] * st["x"][0] - st["z"][0] * st["x"][2],
+                          st["z"][0] * st["x"][1] - st["z"][1] * st["x"][0]]
+                    for a, b in zip(cr, st["y"]):
+                        self.assertAlmostEqual(a, b, 5)
         self.assertEqual(len(ids), sum(len(j["clip"]["sites"]) for j in self.plan["joints"]))
 
     def test_short_clip_spacing_and_rail_lengths(self):
@@ -307,6 +420,18 @@ class StandAndClipPlanTest(unittest.TestCase):
             if c["type"] == "short":
                 self.assertLessEqual(c["pitchMm"], 25.0 + 1e-6, j["id"])
                 self.assertGreaterEqual(c["pitchMm"], 16.0, j["id"])      # clips never overlap
+            elif c["type"] == "dove" and c.get("ledge"):
+                self.assertEqual(c["count"], 2, j["id"])                  # one from each end
+            elif c["type"] == "dove":
+                self.assertEqual(c["count"], 1, j["id"])                  # one clip covers the run
+                st = c["sites"][0]
+                self.assertAlmostEqual(st["sBottom"] + c["seatGapMm"], c["runMm"], delta=0.11)
+                self.assertGreaterEqual(st["lengthMm"], 16.0)
+                if c["runMm"] < 30.0:                                     # short bottom radial: steeper taper
+                    self.assertLess(c["taper"], 80.0)
+                    self.assertGreaterEqual(c["taper"], 10.0)
+                self.assertAlmostEqual(c["lugZp"][1] - c["lugZp"][0], 3.0)
+                self.assertAlmostEqual(c["headZp"][0], c["lugZp"][1])
             elif c["type"] == "rail":
                 lens = {st["lengthMm"] for st in c["sites"]}
                 self.assertEqual(len(lens), 1, j["id"])                   # equal rails
@@ -315,9 +440,10 @@ class StandAndClipPlanTest(unittest.TestCase):
                 self.assertLessEqual(sum(st["lengthMm"] for st in c["sites"]), c["lengthMm"] + 1e-6)
 
     def test_clip_parameters_change_the_plan(self):
-        narrow = C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG, params={"clipWidth": 12.0,
-                                                                                               "clipSpacingMax": 15.0})
-        n0 = sum(len(j["clip"]["sites"]) for j in self.plan["joints"] if j["kind"] == "foot")
+        snap = C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG, params={"clipRailStyle": "snap"})
+        narrow = C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG, params={
+            "clipRailStyle": "snap", "clipWidth": 12.0, "clipSpacingMax": 15.0})
+        n0 = sum(len(j["clip"]["sites"]) for j in snap["joints"] if j["kind"] == "foot")
         n1 = sum(len(j["clip"]["sites"]) for j in narrow["joints"] if j["kind"] == "foot")
         self.assertGreater(n1, n0)                                         # closer spacing: more clips
         site = next(st for j in narrow["joints"] for st in j["clip"]["sites"] if st["kind"] == "short")
@@ -349,7 +475,7 @@ class HelpersTest(unittest.TestCase):
         self.assertIn("mold_casingFreeboard", msg)
         self.assertIn("mold_bedZ", msg)
 
-    def test_overhang_mass_material(self):
+    def test_overhang_and_mass(self):
         self.assertEqual(C.classify_face([0, 0, -1], 0.0), "bed")
         self.assertEqual(C.classify_face([0, 0, -1], 5.0), "overhang")
         self.assertEqual(C.classify_face([1, 0, -1], 5.0), "ok")
@@ -359,17 +485,10 @@ class HelpersTest(unittest.TestCase):
                                  {"normal": [1, 0, 0], "areaMm2": 50.0, "zMin": 0.0}])
         self.assertEqual((rep["bedAreaMm2"], rep["overhangAreaMm2"], rep["nOverhang"], rep["status"]),
                          (100.0, 7.0, 1, "warn"))
-        self.assertEqual(C.pla_mass_g(10000.0), 12.4)
-        self.assertEqual(C.mass_g(10000.0, "PETG"), 12.7)
-        self.assertEqual(C.casing_material(51.0)["material"], "PETG")          # mold_casingMaterial default
-        self.assertIsNone(C.casing_material(51.0)["warning"])
-        pla = C.casing_material(51.0, chosen="'pla'")
-        self.assertEqual(pla["material"], "PLA")
-        self.assertIn("mold_casingMaterial", pla["warning"])
-        self.assertIsNone(C.casing_material(50.0, chosen="PLA")["warning"])
-        self.assertEqual(C.part_name("PETG", "side1_core"), "PETG_side1_core")
-        with self.assertRaises(ValueError):
-            C.material_key("ABS")
+        self.assertEqual(C.mass_g(10000.0), 12.7)                              # filamentDensity 1.27
+        self.assertEqual(C.mass_g(10000.0, {"filamentDensity": 1.24}), 12.4)
+        for gone in ("pla_mass_g", "casing_material", "material_key", "part_name"):
+            self.assertFalse(hasattr(C, gone), gone)
         self.assertTrue(C.nozzle_multiple(2.4))
         self.assertFalse(C.nozzle_multiple(2.5))
 

@@ -30,7 +30,6 @@
     {"name": "casingRingSectors", "expr": "4", "units": "", "group": "casing", "desc": "Sectors for full-ring casing backs", "rule": "PRN-06", "tier": "auto"},
     {"name": "casingFreeboard", "expr": "10 mm", "units": "mm", "group": "casing", "desc": "Casing wall height above the plaster fill line", "rule": "PRN-10", "tier": "auto"},
     {"name": "fillLineDepth", "expr": "0.6 mm", "units": "mm", "group": "casing", "desc": "Fill-line deboss depth", "rule": "PRN-10", "tier": "profile"},
-    {"name": "casingMaterial", "expr": "'PETG'", "units": "Text", "group": "casing", "desc": "Casing print material, the prefix of every casing part name: PETG (recommended: heat deflection about 75 C; setting plaster warms the casing to 40-55 C) | PLA (58 C)", "rule": "PRN-04", "choices": ["PETG", "PLA"], "ignoreCase": true, "tier": "input"},
     {"name": "flangeThickness", "expr": "4 mm", "units": "mm", "group": "seams", "desc": "Flange thickness; leaves a 2.5 mm floor under the 1.5 mm ridge grooves", "rule": "PRN-08", "tier": "auto"},
     {"name": "flangeWidth", "expr": "15 mm", "units": "mm", "group": "seams", "desc": "Flange width: the ridge zone (3 ridges: 14.6 mm) + a land at the edge; the clip beads sit over the outer grooves", "rule": "PRN-08", "tier": "auto", "derive": "the ridge zone (ridgeCount, ridgeWidth, ridgeHeight, ridgeInset, seamClearance) + the 1.2 mm edge land, rounded up to whole mm"},
     {"name": "ridgeCount", "expr": "3", "units": "", "group": "seams", "desc": "Sealing ridges per seam (same offsets on every seam, so the ridge lines turn the corners)", "rule": "PRN-09", "tier": "auto"},
@@ -38,24 +37,33 @@
     {"name": "ridgeHeight", "expr": "1 mm", "units": "mm", "group": "seams", "desc": "Ridge height", "rule": "PRN-09", "tier": "auto"},
     {"name": "ridgeInset", "expr": "1.5 mm", "units": "mm", "group": "seams", "desc": "Casing wall outer face to the first ridge", "rule": "PRN-09", "tier": "auto"},
     {"name": "footGrooveInnerClear", "expr": "0.51 mm", "units": "mm", "group": "seams", "desc": "Cavity-side clearance of the first foot groove (room for the plaster's setting expansion)", "rule": "PRN-09", "tier": "auto", "derive": "= seamClearance + 0.35 mm (plaster setting expansion about 0.17 mm + 0.2 mm print error)"},
-    {"name": "seamClearance", "expr": "0.16 mm", "units": "mm", "group": "seams", "desc": "Ridge/groove clearance per flank; follows the nozzle and the fit offset. To change only the ridges (the fit offset also moves the clips), add a mold_seamClearance user parameter (this mold) or set seamClearance under printer in config.json (every mold)", "rule": "PRN-22", "tier": "profile", "derive": "0.16 mm (PETG, 0.4 mm nozzle) + the fit allowance (fitOffset + 0.125 x (nozzle - 0.4 mm)); PLA 0.05 mm less; never below 0.1 mm"},
+    {"name": "seamClearance", "expr": "0.16 mm", "units": "mm", "group": "seams", "desc": "Ridge/groove clearance per flank; follows the nozzle and the fit offset. To change only the ridges (the fit offset also moves the clips), add a mold_seamClearance user parameter (this mold) or set seamClearance under printer in config.json (every mold)", "rule": "PRN-22", "tier": "profile", "derive": "0.16 mm (0.4 mm nozzle) + the fit allowance (fitOffset + 0.125 x (nozzle - 0.4 mm)); never below 0.1 mm"},
     {"name": "grooveBottomGap", "expr": "0.5 mm", "units": "mm", "group": "seams", "desc": "Extra groove depth so flange faces bear (the sector foot grooves print on the bed face in draft layers)", "rule": "PRN-22", "tier": "profile", "derive": "the larger of 0.4 mm and 2 draft layers (layerDraft x nozzle / 0.4), rounded up to 0.05 mm"},
     {"name": "clipSpacingMax", "expr": "25 mm", "units": "mm", "group": "clips", "desc": "Max centre spacing of the short snap clips along a foot seam (force: about 5.8 N per clip)", "rule": "PRN-12", "tier": "auto", "derive": "one short clip's arm force / the seam's force demand, to whole mm (never below clipWidth)"},
     {"name": "clipEndOffset", "expr": "10 mm", "units": "mm", "group": "clips", "desc": "Foot bead run and clips kept this far from a crossing flange's outer face", "rule": "PRN-12", "tier": "auto"},
-    {"name": "clipArm", "expr": "2.4 mm", "units": "mm", "group": "clips", "desc": "Clip arm thickness (PETG; 20 mm free length)", "rule": "PRN-13", "tier": "auto", "derive": "the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip material's limit"},
+    {"name": "clipArm", "expr": "2.4 mm", "units": "mm", "group": "clips", "desc": "Clip arm thickness (20 mm free length)", "rule": "PRN-13", "tier": "auto", "derive": "the thickest whole number of nozzle lines whose snap strain (preload + barb + 0.2 mm print error) stays within the clip filament's strain limit"},
     {"name": "clipWidth", "expr": "16 mm", "units": "mm", "group": "clips", "desc": "Short snap clip width along the seam", "rule": "PRN-13", "tier": "auto"},
     {"name": "clipPreload", "expr": "0.7 mm", "units": "mm", "group": "clips", "desc": "Short clip preload per arm; spares at 0.5 and 0.9 mm are printed to compare in the leak test", "rule": "PRN-13", "tier": "auto"},
     {"name": "clipRailPreload", "expr": "0.8 mm", "units": "mm", "group": "clips", "desc": "Rail clip preload per arm (vertical seams)", "rule": "PRN-13", "tier": "auto"},
     {"name": "clipRailMax", "expr": "60 mm", "units": "mm", "group": "clips", "desc": "Longest rail clip; longer vertical seams get several stacked rails", "rule": "PRN-13", "tier": "auto"},
     {"name": "lugHeight", "expr": "3 mm", "units": "mm", "group": "clips", "desc": "Stop lugs on the vertical flanges above the foot; the lowest rail clip rests on them", "rule": "PRN-13", "tier": "auto"},
-    {"name": "standHeight", "expr": "5 mm", "units": "mm", "group": "clips", "desc": "Printed stand under the base part, so the foot clips' flat arm wraps under its back", "rule": "PRN-13", "tier": "auto"},
-    {"name": "standWall", "expr": "4 mm", "units": "mm", "group": "clips", "desc": "Stand ring wall width", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipRailStyle", "expr": "'dovetail'", "units": "Text", "group": "clips", "desc": "Clips on straight vertical seams: dovetail (one tapered clip per seam slides down a dovetail ledge until tight; Meshcast style) | snap (rail clips over beads, kit v3)", "rule": "PRN-13", "choices": ["dovetail", "snap"], "ignoreCase": true, "tier": "auto"},
+    {"name": "clipDoveDepth", "expr": "6 mm", "units": "mm", "group": "clips", "desc": "Dovetail head depth from the flange edge (the clip walls cover it)", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveAngle", "expr": "15 deg", "units": "deg", "group": "clips", "desc": "Dovetail lean of the head face: the head is thicker at the flange edge, so the clip cannot be pulled off sideways", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveTaper", "expr": "80", "units": "", "group": "clips", "desc": "Taper of the dovetail ledge and clip, per face: 1 mm thicker per this many mm down the seam (self-locking)", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveWall", "expr": "2.4 mm", "units": "mm", "group": "clips", "desc": "Dovetail clip side wall thickness", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveSpine", "expr": "2 mm", "units": "mm", "group": "clips", "desc": "Dovetail clip spine thickness; it bears on the ledge edge and its bending is the clip's spring", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveReuse", "expr": "12 mm", "units": "mm", "group": "clips", "desc": "Clip reuse: a straight seam may take a standard dovetail clip up to this much shorter than it allows, so equal clips serve several seams (fewer sizes to print)", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipRoundTaper", "expr": "40", "units": "", "group": "clips", "desc": "Taper of the round clips (curved foot seams), per face: 1 mm thicker per this many mm along the arc; steeper than the straight clips so more stations fit (seat gap 4 mm)", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipRoundMax", "expr": "30 mm", "units": "mm", "group": "clips", "desc": "Longest round clip considered; the mold's one round clip length (16 mm up to this) is the one that clamps the most arc over all foot seams", "rule": "PRN-13", "tier": "auto"},
+    {"name": "clipDoveInterference", "expr": "0.1 mm", "units": "mm", "group": "clips", "desc": "Squeeze per head face when the dovetail clip is seated (about 8 mm of travel after it first grips)", "rule": "PRN-13", "tier": "auto"},
     {"name": "bedX", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer bed X", "rule": "PRN-15", "tier": "profile"},
     {"name": "bedY", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer bed Y", "rule": "PRN-15", "tier": "profile"},
     {"name": "bedZ", "expr": "260 mm", "units": "mm", "group": "printer", "desc": "Printer height", "rule": "PRN-15", "tier": "profile"},
     {"name": "bedMargin", "expr": "5 mm", "units": "mm", "group": "printer", "desc": "Safety margin inside the bed limits", "rule": "PRN-15", "tier": "profile"},
     {"name": "nozzle", "expr": "0.4 mm", "units": "mm", "group": "printer", "desc": "Nozzle diameter (the Make mold dialog asks for it): walls and ridges snap to whole lines, layer heights scale with it, printed clearances open 0.125 mm per mm over 0.4", "rule": "PRN-16", "tier": "profile"},
-    {"name": "fitOffset", "expr": "0 mm", "units": "mm", "group": "printer", "desc": "Per-side fit correction from your tolerance test: + loosens every printed fit (ridge grooves, clip openings and barbs), - tightens; 0 for a calibrated printer", "rule": "PRN-22", "tier": "profile"}
+    {"name": "fitOffset", "expr": "0 mm", "units": "mm", "group": "printer", "desc": "Per-side fit correction from your tolerance test: + loosens every printed fit (ridge grooves, clip openings and barbs), - tightens; 0 for a calibrated printer", "rule": "PRN-22", "tier": "profile"},
+    {"name": "printTolerance", "expr": "0.05 mm", "units": "mm", "group": "printer", "desc": "Dimensional accuracy of your printer, +- per side: dovetail clip clearances are 2x this, and the clip seats this much x 2 x the taper above its stop lug", "rule": "PRN-22", "tier": "profile"}
   ],
   "stageGroups": {
     "s1_params": [
@@ -70,16 +78,14 @@
       "printer"
     ]
   },
-  "materials": {
-    "PETG": {
-      "modulusMPa": [
-        1000.0,
-        1200.0,
-        1500.0
-      ],
-      "strainMaxPct": 1.5,
-      "desc": "Clip arm material: elastic modulus low / mid / high and the bending strain it takes without whitening"
-    }
+  "clipFilament": {
+    "modulusMPa": [
+      1000.0,
+      1200.0,
+      1500.0
+    ],
+    "strainMaxPct": 1.5,
+    "desc": "Clip filament stiffness: elastic modulus low / mid / high (MPa) and the bending strain (%) a clip arm takes without whitening"
   },
   "settings": {
     "analysis": {
@@ -104,12 +110,9 @@
       "mixWaterTempC": 21,
       "shopTempMaxC": 24,
       "wetPieceWeightWarnKg": 6.0,
-      "casingMaterialDefault": "PETG",
-      "clipMaterial": "PETG",
       "layerFine": 0.12,
       "layerDraft": 0.24,
-      "plaDensity": 1.24,
-      "petgDensity": 1.27
+      "filamentDensity": 1.27
     },
     "export": {
       "format": "3mf",

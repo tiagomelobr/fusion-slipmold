@@ -209,6 +209,17 @@ class StaleTest(unittest.TestCase):
         st["mold"]["params"] = dict(st["params"])
         self.assertTrue(any("missing parameters" in x for x in PI.evaluate(st)["stale"][PI.S1]))
 
+    def test_retired_param_runs_s1_once_and_changes_no_hash(self):
+        st = fresh_state()
+        h = PI.state_hashes(st, DEFAULTS)
+        st["params"]["mold_casingMaterial"] = "'PETG'"          # an older design (retired input)
+        st["mold"]["params"] = dict(st["params"])
+        self.assertEqual(PI.state_hashes(st, DEFAULTS), h)
+        self.assertIn("retired parameters to delete: mold_casingMaterial", PI.evaluate(st)["stale"][PI.S1])
+        self.assertEqual(PI.params_blocked(st, DEFAULTS), None)
+        st["mold"]["retiredKept"] = ["mold_casingMaterial"]      # S1 could not delete it: not again
+        self.assertEqual(PI.evaluate(st)["stale"][PI.S1], [])
+
     def test_recorded_statuses(self):
         st = fresh_state()
         del st["mold"]["pipeline"]["stages"][PI.S0]
@@ -294,8 +305,8 @@ class DriveTest(unittest.TestCase):
 
 FULL = ORDER + [PI.S7, PI.S8, PI.S9]
 PARTS = ["bottom_core", "bottom_sector1", "side1_core", "side2_core"]
-CLIP_BODIES = ["PETG_clip_short", "PETG_clip_short_p05", "PETG_clip_short_p09", "PETG_clip_rail_48mm"]
-FILES = ["PETG_bottom_core.3mf", "PETG_clip_short_x30.3mf", "process-sheet.html"]
+CLIP_BODIES = ["clip_short", "clip_short_p05", "clip_short_p09", "clip_rail_48mm"]
+FILES = ["bottom_core.3mf", "clip_short_x30.3mf", "process-sheet.html"]
 
 
 def full_state():
@@ -308,7 +319,7 @@ def full_state():
                     "pieces": ["bottom", "side1", "side2"],
                     "parts": [{"name": n, "piece": n.split("_")[0]} for n in PARTS]}
     m["clips"] = {"status": "pass", "paramHash": h["clips"], "total": 30,
-                  "bodies": [{"name": n, "key": n[len("PETG_"):], "count": 1} for n in CLIP_BODIES]}
+                  "bodies": [{"name": n, "key": n, "count": 1} for n in CLIP_BODIES]}
     m["export"] = {"status": "pass", "paramHash": h["clips"], "files": list(FILES),
                    "settingsHash": PI.export_settings_hash(DEFAULTS)}
     m["pipeline"]["stages"].update(entries((PI.S7, PI.S8, PI.S9), start=len(ORDER) + 1))

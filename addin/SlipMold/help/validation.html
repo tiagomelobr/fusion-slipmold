@@ -64,12 +64,12 @@ li { margin:2px 0; }
 <tr><td>S5 pieces</td><td>bottom 412.9 cm3, side1 571.7, side2 572.2; 10 natches (mixed genders, R 6 mm, depth 3.5, clearance 0.5), unique fit</td></tr>
 <tr><td>S6 verify</td><td>pass: 30 checks, none failed; 6 orders searched, 2 feasible, planned order bottom, side1, side2; 360 fit transforms tested; interference 0; min natch to cast 8.0 mm</td></tr>
 <tr><td>S7 casings</td><td>warn: 13 parts (bottom core + 4 sectors, side1 core + floor + 2 sectors, side2 the same), 20 joints, no interference; warnings: 450 mm2 overhang on each bottom sector, a flange thickness that is not a nozzle multiple</td></tr>
-<tr><td>S8 clips</td><td>warn: 78 PETG clips (bottom 28, side1 25, side2 25), 0 clashes, 3 fit tests (seam, clip strips, clips); warnings: seam fit test pair 5 groove wall 1.15 mm &lt; 1.2 mm, 2 clips and no mid-span clip on the short radial joints</td></tr>
-<tr><td>S9 export</td><td>pass: 17 3MF files (13 casing parts, 1 clip file, 3 fit tests: <code>fit_test_seam</code>, <code>fit_test_clip_strips</code>, <code>fit_test_clips_PETG</code>), 0.93 MB, re-read of every file, <code>process-sheet.md</code> and <code>process-sheet.html</code></td></tr>
+<tr><td>S8 clips</td><td>warn: 78 clips (bottom 28, side1 25, side2 25), 0 clashes, 3 fit tests (seam, clip strips, clips); warnings: seam fit test pair 5 groove wall 1.15 mm &lt; 1.2 mm, 2 clips and no mid-span clip on the short radial joints</td></tr>
+<tr><td>S9 export</td><td>pass: 17 3MF files (13 casing parts, 1 clip file, 3 fit tests: seam, clip strips, clips), 0.93 MB, re-read of every file, <code>process-sheet.md</code> and <code>process-sheet.html</code></td></tr>
 <tr><td>Process</td><td>1764 g dry plaster + 1234 g water, 2.46 kg wet; printed casing mass 1340.7 g</td></tr>
 </tbody></table>
 <p>What it proves: the whole pipeline on a revolved vessel with a foot recess. What it does not: any non-revolved shape, any other rim or any pour.</p>
-<p>Note (2026-10-06): the fit tests (<code>fit_test_seam</code>, <code>fit_test_clip_strips</code>, <code>fit_test_clips_PETG</code>), the wedge C-clip (<code>mold_clipTaper</code>, <code>mold_clipInterference</code>) and the clay-coil seal named in the rows of sections 1 to 5 were replaced on 2026-10-06 by ridged seams, snap and rail clips, printed stands and the leak test. Those rows record the earlier runs and were not edited; the first run of the new design is section 6.</p>
+<p>Note (2026-10-06): the fit tests (seam, clip strips, clips), the wedge C-clip (<code>mold_clipTaper</code>, <code>mold_clipInterference</code>) and the clay-coil seal named in the rows of sections 1 to 5 were replaced on 2026-10-06 by ridged seams, snap and rail clips, printed stands and the leak test. Those rows record the earlier runs and were not edited; the first run of the new design is section 6.</p>
 <h2 id="2-earlier-throwaway-runs-before-this-round">2. Earlier throwaway runs (before this round)</h2>
 <p>Built in throwaway documents (never saved) to test non-revolved shapes. Numbers are from the session record.</p>
 <table>
@@ -129,8 +129,8 @@ li { margin:2px 0; }
 <thead><tr><th>Item</th><th>Result</th></tr></thead>
 <tbody>
 <tr><td>S0 to S6</td><td>pass; Gate 1 and Gate 2 approved</td></tr>
-<tr><td>S7 casings</td><td>side1 and side2 pass, bottom warn (sector overhang 365 mm2, pre-existing); parts named <code>PETG_&lt;piece&gt;_&lt;part&gt;</code>, plus one stand per piece; beads, stop lugs and edge chamfers built</td></tr>
-<tr><td>S8 clips</td><td>warn: 42 clip sites (bottom 20, side1 11, side2 11), all seated (0 mm3 overlap) and caught (minimum 3.6 mm3), 0 clashes; bodies <code>PETG_clip_short</code> x 32 plus the spares p05 and p09, <code>PETG_clip_rail_30mm</code> x 4, <code>PETG_clip_rail_59mm</code> x 2, <code>PETG_clip_rail_59mm_flat</code> x 4; the only warning: spare p0.9 snap strain 1.62 % &gt; 1.5 %</td></tr>
+<tr><td>S7 casings</td><td>side1 and side2 pass, bottom warn (sector overhang 365 mm2, pre-existing); parts named <code>&lt;piece&gt;_&lt;part&gt;</code>, plus one stand per piece; beads, stop lugs and edge chamfers built</td></tr>
+<tr><td>S8 clips</td><td>warn: 42 clip sites (bottom 20, side1 11, side2 11), all seated (0 mm3 overlap) and caught (minimum 3.6 mm3), 0 clashes; bodies <code>clip_short</code> x 32 plus the spares p05 and p09, <code>clip_rail_30mm</code> x 4, <code>clip_rail_59mm</code> x 2, <code>clip_rail_59mm_flat</code> x 4; the only warning: spare p0.9 snap strain 1.62 % &gt; 1.5 %</td></tr>
 <tr><td>S9 export</td><td>pass: 22 files (16 casing files including 3 stands, 6 clip files), 0.69 MB, largest part 14,022 triangles; leak-test piece side2; Gate 3 approved</td></tr>
 <tr><td>Print</td><td>not printed yet</td></tr>
 </tbody></table>
@@ -150,8 +150,94 @@ li { margin:2px 0; }
 <tr><td>Advanced and Cancel, clicked by the user (2026-10-08)</td><td>Cancel after this step, then Make mold to resume; Advanced &gt; Run stage and Reset from stage followed by Make mold: the user confirmed all work</td></tr>
 </tbody></table>
 <p>What it proves: Make mold runs S0 to S9 to the exports with no gate and keeps Fusion responsive (every step under 5 s) on both test designs, and the simplified state gives the same layout, plaster and natches as the gated runs. What it does not: saving a version after each stage within the step budget (a save adds about 1.5 s).</p>
-<h2 id="8-not-yet-validated">8. Not yet validated</h2>
+<h2 id="8-core-ledge-part-labels-and-names-without-the-material-2026-10-08">8. Core ledge, part labels and names without the material (2026-10-08)</h2>
+<p>A new unsaved document, "SlipMold test cup", with a copy of the Small Cup body (44.8 mm wide, 40 mm tall), ran S0 to S9 with the add-in's headless Make mold (<code>save=False</code>, <code>s7_per_piece=True</code>) and the defaults (<code>sides2Bottom</code>, 3 pieces). Reports in <code>molds/SlipMold_test_cup/runs/</code>.</p>
+<table>
+<thead><tr><th>Item</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Core ledge (side1, side2)</td><td>ledge 15 x 4 mm behind each core's back on a matching floor extension; the core prints standing on its foot (<code>footOnBed</code>, 163.7 x 57.6 x 64.1 mm, fits); 6 short clips per ledge at 21.9 mm pitch; stand bar moved under the extension</td></tr>
+<tr><td>Release and fit (S7)</td><td>all three pieces warn only: every planned removal order feasible (side1: 8 orders), cavity gap 0, no interference. A first run failed (core/sector and core/floor overlap 25 and 8.6 mm3: the ledge refilled the arc-end notches); the ledge now starts inside the plate back</td></tr>
+<tr><td>Print warnings</td><td>side cores 1085 mm2 overhang: the spare step (knife ledge) when the core stands upright, reported with the support advice; bottom sectors 472 mm2 at 49 deg (not from this change)</td></tr>
+<tr><td>Labels</td><td>every casing part and stand engraved 0.6 mm deep, Arial bold: "SLIPMOLD TEST CUP" over the part name at 7.0 mm (cores, floors, bottom core), 5.1-5.4 mm (sectors); stands one line at 3.6-3.9 mm; read correctly in a screenshot of side1_core's back</td></tr>
+<tr><td>Clips (S8)</td><td>55 sites (bottom 21, side1 17, side2 17), all checked, 0 failed, seated max 0.0019 mm3, barb catch min 2.19 mm3, 0 clashes; only warning spare p0.9 snap strain 1.62 %</td></tr>
+<tr><td>Names and export (S9)</td><td>components <code>Casings</code>, <code>Clips</code>; bodies and files without a material prefix (<code>side1_core.3mf</code>, <code>clip_short_x46.3mf</code>); 21 files + process sheet</td></tr>
+<tr><td>Step times</td><td>S7 per piece: labels 5.6-6.3 s, build 4.7-5.9 s, checks 2.1-2.4 s (before: build and checks 1.0-3.5 s); the checks run the booleans on the parts as built before engraving</td></tr>
+</tbody></table>
+<p>What it does not prove: a print of the ledge and its clips, and the labels' legibility on a real print.</p>
+<h2 id="9-dovetail-clips-what-s7-and-s8-check-2026-10-08">9. Dovetail clips: what S7 and S8 check (2026-10-08)</h2>
+<p>New clip kind for the straight vertical seams: <code>mold_clipRailStyle</code> = <code>'dovetail'</code> (the default) gives each seam one PETG dovetail clip (<code>clip_dove_&lt;length&gt;mm_s&lt;NNN&gt;</code>; radial pairs and arc-end laps); <code>'snap'</code> keeps the rail clips over beads (kit v3) so older molds stay reproducible. Curved foot seams get round clips with <code>'dovetail'</code> when the outline is a circle (the short snap clips otherwise, and with <code>'snap'</code>); core foot ledges get the short snap clips with <code>'snap'</code>, and two dovetail clips with <code>'dovetail'</code> (see "Changes after the Fusion run" and "Round clips" below). S7 builds a dovetail head on each free outer flange face and a stop lug under the run; S8 builds the clip. The S7 casing build number went from 8 to 9 with the dovetail clips, to 10 with the changes below and to 11 with the round clips, so casings built before count as stale. The design numbers are in <a href="user-guide.html">USER_GUIDE.md</a> section 10 ("Dovetail clips" and "Round clips"). The logic is unit-tested with synthetic data (<code>tests/test_dovetail.py</code>, <code>tests/test_casing.py</code> and others).</p>
+<p>Fusion run, 2026-10-08, document "SlipMold test cup" (unsaved; layout sides2Bottom, S7 build 9). S7 to S9 pass (S7 and S8 warn only for older items: curved-face overhangs, the side cores' knife ledge, the 0.9 mm snap spare). Nine straight seams got dovetail clips:</p>
 <ul>
+<li>3 bottom radials: <code>clip_dove_26mm_s026</code>, both faces;</li>
+<li>2 side radials: <code>clip_dove_49mm_s049</code>;</li>
+<li>4 arc-end laps: <code>clip_dove_49mm_s049_flat</code> and its mirror <code>_flat_m</code>, one head face.</li>
+</ul>
+<p>All 55 clip sites pass, the 9 dovetail ones with:</p>
+<ul>
+<li>seated squeeze 0.86 to 0.98 of the designed volume;</li>
+<li>nothing touched when raised by the travel + 1 mm;</li>
+<li>the lug filling 0.80 to 0.96 of its probe.</li>
+</ul>
+<p>The side pieces' lower squeeze comes from their leaning flange edges (about 8 deg); the taper takes it up with about 1 mm more travel. Two fixes came out of this run:</p>
+<ul>
+<li>The lug got a 45-deg underside: its flat underside counted as a 20 mm2 overhang per lug.</li>
+<li>One-sided seams got the 0.8 mm edge chamfer on the core's bed-face flange edge: the clip's root chamfer on the flat side overlapped the square core corner, 5 mm3 per clip, and bound the clip all the way up.</li>
+</ul>
+<p>Changes after the Fusion run above (S7 build 10; unit-tested, not run in Fusion yet):</p>
+<ul>
+<li><strong>Two-sided laps on side cores.</strong> A side core with a foot ledge prints standing on its foot, so its back face is no bed face. With <code>'dovetail'</code> its arc-end lap seams get a head on both faces (the core's back and the sector's flange) and use the same symmetric clip as the radial seams. <code>_flat</code> clips remain only where one flange is a plate (printed back down on the bed). The <code>'snap'</code> style is unchanged.</li>
+<li><strong>Core foot ledges</strong> (the core standing on the floor's extension; before: 6 short snap clips per ledge) get two dovetail clips with <code>'dovetail'</code>, one slid in from each end of the ledge toward the middle, where both stop at a central stop lug. The ledge top (the core) carries the head. The floor's underside, its print-bed face, gets a recessed dovetail groove instead (walls leaning 15 deg like the head face; 1.0 mm deep at the stop, growing toward the entry end with the 1:80 taper; mouth from 1.5 mm to 5.5 mm in from the ledge edge) and a 0.8 mm 45 deg chamfer on its edge. The clip's lower arm carries a matching tongue, 0.1 mm clear of each groove wall, its top squeezing the groove roof by the same 0.10 mm. The floor still prints flat on the bed with no supports (the groove roof is a short bridge about 5 mm wide, the walls lean 15 deg). The two ledge clips are a mirrored pair, <code>clip_dove_&lt;L&gt;mm_s&lt;NNN&gt;_g</code> and <code>..._g_m</code>.</li>
+<li><strong>Clip reuse</strong> (<code>mold_clipDoveReuse</code>, group clips, tier auto, default 12 mm): each straight run takes the longest of a few standard clip lengths that fits it, at most 12 mm shorter than the run allows. The head runs from the seam's top (a ledge's end) for that clip plus its 8 mm seat gap, and the stop lug sits right after it, so equal lengths make identical clips across seams and pieces. Test cup: 26 mm clips on the 3 short bottom radials, 48 mm clips on the 2 side radials and the 4 laps, and a 63 mm <code>_g</code> / <code>_g_m</code> pair on each of the 2 core ledges. Very short runs that need a steeper taper keep their own clip (<code>_t&lt;N&gt;</code>).</li>
+<li><strong>S8 report.</strong> S8 no longer creates the sketch <code>s8_clip_sites</code> (one point per clip site): nothing read it. The report's summary field <code>sketchPoints</code> became <code>siteCount</code>.</li>
+<li><strong>New checks</strong> (tables below): <code>doveGroove</code> and the blocked-path site problem.</li>
+</ul>
+<p><strong>Round clips</strong> (S7 build 11). With <code>'dovetail'</code>, the curved foot seams of a circular outline (sector foot on the floor or the bottom core) get round clips instead of the short snap clips; non-circular outlines (and <code>'snap'</code>) keep the short snap clips, and the two spare short clips then only exist when short clips are used. A round clip is a curved groove clip: the dovetail cross-section of the ledge clips (head on top, tongue below), bent to the foot's edge radius. A clip cannot slide in from a foot seam's end (the radial seams' vertical flanges stand there), so S7 builds stations along each foot seam arc. Each station is a notch (no head; a tongue pocket in the base's underside, open to the edge), a tapered head segment on the sector foot's top (2 mm stepped pieces, 0.05 mm per step) with the tapered groove under the base, and a stop lug. The clip is pushed on radially at the notch, wide end toward the ledge, then slid clockwise seen from the open top onto the ledge until it stops; all round clips slide the same way, so one body serves every station of a radius class.</p>
+<ul>
+<li><strong>Parameters</strong> (group clips, tier auto): <code>mold_clipRoundTaper</code> (default 40: 1 mm per 40 mm per face, seat gap 4 mm, travel 4 mm; straight clips at 1:80: 8 mm) and <code>mold_clipRoundMax</code> (default 30 mm). One round clip length per mold, between 16 mm and <code>mold_clipRoundMax</code>, chosen to clamp the most arc over all foot seams. Station length = clip + 1 mm (notch) + clip + 4 mm (seat gap) + 3 mm (lug).</li>
+<li><strong>Names and sharing</strong>: <code>clip_round_&lt;L&gt;mm_r&lt;R&gt;_l&lt;p|n&gt;&lt;NN&gt;</code>; edge radii share a clip when their sag over the clip length differs by under 0.05 mm. The suffix is the edge's lean class (100 x the radius change per mm of height): the foot flanges follow the outline's draft, so the stack's outer edge leans and the clip's profile leans with it, and an upright piece and one poured upside down lean opposite ways, so they need two clips. The clip prints standing (C profile on the bed, wide end down, the arc rising; brim).</li>
+<li><strong>Stand</strong>: none since 2026-10-08 (stand parts removed; the clips' lower arms sit under the base's back).</li>
+<li><strong>Checks</strong>: S8 checks each round station like a straight dovetail clip: seated squeeze, free when moved back along the arc by its travel + 1 mm, free in its notch (the way-in check: for a round clip, the clip sitting in its notch before it slides), and the stop lug filling its probe. <code>doveStrain</code>, <code>doveStopStrain</code>, <code>doveForce</code>, <code>dovePush</code>, <code>doveMallet</code> and <code>doveGroove</code> apply to <code>clip_round_</code> bodies too. No new check names.</li>
+</ul>
+<p>Fusion run, 2026-10-08, document "Cup 01" (source body "Cup", layout sides2Bottom, S7 build 11), the whole pipeline S0 to S9: pass (S7 warns only for the older items: the bottom sectors' curved faces at 49 deg and the side cores' knife ledge). 30 clips, 6 bodies, no short snap clips left:</p>
+<ul>
+<li><code>clip_dove_25mm_s025</code> x 3 (bottom radials), <code>clip_dove_48mm_s048</code> x 6 (side radials and the two-sided laps), <code>clip_dove_63mm_s063_g</code> / <code>_g_m</code> x 2 each (core ledges);</li>
+<li><code>clip_round_16mm_r72_ln14</code> x 9 (3 stations on each bottom foot) and <code>clip_round_16mm_r72_lp14</code> x 8 (2 on each side foot).</li>
+</ul>
+<p>All 30 sites pass: seated squeeze 0.86 to 0.99 of the design, at most 0.06 mm3 touched when moved back by the travel + 1 mm or sitting in its notch, the lugs filling 0.80 to 1.00 of their probes, no clashes. Four fixes came out of the run:</p>
+<ul>
+<li>The edge lean above (first build: the round clips' spine cut 40 mm3 into the core's band and 17 into the sector).</li>
+<li>The stand ring sized with that lean (it hit the side pieces' clips by 11 mm3).</li>
+<li>S7's overhang check takes a stepped groove roof as one bridge between its walls (each 2 mm step was counted as a cantilever: 650 mm2 on bottom_core).</li>
+<li>The round clips' underside edge chamfer is 0.8 high x 0.6 wide, so with the 7 deg draft it still prints under 45 deg.</li>
+</ul>
+<p>Design checks, per clip body (<code>&lt;clip&gt;</code> is the body name), listed in the S8 report beside the snap clip checks (<code>snapStrain</code>, <code>clipForce</code>):</p>
+<table>
+<thead><tr><th>Check</th><th>Level</th><th>Fails when</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td><code>doveStrain:&lt;clip&gt;</code></td><td>fail</td><td>the bending strain with the 0.25 mm plaster setting expansion is over the clip filament limit (1.5 %)</td><td>lower <code>mold_clipDoveInterference</code> or <code>mold_clipDoveSpine</code></td></tr>
+<tr><td><code>doveStopStrain:&lt;clip&gt;</code></td><td>warn</td><td>the strain, if the clip is driven all the way to the stop lug with the worst print error, is over that limit</td><td>none while the clip stops before the lug; or the same two parameters</td></tr>
+<tr><td><code>doveForce:&lt;clip&gt;</code></td><td>fail</td><td>the clamping force in N per mm of seam is below the seam demand, 0.15 x 1.5 N/mm</td><td>raise <code>mold_clipDoveInterference</code> (then check <code>doveStrain</code> and <code>doveMallet</code>)</td></tr>
+<tr><td><code>dovePush:&lt;clip&gt;</code></td><td>warn</td><td>the push-on force is over 40 N by hand: use a mallet</td><td>lower <code>mold_clipDoveInterference</code>, or <code>mold_clipRailStyle</code> <code>'snap'</code> for that mold</td></tr>
+<tr><td><code>doveMallet:&lt;clip&gt;</code></td><td>fail</td><td>the push-on force is over 150 N: too tight to drive</td><td>lower <code>mold_clipDoveInterference</code>, or <code>mold_clipRailStyle</code> <code>'snap'</code> for that mold</td></tr>
+<tr><td><code>doveDepth</code></td><td>fail</td><td>the flange width is below <code>clipDoveDepth</code> + 2 mm</td><td>raise the flange width (<code>mold_flangeWidth</code>), lower <code>mold_clipDoveDepth</code>, or <code>'snap'</code></td></tr>
+<tr><td><code>doveGroove:&lt;clip&gt;</code></td><td>fail</td><td>a ledge clip (<code>_g</code>, <code>_g_m</code>) or a round clip: the floor band left over the deepest groove (at the ledge end; at the notch end of a round clip's head) is under 1.6 mm (4 lines)</td><td>ledge clip: lower the taper's slope (raise the number of <code>mold_clipDoveTaper</code>), or shorten the clip with <code>mold_clipDoveReuse</code>; either: <code>'snap'</code></td></tr>
+</tbody></table>
+<p>Site checks (S8, Fusion booleans on each dovetail clip site; a problem fails the stage, message <code>&lt;site&gt;: &lt;problem&gt;</code>):</p>
+<table>
+<thead><tr><th>Site problem</th><th>Meaning</th><th>Fix</th></tr></thead>
+<tbody>
+<tr><td>seated squeeze X mm3, designed about Y mm3 (the head and the clip do not match)</td><td>the clip at its nominal seat squeezes a volume outside 0.5 to 1.6 times the designed one</td><td>run S7, then S8 again (the casing and clip parameters must match); check <code>fitOffset</code> and <code>printTolerance</code></td></tr>
+<tr><td>clip binds N mm above its seat (V mm3): it will not slide on</td><td>the clip raised by its travel plus 1 mm (a round clip: moved back along the arc) still touches the head</td><td>raise <code>printTolerance</code> or <code>fitOffset</code>, or run S7 and S8 again</td></tr>
+<tr><td>something blocks the clip's way in, just off the end of its run (V mm3: &lt;parts&gt;)</td><td>the clip placed just past the entry end of its run (above a vertical seam's top, beyond a ledge's end; a round clip: sitting in its notch) touches a part (a stand, a flange, a label)</td><td>report it; no clip parameter moves it</td></tr>
+<tr><td>no stop lug under the seat (a of b mm3)</td><td>the probe under the seat is not filled by a lug (under 80 %)</td><td>run S7 again</td></tr>
+<tr><td>seated clip hits &lt;part&gt; (V mm3)</td><td>the seated clip overlaps another part: a feature (label, ledge) crosses the clip path</td><td>report it; no clip parameter moves it</td></tr>
+</tbody></table>
+<p>The plain-language text of every check and problem is in <code>moldkit/core/explain.py</code>. The user-facing table is <a href="user-guide.html">USER_GUIDE.md</a> section 11.</p>
+<h2 id="10-not-yet-validated">10. Not yet validated</h2>
+<ul>
+<li>Any print of the dovetail clips (head and clip fit, the 8 mm run before the lug, the push-on force by hand and with a mallet, PETG-on-PETG friction, force kept after an hour at 50 C, the plaster setting expansion against the clip), and a dovetail run on a mold other than the test cup.</li>
+<li>A Fusion run of the changes after the first dovetail run (two-sided laps, ledge clips with the floor groove, clip reuse, the way-in check), and a print of the floor groove (the bridge printed without supports) and of a ledge clip's tongue.</li>
+<li>Any print of the round clips (Fusion run above): the stepped head and groove on the arc, the notch pocket, pushing a clip on radially and sliding it clockwise to the lug, the 4 mm seat gap and travel at the 1:40 taper, the stand ring inside the lower arm tips, and a circular foot other than the unit-test mug.</li>
 <li>Any print of the new seals and clips (ridge fit, clip grip, water and plaster leak tests), and any pour: plaster pieces cast from these casings. The plaster keys have no test print.</li>
 <li><code>sides3Bottom</code> and <code>sides4Bottom</code> (proposed by S3, not splittable), handles and spouts, casing parts larger than the bed, <code>contoured</code> plaster on non-revolved shapes, wavy or scalloped rims.</li>
 <li>A cancelled-then-resumed S9 and the oversize message in a live S7 run (the per-piece S7 path to its check step ran in T1).</li>

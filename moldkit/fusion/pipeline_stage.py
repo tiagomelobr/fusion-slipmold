@@ -21,6 +21,7 @@ import os
 from moldkit import pipeline as PIPE
 from moldkit.core import params as P
 from moldkit.core import report
+from moldkit.core import resolve as R
 from moldkit.core import state as ST
 from moldkit.fusion import context as C
 
@@ -74,7 +75,7 @@ def gather(d, order):
         outputs["exports"] = sorted(os.listdir(exp_dir))
     cfg = C.get_config()
     return {"stages": order, "params": C.mold_params(d), "values": C.mold_values(d), "defaults": P.load_defaults(),
-            "printer": cfg.get("printer"), "materials": cfg.get("materials"), "mold": mold,
+            "printer": cfg.get("printer"), "filament": R.filament_config(cfg), "mold": mold,
             "master": master, "outputs": outputs}
 
 

@@ -1,4 +1,5 @@
 """Pure helpers of the S8 clips and S9 export stages and moldkit.core.mesh3mf (adsk is stubbed)."""
+import math
 import os
 import sys
 import tempfile
@@ -68,6 +69,12 @@ class S8GateTest(unittest.TestCase):
         self.assertIn("partial", s8.gate(part, HASHES, {"status": "pass"}, {"a": 1, "b": 1}))
         self.assertIn("partial", s9.gate(part, HASHES, {"status": "pass"}))
 
+    def test_older_part_rows_match_by_part_id(self):
+        # mold.json rows of an older build: "PETG_<id>" names, with or without the id
+        old = _mold(casings=dict(_mold()["casings"], parts=[{"name": "PETG_a"}, {"id": "b", "name": "PETG_b"}]))
+        self.assertIsNone(s8.gate(old, HASHES, {"status": "pass"}, {"a": 1, "b": 1}))
+        self.assertIn("missing in the design: b", s8.gate(old, HASHES, {"status": "pass"}, {"a": 1}))
+
 
 class S8HelpersTest(unittest.TestCase):
     def test_constants(self):
@@ -75,12 +82,12 @@ class S8HelpersTest(unittest.TestCase):
 
     def test_build_summary_from_state_bodies(self):
         # check mode rebuilds the summary from mold.json "clips" bodies (no old report)
-        bodies = [{"name": "PETG_clip_short", "count": 12, "preloadMm": 0.7, "lengthMm": 16.0, "massG": 2.5,
+        bodies = [{"name": "clip_short", "count": 12, "preloadMm": 0.7, "lengthMm": 16.0, "massG": 2.5,
                    "printSizeMm": [20, 16, 9], "volumeCm3": 2.0}]
         got = s8.build_summary(bodies, {}, 14)
         self.assertEqual(got["bodies"], [{k: bodies[0][k] for k in ("name", "count", "preloadMm", "lengthMm",
                                                                        "massG", "printSizeMm")}])
-        self.assertEqual((got["sketchPoints"], got["clip"]), (14, None))
+        self.assertEqual((got["siteCount"], got["clip"]), (14, None))
 
     def test_site_order(self):
         sites = [{"joint": "a", "index": i} for i in range(1, 6)] + [{"joint": "b", "index": 1}]
@@ -118,6 +125,44 @@ class S8HelpersTest(unittest.TestCase):
         self.assertEqual(len(bad), 1)                                       # unknown short-circuits the rest
         self.assertIn("unknown", bad[0])
         self.assertIn("bottom_floor, side1_core", bad[0])
+
+    def test_dove_verdict(self):
+        row = {"kind": "dove", "seatedMm3": 25.9, "expectedMm3": 26.4, "raisedMm3": 0.0, "raiseMm": 9.0,
+               "lugMm3": 5.2, "lugProbeMm3": 5.4, "hits": {"a": 13.0, "b": 12.9}, "otherHits": {}}
+        self.assertEqual(s8.site_verdict(row), [])                     # dispatches on the kind
+        self.assertIn("seated squeeze", s8.site_verdict(dict(row, seatedMm3=5.0))[0])
+        self.assertIn("seated squeeze", s8.site_verdict(dict(row, seatedMm3=50.0))[0])
+        self.assertIn("will not slide on", s8.site_verdict(dict(row, raisedMm3=4.3))[0])
+        self.assertIn("no stop lug", s8.site_verdict(dict(row, lugMm3=1.0))[0])
+        self.assertIn("seated clip hits side1_floor", s8.site_verdict(dict(row, otherHits={"side1_floor": 2.0}))[0])
+        self.assertIn("unknown", s8.site_verdict(dict(row, unknown=["a"]))[0])
+        blocked = s8.site_verdict(dict(row, entryMm3=3.0, entryHits={"side1_stand": 3.0}))
+        self.assertIn("blocks the clip's way in", blocked[0])
+        self.assertIn("side1_stand", blocked[0])
+
+    def test_round_sites_move_along_their_arc(self):
+        s = {"kind": "round", "radiusMm": 50.0, "origin": [50.0, 0.0, 3.0], "x": [-1.0, 0.0, 0.0],
+             "y": [0.0, 0.0, 1.0], "z": [0.0, 1.0, 0.0]}
+        o, x, y, z = s8._moved(s, 0.5)
+        self.assertAlmostEqual(o[1], 0.5, 3)                     # back along +z
+        self.assertAlmostEqual(math.hypot(o[0], o[1]), 50.0, 6)  # on the same circle about the axis
+        self.assertAlmostEqual(o[2], 3.0)
+        self.assertAlmostEqual(math.hypot(x[0], x[1]), 1.0)
+        self.assertEqual(y, [0.0, 0.0, 1.0])
+        q = s8._moved(dict(s, kind="dove"), 2.0)
+        self.assertEqual(q[0], [50.0, 2.0, 3.0])                 # straight: a translation
+        self.assertEqual(s8._arc_pt(50.0, 3.0, 1.0, 0.0), (3.0, 1.0, 0.0))
+
+    def test_rows_summary_splits_snap_and_dove(self):
+        snap = {"site": "j1#1", "seatedMm3": 0.1, "nudgedMm3": 1.3, "problems": []}
+        dove = {"site": "j2#1", "kind": "dove", "seatedMm3": 21.0, "expectedMm3": 24.8, "raisedMm3": 0.0,
+                "lugMm3": 4.9, "lugProbeMm3": 6.1, "problems": []}
+        out = s8._site_rows_summary([snap, dove], 2)
+        self.assertEqual((out["checked"], out["failed"], out["maxSeatedMm3"]), (2, 0, 0.1))
+        self.assertAlmostEqual(out["minCatchMm3"], 1.2)
+        self.assertEqual(out["dove"]["checked"], 1)
+        self.assertEqual(out["dove"]["squeezeRatio"], [0.847, 0.847])
+        self.assertNotIn("dove", s8._site_rows_summary([snap], 1))
 
     def test_per_piece_and_max_pitch(self):
         sites = [{"piece": "p"}, {"piece": "q"}, {"piece": "p"}]
@@ -165,7 +210,7 @@ class S9RepairTest(unittest.TestCase):
         self.assertEqual(s9.mesh_ladder(0.3, 50), [(0.3, 50.0)])
 
     def test_part_key_tracks_settings_transform_volume(self):
-        q = {"name": "side1_core", "role": "core", "material": "PLA", "count": 1}
+        q = {"name": "side1_core", "role": "core", "count": 1}
         m4 = [[1, 0, 0, 5], [0, 1, 0, 0], [0, 0, 1, 0], [0, 0, 0, 1]]
         k = s9.part_key(q, "3mf", 0.01, 10, 150000, m4, 345.378)
         self.assertEqual(k, s9.part_key(q, "3mf", 0.01, 10, 150000, m4, 345.37801))
@@ -290,30 +335,43 @@ class S9HelpersTest(unittest.TestCase):
                                        "bottom": {"planned": ["x"], "plannedStatus": "blocked",
                                                   "feasible": [["y", "z"]]}}},
                 "clips": {"bodies": [{"name": "clip_short", "key": "clip_short", "kind": "short", "sides": 2,
-                                      "material": "PETG", "count": 12, "spare": False, "preloadMm": 0.7,
+                                      "count": 12, "spare": False, "preloadMm": 0.7,
                                       "lengthMm": 16.0, "printMode": "flat"},
                                      {"name": "clip_short_p05", "key": "clip_short_p05", "kind": "short",
-                                      "sides": 2, "material": "PETG", "count": 1, "spare": True,
+                                      "sides": 2, "count": 1, "spare": True,
                                       "preloadMm": 0.5, "lengthMm": 16.0, "printMode": "flat"},
                                      {"name": "clip_rail_48mm_flat", "key": "clip_rail_48mm_flat", "kind": "rail",
-                                      "sides": 1, "material": "PETG", "count": 4, "spare": False,
+                                      "sides": 1, "count": 4, "spare": False,
                                       "preloadMm": 0.8, "lengthMm": 48.0, "printMode": "standing"},
                                      "legacy", {"key": "no name"}]},
                 "pieces": [{"id": "bottom"}, {"id": "side1"}]}
         self.assertEqual(s9.KINDS, ("casing", "clip"))
-        rows = s9.part_rows(mold, "PLA")
+        rows = s9.part_rows(mold)
         self.assertEqual([q["kind"] for q in rows], ["casing", "casing", "clip", "clip", "clip"])
         self.assertEqual([q["role"] for q in rows], ["plate", "stand", "clip", "clip", "clip"])
         self.assertEqual([q["count"] for q in rows], [1, 1, 12, 1, 4])
         self.assertEqual([q.get("spare", False) for q in rows], [False, False, False, True, False])
         self.assertEqual([q["printMode"] for q in rows][:2], ["lapFaceOnBed:side1_j6", "standFlat"])
-        self.assertEqual({q["material"] for q in rows[2:]}, {"PETG"})
+        self.assertTrue(all("material" not in q for q in rows))
+        self.assertEqual([q["id"] for q in rows], ["side1_floor", "side1_stand", "clip_short", "clip_short_p05",
+                                                   "clip_rail_48mm_flat"])
         self.assertEqual([s9.file_name(q, "3mf") for q in rows],
-                         ["PLA_side1_floor.3mf", "PLA_side1_stand.3mf", "PETG_clip_short_x12.3mf",
-                          "PETG_clip_short_p05_x1.3mf", "PETG_clip_rail_48mm_flat_x4.3mf"])
+                         ["side1_floor.3mf", "side1_stand.3mf", "clip_short_x12.3mf",
+                          "clip_short_p05_x1.3mf", "clip_rail_48mm_flat_x4.3mf"])
         self.assertEqual(s9.casing_orders(mold), {"side1": ["a", "b"], "bottom": ["y", "z"]})
         self.assertEqual(s9.plaster_order(mold), ["bottom", "side1"])
-        self.assertEqual(s9.part_rows({"casings": {"parts": []}}, "PLA"), [])
+        self.assertEqual(s9.part_rows({"casings": {"parts": []}}), [])
+
+    def test_rows_of_an_older_mold_json(self):
+        # built before 2026-10-08: material-prefixed names; the bodies are looked up by part id / clip key
+        old = {"casings": {"parts": [{"name": "PETG_side1_core", "piece": "side1", "role": "core"},
+                                     {"id": "side1_stand", "name": "PETG_side1_stand", "piece": "side1",
+                                      "role": "stand", "material": "PETG"}]},
+               "clips": {"bodies": [{"name": "PETG_clip_short", "count": 3, "material": "PETG"},
+                                    {"name": "PETG_clip_rail_30mm", "key": "clip_rail_30mm", "count": 2}]}}
+        rows = s9.part_rows(old)
+        self.assertEqual([q["id"] for q in rows], ["side1_core", "side1_stand", "clip_short", "clip_rail_30mm"])
+        self.assertTrue(all("material" not in q for q in rows))
 
     def test_merged_settings(self):
         out = s9.merged_settings({"settings": {"process": {"a": 1, "b": 2}, "export": {"format": "3mf"}}},

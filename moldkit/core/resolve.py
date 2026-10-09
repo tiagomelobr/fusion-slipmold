@@ -11,6 +11,8 @@ its (Fusion-evaluated) value wins over the rule. Delete the parameter to go back
 
 Stages read resolve()["values"] (short names, mm / deg / plain numbers / text without quotes) and hash
 resolved values (scoped_hashes), so a rule change or a profile change re-runs the stages it reaches.
+A retired parameter (RETIRED) left in an older design is ignored: no value, not unknown, in no hash; S1
+deletes it.
 """
 import math
 import re
@@ -32,7 +34,7 @@ NATCH_WALL_RATIO = 0.24     # natchRadius = 0.24 x plasterWall: 6 mm at the 25 m
 NATCH_RADIUS_MIN = 3.0      # mm: a smaller key does not register the pieces
 NATCH_RADIUS_MAX = 10.0     # mm: a larger one only costs plaster
 NATCH_RADIUS_STEP = 0.5     # mm
-SEAM_CLEARANCE_REF = 0.16   # mm per flank, PETG, 0.4 mm nozzle (PRN-10, PRN-22: snug class; 0.25, the sliding
+SEAM_CLEARANCE_REF = 0.16   # mm per flank, 0.4 mm nozzle (PRN-10, PRN-22: snug class; 0.25, the sliding
                             # class, printed too loose in the user's side2 leak test, 2026-10-07)
 SEAM_CLEARANCE_MIN = 0.1    # mm: FDM does not hold a smaller clearance
 GROOVE_BOTTOM_MIN = 0.4     # mm, PRN-10
@@ -40,6 +42,9 @@ GROOVE_BOTTOM_LAYERS = 2    # PRN-22: the sector foot grooves open on the bed fa
                             # ceiling) and the ridges stand in fine layers: keep 2 draft layers of gap
 FOOT_EXPANSION = 0.35       # mm over seamClearance on the first foot groove's cavity flank: plaster setting
                             # expansion pushes the sector out about 0.17 mm, plus 0.2 mm print error
+# Inputs older designs still carry (short names): ignored here, kept out of every hash, deleted by S1.
+# casingMaterial: the casing print material, retired 2026-10-08 (the parts no longer name a material).
+RETIRED = ("casingMaterial",)
 
 
 def live_entries(defaults):
@@ -54,6 +59,11 @@ def tier(entry):
 def input_names(defaults):
     """Full names of the input parameters (the ones S1 creates), in defaults.json order."""
     return [defaults["prefix"] + n for n, e in live_entries(defaults).items() if tier(e) == "input"]
+
+
+def retired_names(names, prefix="mold_"):
+    """The retired parameters (RETIRED) among `names` (full or short names), as full names, in their order."""
+    return [prefix + _short(n, prefix) for n in names or [] if _short(n, prefix) in RETIRED]
 
 
 def parse_expr(entry, expr=None):
@@ -146,9 +156,9 @@ def _ridge_width(v, ctx):
 
 
 def _seam_clearance(v, ctx):
-    """PRN-22: 0.16 mm per flank for PETG on a 0.4 mm nozzle, opened by the fit allowance (calibrated
-    fitOffset + nozzle term); PLA 0.05 mm tighter; never below 0.1 mm."""
-    c = SEAM_CLEARANCE_REF + F.material_fit(v.get("casingMaterial")) + F.allowance(v)
+    """PRN-22: 0.16 mm per flank on a 0.4 mm nozzle, opened by the fit allowance (calibrated fitOffset +
+    nozzle term); never below 0.1 mm."""
+    c = SEAM_CLEARANCE_REF + F.allowance(v)
     return _r(max(SEAM_CLEARANCE_MIN, round(c, 3)))
 
 
@@ -177,12 +187,12 @@ def _flange_width(v, ctx):
 
 
 def _clip_q(v, ctx):
-    q = CL.clip_params(v, ctx["clipMaterial"])
+    q = CL.clip_params(v, ctx["clipFilament"])
     return q
 
 
 def _clip_arm(v, ctx):
-    """Thickest arm (whole nozzle lines) whose worst snap strain stays within the material's limit."""
+    """Thickest arm (whole nozzle lines) whose worst snap strain stays within the clip filament's limit."""
     q = _clip_q(v, ctx)
     d = v["clipPreload"] + q["barbHeight"] + q["printErrorMm"]
     t_max = q["strainMaxPct"] / 100.0 * 2.0 * q["freeLength"] ** 2 / (3.0 * d)
@@ -200,14 +210,14 @@ def _clip_spacing(v, ctx):
     """Widest short-clip pitch (whole mm) whose clip force still meets the seam's demand."""
     q = _clip_q(v, ctx)
     demand = q["forceDemandNPerMm"] * q["forceFactor"]
-    force = CL.arm_force(q, v["clipWidth"], v["clipPreload"], q["petgE"][1])
+    force = CL.arm_force(q, v["clipWidth"], v["clipPreload"], q["modulusMPa"][1])
     s = float(math.floor(force / demand + 1e-6))
     if s < v["clipWidth"]:
         ctx["problems"].append(
             "clipSpacingMax: one short clip presses %.2f N, less than %.2f N/mm x its own %g mm width: raise "
             "mold_clipPreload or mold_clipWidth" % (force, demand, v["clipWidth"]))
         s = float(v["clipWidth"])
-    rail = CL.arm_force(q, 1.0, v["clipRailPreload"], q["petgE"][1])
+    rail = CL.arm_force(q, 1.0, v["clipRailPreload"], q["modulusMPa"][1])
     if rail < demand - 1e-9:
         ctx["problems"].append(
             "clipRailPreload: the rail clips press %.3f N per mm, less than the %.3f N/mm demand with a %g mm "
@@ -233,28 +243,40 @@ DERIVED = (
 )
 
 
-def clip_material(defaults, settings=None, materials=None):
-    """{"name", "modulusMPa", "strainMaxPct"} of the clip material (settings.process.clipMaterial),
-    defaults.json "materials" overridden by the user config "materials" {name: {...}}."""
-    st = settings if settings is not None else defaults.get("settings") or {}
-    name = str((st.get("process") or {}).get("clipMaterial") or "PETG").upper()
-    base = dict((defaults.get("materials") or {}).get(name) or {})
-    base.update((materials or {}).get(name) or {})
+def clip_filament(defaults, override=None):
+    """{"modulusMPa": [low, mid, high], "strainMaxPct"}: the clip filament's stiffness (defaults.json
+    "clipFilament") overridden by the user config's (filament_config)."""
+    base = dict(defaults.get("clipFilament") or {})
+    base.update(override or {})
     if "modulusMPa" not in base or "strainMaxPct" not in base:
-        raise ValueError("no material profile for the clip material %s (defaults.json materials)" % name)
-    return {"name": name, "modulusMPa": [float(x) for x in base["modulusMPa"]],
-            "strainMaxPct": float(base["strainMaxPct"])}
+        raise ValueError("no clip filament stiffness (defaults.json clipFilament: modulusMPa, strainMaxPct)")
+    return {"modulusMPa": [float(x) for x in base["modulusMPa"]], "strainMaxPct": float(base["strainMaxPct"])}
 
 
-def resolve(present=None, defaults=None, printer=None, materials=None):
+LEGACY_FILAMENT_KEY = "PETG"  # the clip profile's key in the user config "materials" before 2026-10-08
+
+
+def filament_config(cfg):
+    """The user config's clip filament override {"modulusMPa"?, "strainMaxPct"?}: its "clipFilament", else an
+    older config's "materials" entry of the former clip profile; None without either."""
+    cfg = cfg or {}
+    if isinstance(cfg.get("clipFilament"), dict):
+        return cfg["clipFilament"]
+    old = (cfg.get("materials") or {}) if isinstance(cfg.get("materials"), dict) else {}
+    entry = old.get(LEGACY_FILAMENT_KEY)
+    return entry if isinstance(entry, dict) else None
+
+
+def resolve(present=None, defaults=None, printer=None, filament=None):
     """Effective parameters.
 
     present    {full or short name: value} of the mold_* user parameters in the design, as Fusion evaluates
-               them (mm, deg, plain numbers; Text values without quotes).
+               them (mm, deg, plain numbers; Text values without quotes). Retired names (RETIRED) are ignored.
     printer    the user config "printer" {short name: number}: overrides the profile entries' defaults.
-    materials  the user config "materials" {name: {...}}: overrides defaults.json "materials".
+    filament   the user config's clip filament override (filament_config): overrides defaults.json
+               "clipFilament".
     -> {"values": {short: value}, "source": {short: input | auto | derived | profile | override},
-        "overrides": [short names], "unknown": {full name: value}, "problems": [str], "clipMaterial": {...}}
+        "overrides": [short names], "unknown": {full name: value}, "problems": [str], "clipFilament": {...}}
     """
     defaults = defaults or P.load_defaults()
     prefix = defaults["prefix"]
@@ -264,7 +286,7 @@ def resolve(present=None, defaults=None, printer=None, materials=None):
         s = _short(k, prefix)
         if s in entries:
             have[s] = val
-        else:
+        elif s not in RETIRED:
             unknown[prefix + s] = val
     printer = {k: float(x) for k, x in (printer or {}).items() if k in entries and tier(entries[k]) == "profile"}
     values, source, problems = {}, {}, []
@@ -281,7 +303,7 @@ def resolve(present=None, defaults=None, printer=None, materials=None):
         else:
             values[name] = parse_expr(e)
             source[name] = t
-    ctx = {"problems": problems, "clipMaterial": clip_material(defaults, None, materials),
+    ctx = {"problems": problems, "clipFilament": clip_filament(defaults, filament),
            "layerDraft": float(((defaults.get("settings") or {}).get("process") or {}).get("layerDraft")
                                or F.LAYER_REF["draft"])}
     for name, rule in DERIVED:
@@ -296,23 +318,23 @@ def resolve(present=None, defaults=None, printer=None, materials=None):
     values = {n: values[n] for n in entries}  # defaults.json order
     return {"values": values, "source": {n: source[n] for n in entries},
             "overrides": [n for n in entries if source[n] == "override"], "unknown": unknown,
-            "problems": problems, "clipMaterial": ctx["clipMaterial"]}
+            "problems": problems, "clipFilament": ctx["clipFilament"]}
 
 
-def auto_value(name, res, defaults=None, printer=None, materials=None):
+def auto_value(name, res, defaults=None, printer=None, filament=None):
     """The engine's value of `name` were its override removed (the other values as resolved)."""
     defaults = defaults or P.load_defaults()
     prefix = defaults["prefix"]
     present = {n: v for n, v in res["values"].items() if res["source"][n] in ("input", "override") and n != name}
     present.update({_short(k, prefix): v for k, v in res.get("unknown", {}).items()})
-    return resolve(present, defaults, printer, materials)["values"][name]
+    return resolve(present, defaults, printer, filament)["values"][name]
 
 
-def override_rows(res, defaults=None, printer=None, materials=None):
+def override_rows(res, defaults=None, printer=None, filament=None):
     """[{"name", "value", "auto"}] of the overrides in the resolved parameters (full names)."""
     defaults = defaults or P.load_defaults()
     prefix = defaults["prefix"]
-    return [{"name": prefix + n, "value": res["values"][n], "auto": auto_value(n, res, defaults, printer, materials)}
+    return [{"name": prefix + n, "value": res["values"][n], "auto": auto_value(n, res, defaults, printer, filament)}
             for n in res["overrides"]]
 
 
@@ -338,14 +360,14 @@ def _canon(v):
 
 def scope_items(res, groups, defaults):
     """{full name: canonical value} of the resolved parameters in `groups`, plus every unknown mold_*
-    parameter (it could matter to any stage) and, when the clip group is in, the clip material."""
+    parameter (it could matter to any stage) and, when the clip group is in, the clip filament stiffness."""
     prefix = defaults["prefix"]
     entries = live_entries(defaults)
     out = {prefix + n: _canon(v) for n, v in res["values"].items() if entries[n]["group"] in groups}
     out.update({k: _canon(v) for k, v in (res.get("unknown") or {}).items()})
     if "clips" in groups:
-        m = res["clipMaterial"]
-        out["clipMaterial"] = [m["name"], m["modulusMPa"], m["strainMaxPct"]]
+        m = res["clipFilament"]
+        out["clipFilament"] = [m["modulusMPa"], m["strainMaxPct"]]
     return out
 
 

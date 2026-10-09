@@ -1,14 +1,14 @@
 """Snap and rail clips (PRN-12, PRN-13; pure Python, stdlib only, no adsk).
 
 Seal kit v3 design (2026-10-06), ported into the pipeline: every clamped seam gets a bead on each
-free outer face of its flange pair, and PETG clips with a barb behind the bead and a preload per arm
+free outer face of its flange pair, and printed clips with a barb behind the bead and a preload per arm
 press the flanges together (the ridges in grooves seal; the clips only hold). Curved seams (the sector
 feet on the base) get short snap clips pushed on from the flange edge; straight vertical seams (radial
 pairs, arc-end laps) get rail clips slid down from the top onto stop lugs. A face printed on the bed
 (base and core plate backs) stays flat: the clip's arm on that side is flat and preloaded too
-("sides 1"). The stand (an S7 part) lifts the base so a foot clip's flat arm can wrap under it.
+("sides 1").
 The casing planner (moldkit.core.casing.plan_piece) places the runs and sites; S7 builds the beads,
-lugs, edge chamfers and the stand; S8 builds the clips and checks them seated at every site.
+lugs and edge chamfers; S8 builds the clips and checks them seated at every site.
 
 Clip frame (mm): x inward from the flange edge (0 at the edge, the spine at x < 0), y across the stack
 (0 on the lap plane = the stack centre, + = the bead side), z along the seam (0..length).
@@ -43,8 +43,7 @@ CLIP = {  # fixed details of the kit v3 clip and bead (the leak test tunes the p
     "lugProud": 2.6,           # stop lug height off the flange face (> bead height: the rail arm lands on it)
     "railTopGap": 1.0,         # rail top below the casing top
     "railMin": 16.0,           # shortest rail worth printing
-    "standClear": 1.0,         # stand ring to the foot clips' arm tips
-    "petgE": (1000.0, 1200.0, 1500.0),   # MPa, low / mid / high
+    "modulusMPa": (1000.0, 1200.0, 1500.0),   # clip filament, MPa, low / mid / high (defaults.json clipFilament)
     "strainMaxPct": 1.5,
     "printErrorMm": 0.2,       # extra snap deflection from print error (0.4 mm nozzle; grows with the nozzle)
     "forceDemandNPerMm": 0.15,  # seam force demand until the bench test (review section 7)
@@ -52,9 +51,8 @@ CLIP = {  # fixed details of the kit v3 clip and bead (the leak test tunes the p
 }
 PARAM_DEFAULTS = {  # mold_* clip parameters (defaults.json group "clips")
     "clipSpacingMax": 25.0, "clipEndOffset": 10.0, "clipArm": 2.4, "clipWidth": 16.0, "clipPreload": 0.7,
-    "clipRailPreload": 0.8, "clipRailMax": 60.0, "lugHeight": 3.0, "standHeight": 5.0, "standWall": 4.0,
+    "clipRailPreload": 0.8, "clipRailMax": 60.0, "lugHeight": 3.0,
 }
-MATERIAL = "PETG"
 SHORT = "clip_short"
 BARB_GAP_MIN = 0.05  # mm: the barb still drops behind the bead
 
@@ -81,18 +79,18 @@ def _r(v, nd=3):
     return round(float(v), nd)
 
 
-def clip_params(p, material=None):
+def clip_params(p, filament=None):
     """CLIP + the clip parameters (PARAM_DEFAULTS overridden by p, a dict of numbers) + flangeThickness;
-    material (resolve.clip_material: modulusMPa low / mid / high, strainMaxPct) replaces petgE and
+    filament (resolve.clip_filament: modulusMPa low / mid / high, strainMaxPct) replaces modulusMPa and
     strainMaxPct."""
     q = dict(CLIP)
     q.update(PARAM_DEFAULTS)
     q.update({k: float(p[k]) for k in PARAM_DEFAULTS if k in p})
     if "flangeThickness" in p:
         q["flangeThickness"] = float(p["flangeThickness"])
-    if material:
-        q["petgE"] = tuple(float(x) for x in material["modulusMPa"])
-        q["strainMaxPct"] = float(material["strainMaxPct"])
+    if filament:
+        q["modulusMPa"] = tuple(float(x) for x in filament["modulusMPa"])
+        q["strainMaxPct"] = float(filament["strainMaxPct"])
     # PRN-22 printer fit: the arms open and the barb gap grows by the fit allowance (a printed slot runs
     # tight); a coarser nozzle adds print error to the snap strain
     q["fitMm"] = F.allowance(p)
@@ -147,7 +145,7 @@ def clip_spec(q, stack, preload, sides, length, kind="short"):
     half = stack / 2.0
     up_in = half + h
     lo_in = half + h if sides == 2 else half
-    E0, E1, E2 = q["petgE"]
+    E0, E1, E2 = q["modulusMPa"]
     out = {
         "kind": kind, "sides": int(sides), "stackMm": _r(stack), "preloadMm": _r(preload), "lengthMm": _r(length),
         "armMm": _r(t), "spineMm": _r(q["spine"]), "freeLengthMm": _r(q["freeLength"]),
@@ -162,7 +160,6 @@ def clip_spec(q, stack, preload, sides, length, kind="short"):
         "heldStrainPct": _r(arm_strain(q, preload), 2),
         "forcePerArmN": [_r(arm_force(q, length, preload, E), 2) for E in (E0, E1, E2)],
         "forcePerMm": _r(arm_force(q, length, preload, E1) / length, 3),
-        "material": MATERIAL,
     }
     if kind == "short":
         out["snapStrainPct"] = _r(arm_strain(q, preload + hb), 2)
@@ -173,11 +170,6 @@ def clip_spec(q, stack, preload, sides, length, kind="short"):
                          "slope": "1:%.1f" % (q["railLeadIn"] / q["railLeadOpen"])}
         out["print"] = "standing: C profile on the bed, length along Z" + (", brim" if length > 30 else "")
     return out
-
-
-def stand_offset(q, flange_offset, sag):
-    """Outer offset (from the outline) of the stand ring: inside the foot clips' arm tips."""
-    return flange_offset - barb(q)["xTip"] - sag - q["standClear"]
 
 
 # ---------------------------------------------------------------- runs and sites

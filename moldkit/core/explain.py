@@ -765,12 +765,6 @@ ENTRIES = [
         "Round any other listed wall to a multiple of the nozzle: override it, for example add the user parameter "
         "mold_flangeThickness = 3.2 mm in Change Parameters (0.4 mm nozzle)."],
        "not a nozzle multiple: mold_flangeThickness"),
-    _e("petg", r"suggest PETG",
-       "Thick plaster may soften PLA casings",
-       "A thick plaster section heats up while it sets, which can soften PLA.",
-       ["Print the casings in PETG (mold_casingMaterial), or lower mold_plasterWall by 5 mm (mold_plasterBase follows "
-        "it)."],
-       "thickest plaster section 60 mm > 50 mm: suggest PETG casings (unvalidated heuristic, PRN-04)"),
     _e("layoutNotBuildable", r"not supported by the builder|on a plate lap is not supported|natch axis lies in the "
        r"face|release does not leave the face|no face on zb or ztop|no plug face|sector centre lies outside|"
        r"no base part|no seam face at the arc end|sector span",
@@ -790,8 +784,8 @@ ENTRIES = [
     # ------------------------------------------------------------------ clips (S8)
     _e("clipStrain", check("snapStrain", ids=r"p(?P<preload>NUM)"),
        "A clip bends too far when it snaps on",
-       "Pushing the {preload} mm preload clip over its bead strains the PETG arm {value} %, above the {limit} % it "
-       "takes without whitening.",
+       "Pushing the {preload} mm preload clip over its bead strains its arm {value} %, above the {limit} % the clip "
+       "filament takes without whitening.",
        ["If it is a spare (0.5 or 0.9 mm), no action needed: compare it in the leak test and set it aside if it "
         "whitens.", "Delete the mold_clipArm override (SlipMold picks the thickest arm within the strain limit).",
         "Lower the mold_clipPreload override by 0.1 mm, or delete it (SlipMold uses 0.7 mm)."],
@@ -809,18 +803,123 @@ ENTRIES = [
        "check clipForce:short: 0.18 (limit 0.22)", stages=("s8_clips",)),
     _e("clipHits", r"seated clip hits (?P<part>\S+) \((?P<value>NUM) mm3\)",
        "A clip runs into a casing part",
-       "Seated on its seam, a clip overlaps {part} by {value} mm3 (a bead, lug, stand or crossing flange is in "
-       "its way).",
+       "Seated on its seam, a clip overlaps {part} by {value} mm3 (a bead, lug, label, ledge or crossing "
+       "flange is in its way).",
        ["Override mold_clipEndOffset with 15 mm (add the user parameter mold_clipEndOffset = 15 mm in Change "
         "Parameters; the default is 10 mm). It keeps foot clips off the crossing flanges.",
-        "If it is the stand, override mold_standHeight with 6 mm (the default is 5 mm).",
-        "Override mold_clipWidth with 14 mm (the default is 16 mm).", LOG],
-       "bottom_j1#4: seated clip hits PETG_bottom_floor (1.17 mm3)", stages=("s8_clips",)),
+        "Override mold_clipWidth with 14 mm (the default is 16 mm).",
+        "On a straight seam with a dovetail clip, a feature such as a label or a core ledge crosses the clip path. "
+        "The settings above do not move it, so report it with the log.", LOG],
+       "bottom_j1#4: seated clip hits bottom_floor (1.17 mm3)", stages=("s8_clips",)),
     _e("clipNoCatch", r"barb does not catch",
        "A clip's barb would not hold",
        "Pulled outward a little, the clip at this site does not meet its bead, so it could slide off.",
        ["Click Make mold so the casings and clips use the same parameters.", LOG],
        "side1_j3#1: barb does not catch pulled out 0.40 mm (0.000 vs 0.000 mm3)", stages=("s8_clips",)),
+    _e("doveStrain", check("doveStrain", ids=r"clip_(?:dove|round)[^:]*"),
+       "A dovetail clip bends too far",
+       "With the 0.25 mm the plaster expands while it sets, the dovetail clip {id} bends {value} %, above the "
+       "{limit} % the clip filament takes without whitening.",
+       ["Lower the mold_clipDoveInterference override (add the user parameter in Change Parameters; the default "
+        "is 0.1 mm).",
+        "Or lower the mold_clipDoveSpine override (the default is 2 mm).",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold: the straight seams then get rail "
+        "clips and the curved foot seams short snap clips."],
+       "check doveStrain:clip_dove_59mm_s012: 1.7 (limit 1.5)", stages=("s8_clips",)),
+    _e("doveStopStrain", check("doveStopStrain", ids=r"clip_(?:dove|round)[^:]*"),
+       "A dovetail clip would strain too far at the stop lug",
+       "Driven all the way to the stop lug with the worst print error, the dovetail clip {id} would bend {value} %, "
+       "above the {limit} % the clip filament takes without whitening. This is a warning.",
+       ["No action needed if your printer holds its printTolerance (printer profile, default 0.05 mm): the clip "
+        "tightens and stops moving before the lug, so tap it only until it stops.",
+        "To clear the warning, lower the mold_clipDoveInterference override (the default is 0.1 mm) or the "
+        "mold_clipDoveSpine override (the default is 2 mm)."],
+       "check doveStopStrain:clip_dove_59mm_s012: 1.6 (limit 1.5)", stages=("s8_clips",)),
+    _e("doveForce", check("doveForce", ids=r"clip_(?:dove|round)[^:]*"),
+       "The dovetail clips hold the seam too weakly",
+       "The dovetail clip {id} presses {value} N per mm of seam, less than the {limit} N/mm the seam needs (0.15 "
+       "N/mm times a safety factor of 1.5).",
+       ["Raise the mold_clipDoveInterference override above the default 0.1 mm (add the user parameter in Change "
+        "Parameters). The doveStrain and doveMallet checks show how far it can go.",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold."],
+       "check doveForce:clip_dove_59mm_s012: 0.1 (limit 0.225)", stages=("s8_clips",)),
+    _e("dovePush", check("dovePush", ids=r"clip_(?:dove|round)[^:]*"),
+       "A dovetail clip is hard to push on",
+       "Pushing the dovetail clip {id} onto its seam takes about {value} N, over the {limit} N you can push by hand. "
+       "This is a warning: use a mallet.",
+       ["Tap the clip on with a mallet, as the process sheet says: push, then tap until it stops moving.",
+        "To make it easier, lower the mold_clipDoveInterference override (the default is 0.1 mm).",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold."],
+       "check dovePush:clip_dove_59mm_s012: 55.0 (limit 40.0)", stages=("s8_clips",)),
+    _e("doveMallet", check("doveMallet", ids=r"clip_(?:dove|round)[^:]*"),
+       "A dovetail clip is too tight to drive on",
+       "Driving the dovetail clip {id} onto its seam takes up to {value} N (at high friction between the two "
+       "surfaces), over the {limit} N a mallet can apply: it is too tight to drive.",
+       ["Lower the mold_clipDoveInterference override (add the user parameter in Change Parameters; the default "
+        "is 0.1 mm).",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold: the straight seams then get rail "
+        "clips and the curved foot seams short snap clips."],
+       "check doveMallet:clip_dove_59mm_s012: 180.0 (limit 150.0)", stages=("s8_clips",)),
+    _e("doveDepth", check("doveDepth"),
+       "The flange is too narrow for the dovetail head",
+       "The casing flange is {value} mm wide, but the dovetail head and the clip wall need {limit} mm (the head "
+       "depth plus 2 mm).",
+       ["If mold_flangeWidth is an override, delete it or raise it to at least {limit} mm.",
+        "Or lower the mold_clipDoveDepth override (the default is 6 mm) so the flange is 2 mm wider than the head "
+        "is deep.",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold."],
+       "check doveDepth: 7.0 (limit 8.0)", stages=("s8_clips",)),
+    _e("doveGroove", check("doveGroove", ids=r"clip_(?:dove|round)[^:]*"),
+       "The floor is too thin over the groove of a ledge or round clip",
+       "The recessed groove that the ledge or round clip {id} sits in leaves only {value} mm of the floor over its "
+       "deepest point (at the end of the ledge, or at the notch end of the head of a round clip), less than the "
+       "{limit} mm (4 printed lines) the floor needs.",
+       ["For a ledge clip (its name ends in _g or _g_m), make the groove shallower at the end of the ledge: raise "
+        "the mold_clipDoveTaper override (add the user parameter in Change Parameters; the default is 80, and a "
+        "higher number is a gentler slope). The other dovetail checks show how far it can go.",
+        "Or, for a ledge clip, let the ledge take a shorter clip: raise the mold_clipDoveReuse override (the "
+        "default is 12 mm; a run may take a standard clip that much shorter than it allows).",
+        "Or set mold_clipRailStyle to 'snap' (in single quotes) for this mold: the core ledges and the curved foot "
+        "seams then get short snap clips."],
+       "check doveGroove:clip_round_22mm_r66: 1.2 (limit 1.6)", stages=("s8_clips",)),
+    _e("doveSqueeze", r"seated squeeze (?P<value>NUM) mm3, designed about (?P<limit>NUM) mm3",
+       "A dovetail clip and its head do not match",
+       "Seated, the dovetail clip squeezes its head by {value} mm3, but it was designed for about {limit} mm3: the "
+       "head and the clip do not match.",
+       ["Reset from s7_casings (SlipMold > Advanced > Reset from stage) and click Make mold: S7 and S8 run again, "
+        "so the casing and the clip use the same parameters.",
+        "Check fitOffset (SlipMold > Make mold) and printTolerance (printer profile): the clip fit is built from "
+        "them.", LOG],
+       "side1_j3#1: seated squeeze 0.01 mm3, designed about 0.62 mm3 (the head and the clip do not match)",
+       stages=("s8_clips",)),
+    _e("doveBinds", r"clip binds (?P<value>NUM) mm above its seat \((?P<volume>NUM) mm3\)",
+       "A dovetail clip would not slide on",
+       "While it should still run loose, {value} mm above its seat, the dovetail clip overlaps its head by "
+       "{volume} mm3: it binds and will not slide on. For a round clip on a curved foot seam, 'above its seat' "
+       "means moved back along the arc.",
+       ["Raise printTolerance (printer profile, default 0.05 mm) or fitOffset (SlipMold > Make mold): both open the "
+        "clip clearances.",
+        "Or Reset from s7_casings (SlipMold > Advanced > Reset from stage) and click Make mold, so S7 and S8 run "
+        "again with the same parameters.", LOG],
+       "side1_j1#1: clip binds 6.4 mm above its seat (0.85 mm3): it will not slide on", stages=("s8_clips",)),
+    _e("doveBlocked",
+       r"something blocks the clip's way in, just off the end of its run \((?P<value>NUM) mm3(?:: (?P<parts>[^)]*))?\)",
+       "Something blocks the way in of a dovetail clip",
+       "The dovetail clip is slid on from just past the entry end of its run (above a vertical seam's top, beyond "
+       "a ledge's end; a round clip on a curved foot seam is tested sitting in its notch, before it slides along "
+       "the seam), but there it overlaps {parts} by {value} mm3: a part (a stand, a flange or a label) is in "
+       "the way, so the clip could not be slid on.",
+       ["None of the clip parameters moves it. Report it with the log and the names of the parts in the message.",
+        LOG],
+       "side1_j1#1: something blocks the clip's way in, just off the end of its run (1.20 mm3: side1_stand)",
+       stages=("s8_clips",)),
+    _e("doveNoLug", r"no stop lug under the seat \((?P<value>NUM) of (?P<limit>NUM) mm3\)",
+       "A dovetail clip has no stop lug under it",
+       "Only {value} of the {limit} mm3 under the seat of the dovetail clip is filled: the casing has no stop lug "
+       "there, so the clip could slide past its seat.",
+       ["Reset from s7_casings (SlipMold > Advanced > Reset from stage) and click Make mold: S7 builds the stop "
+        "lug at the end of each dovetail run and of each round clip station.", LOG],
+       "side1_j1#1: no stop lug under the seat (0.00 of 4.20 mm3)", stages=("s8_clips",)),
     _e("clipUnknown", r"boolean failed \(result unknown\)|site boolean\(s\) failed",
        "Fusion could not test a clip site",
        "A clip-site interference test returned no result, so the site is not counted as clean.",
@@ -837,7 +936,8 @@ ENTRIES = [
        "seated clips overlap at 2 site pairs: ['side1_j1#1|side1_j3#1']", stages=("s8_clips",)),
     _e("noClip", r"no clip: |no clip sites planned",
        "A seam has no clip",
-       "This seam gets no clip (it is curved but vertical, too short for a rail clip, or has no clip design); "
+       "This seam gets no clip (it is curved but vertical, too short for a rail or dovetail clip, or has no clip "
+       "design); "
        "the process sheet says to tape it.",
        ["No action needed: tape it from outside as the process sheet says.",
         "If a foot run came out empty, override mold_clipEndOffset with 8 mm (add the user parameter "

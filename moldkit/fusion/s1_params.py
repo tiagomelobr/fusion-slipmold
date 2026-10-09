@@ -13,6 +13,8 @@ args:
                   an override (created or updated). Names must be defined in defaults.json.
   unset           [names]: delete these overrides (the engine's value takes over)
   resetOverrides  True = delete every override
+A retired parameter (resolve.RETIRED, e.g. mold_casingMaterial) is deleted whenever S1 runs, unless something
+references it (then mold.json "retiredKept" lists it and it stays ignored).
 """
 import adsk.fusion
 
@@ -88,12 +90,13 @@ def run(args):
     for name in unset:
         if name in present:
             _delete(d, name, deleted, r)
+    retired_kept = delete_retired(d, R.retired_names(present, prefix), deleted, r)
 
     comments = _refresh_comments(d, defaults)
     raw = C.mold_params(d)
     cfg = C.get_config()
     res = C.resolved(d, defaults)
-    rows = R.override_rows(res, defaults, cfg.get("printer"), cfg.get("materials"))
+    rows = R.override_rows(res, defaults, cfg.get("printer"), R.filament_config(cfg))
     hashes = R.scoped_hashes(res, defaults)
     upd = {
         "doc": C.doc_name(),
@@ -102,6 +105,7 @@ def run(args):
         "paramHashes": hashes,
         "resolved": {"overrides": rows, "problems": res["problems"]},
         "settings": defaults["settings"],
+        "retiredKept": retired_kept,
     }
     mold_json = C.write_mold_json(d, upd)
     for msg in res["problems"]:
@@ -137,10 +141,11 @@ def _unset_names(names, prefix, entries, errors):
     return out
 
 
-def _delete(d, name, deleted, r):
+def _delete(d, name, deleted, r, note=""):
+    """Delete the user parameter `name` -> True when it is gone (a warning when Fusion refuses)."""
     p = d.userParameters.itemByName(name)
     if p is None:
-        return
+        return True
     try:
         ok = p.deleteMe()
     except Exception as exc:
@@ -150,7 +155,14 @@ def _delete(d, name, deleted, r):
     if ok:
         deleted.append(name)
     else:
-        report.warn(r, "could not delete %s (%s): delete it in Change Parameters" % (name, why))
+        report.warn(r, "could not delete %s (%s): delete it in Change Parameters%s" % (name, why, note))
+    return bool(ok)
+
+
+def delete_retired(d, names, deleted, r):
+    """Delete the retired parameters (resolve.RETIRED) an older design still has, unless something references
+    them -> [names kept] (mold.json "retiredKept": SlipMold ignores them and does not try again)."""
+    return [n for n in names if not _delete(d, n, deleted, r, note=" (SlipMold no longer uses it)")]
 
 
 def _refresh_comments(d, defaults):

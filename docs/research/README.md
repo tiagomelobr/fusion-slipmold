@@ -5,6 +5,7 @@
 | [slipcast-mold-research.md](slipcast-mold-research.md) | **Start here.** Curated brief with fact-check corrections applied |
 | [design-rules.md](design-rules.md) | All 69 design rules (CER / PRN / SW), each with a default, a fact-check verdict, any corrected value, and sources |
 | [fit-tolerances.md](fit-tolerances.md) | Printer fit (PRN-22): every printed clearance, the evidence for it, the nozzle and fit-offset model, plaster facts, calibration (2026-10-07) |
+| [clip-strength-research.md](clip-strength-research.md) | Stronger casing clips: seven options compared, the ramp-ratchet clip recommended, bench test (2026-10-08) |
 | [sources.md](sources.md) | Every URL cited by the research agents, grouped by domain |
 | [raw/](raw/) | Unedited structured output of each research agent (JSON) and the synthesizer's drafts |
 

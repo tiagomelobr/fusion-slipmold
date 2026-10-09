@@ -11,5 +11,8 @@
         ]
       }
     ]
+  },
+  "enabledPlugins": {
+    "savvy-progress@claude-kit": true
   }
 }

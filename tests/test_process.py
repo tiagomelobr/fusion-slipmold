@@ -1,4 +1,4 @@
-"""moldkit.core.process: plaster batches, casing material, print settings, the process sheet blocks and HTML;
+"""moldkit.core.process: plaster batches, print settings, the process sheet blocks and HTML;
 defaults.json process/export settings."""
 import os
 import sys
@@ -38,7 +38,7 @@ def _site(piece, clip, kind="short"):
 
 
 def _body(key, kind, count, spare=False, preload=0.7, length=16.0):
-    return {"name": "PETG_" + key, "key": key, "kind": kind, "sides": 2, "material": "PETG", "count": count,
+    return {"name": key, "key": key, "kind": kind, "sides": 2, "count": count,
             "spare": spare, "preloadMm": preload, "lengthMm": length,
             "printMode": "flat" if kind == "short" else "standing"}
 
@@ -61,7 +61,7 @@ def sheet(**kw):
              {"name": "bottom_sector1", "piece": "bottom", "role": "sector", "volumeCm3": 50.0},
              {"name": "bottom_stand", "piece": "bottom", "role": "stand", "volumeCm3": 20.0},
              {"name": "side1_floor", "piece": "side1", "role": "floor"},
-             {"name": "PETG_clip_short", "role": "clip", "volumeCm3": 2.0, "count": 12, "orientation": "flat"}]
+             {"name": "clip_short", "role": "clip", "volumeCm3": 2.0, "count": 12, "orientation": "flat"}]
     args = dict(clips={"total": 30, "perPiece": {"bottom": 12, "side1": 9}, "bodies": BODIES},
                 orders={"bottom": ["bottom_sector1", "bottom_core"]},
                 plaster_order=["bottom", "side1", "side2"], settings=SETTINGS, nozzle_mm=0.4,
@@ -73,8 +73,9 @@ def sheet(**kw):
 class DefaultsTest(unittest.TestCase):
     def test_process_and_export_keys(self):
         pr = SETTINGS["process"]
-        self.assertEqual((pr["layerFine"], pr["layerDraft"], pr["plaDensity"], pr["petgDensity"]),
-                         (0.12, 0.24, 1.24, 1.27))
+        self.assertEqual((pr["layerFine"], pr["layerDraft"], pr["filamentDensity"]), (0.12, 0.24, 1.27))
+        for gone in ("casingMaterialDefault", "clipMaterial", "plaDensity", "petgDensity"):
+            self.assertNotIn(gone, pr)
         self.assertEqual(SETTINGS["export"]["format"], "3mf")
         self.assertEqual(P.validate(DEFAULTS), [])
 
@@ -93,28 +94,18 @@ class BatchTest(unittest.TestCase):
         self.assertAlmostEqual(PR.plaster_batch(100.0)["dryPlasterG"], 113.3, places=1)
 
 
-class MaterialTest(unittest.TestCase):
-    def test_petg_default_and_pla_triggers(self):
-        self.assertEqual(PR.casing_material(40, SETTINGS)["material"], "PETG")   # casingMaterialDefault PETG
-        pla = {"process": dict(SETTINGS["process"], casingMaterialDefault="PLA")}
-        self.assertEqual(PR.casing_material(40, pla)["material"], "PLA")
-        self.assertEqual(PR.casing_material(None, pla)["material"], "PLA")
-        m = PR.casing_material(60, pla)
-        self.assertEqual(m["material"], "PETG")
-        self.assertTrue(m["heuristic"])
-        self.assertIn("50", m["reasons"][0])
-        self.assertEqual(PR.casing_material(40, pla, mix_water_c=25)["material"], "PETG")
-        self.assertEqual(PR.casing_material(40, pla, room_c=26)["material"], "PETG")
-
+class PrintSettingsTest(unittest.TestCase):
     def test_print_settings(self):
+        self.assertFalse(hasattr(PR, "casing_material"))
         core = PR.print_settings("core", SETTINGS, 0.4, 2.4)
-        self.assertEqual((core["layerMm"], core["supports"], core["material"]), (0.12, False, "PETG"))
+        self.assertEqual((core["layerMm"], core["supports"]), (0.12, False))
+        self.assertNotIn("material", core)
         self.assertEqual((core["wallLines"], core["wallIsNozzleMultiple"]), (6, True))
         self.assertIn("working face up", core["orientation"])
         sec = PR.print_settings("sector", SETTINGS)
         self.assertEqual(sec["layerMm"], 0.24)
         self.assertIn("foot flange", sec["orientation"])
-        self.assertEqual(PR.print_settings("clip", SETTINGS)["material"], "PETG")
+        self.assertNotIn("material", PR.print_settings("clip", SETTINGS))
         stand = PR.print_settings("stand", SETTINGS, 0.4, 2.4)
         self.assertEqual((stand["layerMm"], stand["supports"]), (0.24, False))
         self.assertEqual(stand["orientation"], "upright, as it stands under the base")
@@ -128,13 +119,13 @@ class SheetTest(unittest.TestCase):
         self.assertEqual(len(s["pieces"]), 3)
         self.assertAlmostEqual(s["totals"]["wetKg"], 1.58 + 6.32 + 0.79, places=2)
         self.assertEqual(len(s["warnings"]), 1)
-        self.assertEqual(s["casingMaterial"]["material"], "PETG")
+        self.assertNotIn("casingMaterial", s)
         parts = {p["name"]: p for p in s["parts"]}
         self.assertAlmostEqual(parts["bottom_core"]["massG"], 127.0)
-        self.assertAlmostEqual(parts["PETG_clip_short"]["massG"], 2.5, places=1)    # PETG 1.27
-        self.assertEqual(parts["PETG_clip_short"]["material"], "PETG")
-        self.assertEqual(parts["PETG_clip_short"]["count"], 12)
-        self.assertEqual(parts["PETG_clip_short"]["orientation"], "flat")
+        self.assertAlmostEqual(parts["clip_short"]["massG"], 2.5, places=1)    # filamentDensity 1.27
+        self.assertNotIn("material", parts["clip_short"])
+        self.assertEqual(parts["clip_short"]["count"], 12)
+        self.assertEqual(parts["clip_short"]["orientation"], "flat")
         self.assertEqual(parts["bottom_core"]["count"], 1)
         self.assertNotIn("massG", parts["side1_floor"])
         self.assertEqual(parts["bottom_sector1"]["layerMm"], 0.24)
@@ -150,14 +141,14 @@ class SheetTest(unittest.TestCase):
         self.assertEqual((s["clips"]["total"], s["clips"]["perPiece"]), (30, {"bottom": 12, "side1": 9}))
         self.assertEqual([b["key"] for b in s["clips"]["bodies"]],
                          ["clip_short", "clip_short_p05", "clip_short_p09", "clip_rail_48mm"])
-        self.assertEqual(s["clips"]["counts"], {"bottom": {"PETG_clip_short": 3, "PETG_clip_rail_48mm": 2},
-                                                 "side1": {"PETG_clip_short": 2}})
+        self.assertEqual(s["clips"]["counts"], {"bottom": {"clip_short": 3, "clip_rail_48mm": 2},
+                                                 "side1": {"clip_short": 2}})
         lt = s["leakTest"]
         self.assertEqual(lt["piece"], "bottom")                          # foot + radial/rail seams: most kinds
         self.assertEqual(lt["parts"], ["bottom_core", "bottom_sector1", "bottom_stand"])
-        self.assertEqual(lt["clips"], {"PETG_clip_short": 3, "PETG_clip_rail_48mm": 2})
-        self.assertEqual(lt["spares"], [{"name": "PETG_clip_short_p05", "preloadMm": 0.5},
-                                        {"name": "PETG_clip_short_p09", "preloadMm": 0.9}])
+        self.assertEqual(lt["clips"], {"clip_short": 3, "clip_rail_48mm": 2})
+        self.assertEqual(lt["spares"], [{"name": "clip_short_p05", "preloadMm": 0.5},
+                                        {"name": "clip_short_p09", "preloadMm": 0.9}])
         self.assertEqual(lt["preloadMm"], 0.7)
 
     def test_no_clips_no_joints(self):
@@ -179,24 +170,28 @@ class SheetTest(unittest.TestCase):
     def test_mass_rendered_with_one_decimal(self):
         s = PR.build_sheet("x", [], [{"name": "f", "piece": "a", "role": "floor", "volumeCm3": 43.985}],
                            settings=SETTINGS)
-        self.assertIn("| 55.9 |", _text(s))      # PETG 1.27
+        self.assertIn("| 55.9 |", _text(s))      # filamentDensity 1.27
 
-    def test_thick_section_switches_casings(self):
+    def test_no_material_named(self):
+        # 2026-10-08: the sheet names no print material; a thick section changes nothing
         s = PR.build_sheet("x", [{"id": "a", "volumeCm3": 10, "thickestSectionMm": 70}],
                            [{"name": "a_core", "piece": "a", "role": "core", "volumeCm3": 1.0},
-                            {"name": "clip", "role": "clip"}], settings=SETTINGS)
-        self.assertEqual(s["parts"][0]["material"], "PETG")
+                            {"name": "clip", "role": "clip", "material": "PETG"}], settings=SETTINGS)
         self.assertAlmostEqual(s["parts"][0]["massG"], 1.3)
-        self.assertEqual(s["parts"][1]["material"], "PETG")
+        self.assertTrue(all("material" not in x for x in s["parts"]))
+        h = PR.render_html(sheet()).lower()
+        for word in ("petg", "pla ", "pla.", "pla)", "material"):
+            self.assertNotIn(word, h, word)
 
     def test_sheet_text(self):
         md = _text(sheet())
         for text in ("# Process sheet: Mug 01.1", "| bottom | 1000.0 | 1133 | 793 | 1.58 |",
-                     "6.32 (!)", "independent", "Never oil", "30 clips in total, all PETG",
+                     "6.32 (!)", "independent", "Never oil", "30 clips in total.",
                      "bottom: bottom_sector1 -> bottom_core", "bottom -> side1 -> side2",
-                     "| bottom_core | bottom | 1 | PETG |", "| PETG_clip_short | - | 12 | PETG |",
-                     "| bottom_stand | bottom | 1 | PETG | 0.24 | - | upright, as it stands under the base |",
-                     "No supports", "21 C", "Never insulate", "bottom_core.3mf", "| Part | Piece | Qty | Material |"):
+                     "| bottom_core | bottom | 1 | 0.12 |", "| clip_short | - | 12 | 0.12 |",
+                     "| bottom_stand | bottom | 1 | 0.24 | - | upright, as it stands under the base |",
+                     "No supports", "21 C", "cool the casings", "Never insulate", "bottom_core.3mf",
+                     "| Part | Piece | Qty | Layer mm |"):
             self.assertIn(text, md, text)
         for gone in ("fit test", "wedge", "coupon", "clay coil"):
             self.assertNotIn(gone, md.lower(), gone)
@@ -213,21 +208,42 @@ class SheetTest(unittest.TestCase):
     def test_casing_assembly_section(self):
         md = _text(sheet())
         sec = md[md.index("## 4. Casing assembly"):md.index("## 5.")]
-        self.assertIn("- **bottom**: bottom_core, bottom_sector1, bottom_stand; clips 3 x PETG_clip_short, "
-                      "2 x PETG_clip_rail_48mm. Assembly order: stand -> bottom_core -> bottom_sector1.", sec)
-        self.assertIn("- **side1**: side1_floor; clips 2 x PETG_clip_short.\n", sec)   # no order: no assembly order
+        self.assertIn("- **bottom**: bottom_core, bottom_sector1, bottom_stand; clips 3 x clip_short, "
+                      "2 x clip_rail_48mm. Assembly order: bottom_core -> bottom_sector1.", sec)
+        self.assertIn("- **side1**: side1_floor; clips 2 x clip_short.\n", sec)   # no order: no assembly order
         self.assertIn("- **side2**: -; clips none.\n", sec)
         self.assertIn("Assemble each casing in the order listed (the demold order of section 5 reversed)", sec)
         self.assertIn("Short clips (curved foot seams)", sec)
         self.assertIn("Rail clips (straight vertical seams)", sec)
+        self.assertNotIn("Dovetail clips", sec)
+        self.assertIn("tap each back the way it went on", md)
+        self.assertNotIn("Round clips (curved", sec)
+
+    def test_round_clip_assembly(self):
+        bodies = [_body("clip_round_22mm_r66", "round", 7, False, None, 22.0),
+                  _body("clip_dove_48mm_s048", "dove", 6, False, None, 48.0)]
+        md = _text(sheet(clips={"total": 13, "perPiece": {"bottom": 7}, "bodies": bodies}))
+        sec = md[md.index("## 4. Casing assembly"):md.index("## 5.")]
+        self.assertIn("Round clips (curved foot seams", sec)
+        self.assertIn("at each notch", sec)
+        self.assertNotIn("Short clips (curved", sec)
+        self.assertIn("Dovetail clips (straight vertical seams", sec)
+
+    def test_dovetail_clip_assembly(self):
+        bodies = BODIES[:3] + [_body("clip_dove_49mm_s049", "dove", 2, False, None, 48.6)]
+        md = _text(sheet(clips={"total": 16, "perPiece": {"bottom": 12}, "bodies": bodies}))
+        sec = md[md.index("## 4. Casing assembly"):md.index("## 5.")]
+        self.assertIn("Dovetail clips (straight vertical seams, one per seam", sec)
+        self.assertIn("tap the top with a mallet until it stops moving", sec)
+        self.assertNotIn("Rail clips", sec)
 
     def test_leak_test_section(self):
         md = _text(sheet())
         sec = md[md.index("## 1. First print: leak test"):md.index("## 2.")]
         self.assertIn("piece bottom", sec)
-        self.assertIn("Print bottom_core, bottom_sector1, bottom_stand; clips 3 x PETG_clip_short, "
-                      "2 x PETG_clip_rail_48mm (the clip files carry the whole mold's count: print only these); "
-                      "and the spare clips PETG_clip_short_p05 (0.5 mm), PETG_clip_short_p09 (0.9 mm).", sec)
+        self.assertIn("Print bottom_core, bottom_sector1, bottom_stand; clips 3 x clip_short, "
+                      "2 x clip_rail_48mm (the clip files carry the whole mold's count: print only these); "
+                      "and the spare clips clip_short_p05 (0.5 mm), clip_short_p09 (0.9 mm).", sec)
         self.assertIn("`mold_clipPreload`", sec)
         self.assertIn("0.7 mm clips", sec)
         self.assertIn("Fit offset by 0.05 mm in the SlipMold > Make mold dialog", sec)
@@ -239,8 +255,8 @@ class SheetTest(unittest.TestCase):
         for text in ("<!DOCTYPE html>", "<title>Process sheet: Mug 01.1</title>", "<h2>1. First print: leak test</h2>",
                      "<code>mold_clipPreload</code>", "<code>mold_ridgeCount</code>",
                      '<td class="num">1133</td>', "<td><strong>Total</strong></td>", "6.32 (!)",
-                     "<li><strong>bottom</strong>: bottom_core, bottom_sector1, bottom_stand; clips 3 x PETG_clip_short, "
-                     "2 x PETG_clip_rail_48mm. Assembly order: stand -&gt; bottom_core -&gt; bottom_sector1.</li>",
+                     "<li><strong>bottom</strong>: bottom_core, bottom_sector1, bottom_stand; clips 3 x clip_short, "
+                     "2 x clip_rail_48mm. Assembly order: bottom_core -&gt; bottom_sector1.</li>",
                      "<li>bottom: bottom_sector1 -&gt; bottom_core</li>", "<h2>8. Export manifest</h2>", ">Qty<"):
             self.assertIn(text, h, text)
         self.assertNotIn("**", h)
@@ -272,6 +288,11 @@ class SheetTest(unittest.TestCase):
                                    "tape it from outside.")
         self.assertIn("side1_core stands on side1_floor (side1_j6): horizontal lap, no clip and no ridge; "
                       "tape the line from outside", notes[2])
+        ledge = dict(joints[-1], clamped=True, lapKind="baseSlide", clip={"type": "short", "sites": [{}] * 5})
+        self.assertEqual(PR.joint_notes([ledge]), [
+            "side1: side1_core stands on side1_floor (side1_j6): horizontal lap with no ridge; tape the line from "
+            "outside (the ledge edge and both ends), then push the 5 short clips onto the core's ledge; take them off "
+            "first when demolding, the core slides off along its pull."])
         md = _text(PR.build_sheet("x", [{"id": "bottom", "volumeCm3": 10}], [], joints=joints))
         self.assertIn("no ridge; tape them from outside after clipping.", md)
         self.assertIn("no clip (foot run 12.0 mm < clip width 16.0 mm); tape it from outside.", md)
@@ -283,8 +304,8 @@ class SheetTest(unittest.TestCase):
 
 class ClipCountsTest(unittest.TestCase):
     def test_counts_by_piece_with_body_names(self):
-        self.assertEqual(PR.clip_counts(JOINTS, BODIES), {"bottom": {"PETG_clip_short": 3, "PETG_clip_rail_48mm": 2},
-                                                          "side1": {"PETG_clip_short": 2}})
+        self.assertEqual(PR.clip_counts(JOINTS, BODIES), {"bottom": {"clip_short": 3, "clip_rail_48mm": 2},
+                                                          "side1": {"clip_short": 2}})
         self.assertEqual(PR.clip_counts(JOINTS)["bottom"], {"clip_short": 3, "clip_rail_48mm": 2})   # key without rows
         self.assertEqual(PR.clip_counts(JOINTS, ["old", {"name": "x"}])["side1"], {"clip_short": 2})
         self.assertEqual(PR.clip_counts(None), {})

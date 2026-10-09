@@ -37,7 +37,8 @@ class NumbersTest(unittest.TestCase):
 
 class ParamsTest(unittest.TestCase):
     def test_defaults_and_overrides(self):
-        self.assertEqual(CL.MATERIAL, "PETG")
+        self.assertFalse(hasattr(CL, "MATERIAL"))
+        self.assertEqual(CL.CLIP["modulusMPa"], (1000.0, 1200.0, 1500.0))
         self.assertEqual(CL.SHORT, "clip_short")
         for k, v in CL.PARAM_DEFAULTS.items():
             self.assertEqual(Q[k], v, k)
@@ -88,7 +89,7 @@ class GeometryTest(unittest.TestCase):
         self.assertEqual(s["xSpineInner"], -14.0)
         self.assertEqual(s["xSpineOuter"], -17.0)
         self.assertEqual(s["xTip"], CL.barb(Q)["xTip"])
-        self.assertEqual(s["material"], "PETG")
+        self.assertNotIn("material", s)
         self.assertEqual(len(s["forcePerArmN"]), 3)
         self.assertLess(s["forcePerArmN"][0], s["forcePerArmN"][2])
         self.assertAlmostEqual(s["snapStrainPct"], 1.26, places=2)
@@ -111,8 +112,6 @@ class GeometryTest(unittest.TestCase):
         self.assertNotIn("brim", CL.clip_spec(Q, STACK, 0.8, 2, 20.0, "rail")["print"])
         self.assertNotIn("snapStrainPct", r)
 
-    def test_stand_offset(self):
-        self.assertAlmostEqual(CL.stand_offset(Q, 16.0, 0.5), 16.0 - CL.barb(Q)["xTip"] - 0.5 - 1.0)
 
 
 class RunTest(unittest.TestCase):
@@ -277,8 +276,8 @@ class HashScopeTest(unittest.TestCase):
         for name, expr in (("mold_flangeWidth", "14 mm"), ("mold_nozzle", "0.6 mm")):
             h = scoped(dict(VALUES, **{name: expr}))
             self.assertNotEqual(base["casing"], h["casing"], name)
-        # S7 builds the clip beads, lugs and the stand: a clips-group change moves the casing hash too
-        for name, expr in (("mold_clipWidth", "20 mm"), ("mold_standHeight", "6 mm")):
+        # S7 builds the clip beads, heads and lugs: a clips-group change moves the casing hash too
+        for name, expr in (("mold_clipWidth", "20 mm"), ("mold_clipDoveDepth", "7 mm")):
             h = scoped(dict(VALUES, **{name: expr}))
             self.assertNotEqual(base["casing"], h["casing"], name)
             self.assertNotEqual(base["clips"], h["clips"], name)

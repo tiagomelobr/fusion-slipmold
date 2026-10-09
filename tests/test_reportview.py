@@ -19,8 +19,8 @@ HASH = "deadbeefcafe0123"  # a summary-only key: it must never reach a page
 CHECKS = [{"check": "solid:clip%d" % i, "ok": True, "value": {"solid": True}, "limit": 1} for i in range(RV.MAX_ROWS + 4)]
 CHECKS.append({"check": "bed:clip", "ok": False, "value": [300.0, 13.4, 18.0], "limit": [250.0, 250.0, 250.0]})
 STAGE = {"stage": "s8_clips", "status": "warn",
-         "summary": {"total": 78, "bodies": [{"name": "PETG_clip_short", "count": 74},
-                                             {"name": "PETG_clip_rail_48mm", "count": 4}],
+         "summary": {"total": 78, "bodies": [{"name": "clip_short", "count": 74},
+                                             {"name": "clip_rail_48mm", "count": 4}],
                      "perPiece": {"bottom": 28, "side1": 25},
                      "siteChecks": {"total": 78, "nFailed": 0}, "clashes": 0,
                      "clip": {"stackMm": 6.0, "snapStrainWorstPct": 1.44}, "paramHash": HASH},
@@ -67,7 +67,7 @@ DONE = {"doc": "Cup", "layout": {"name": "sides2Bottom", "pieces": 3}, "casings"
 DONE["pipeline"]["stages"]["s3_moldability"].update(status="warn", warnings=["the best layout has a seam across the foot"])
 DONE["pipeline"]["stages"]["s6_verify"]["summary"] = {"batchTotal": S6["summary"]["batchTotal"] | {
     "dryWithOverageG": 836, "waterWithOverageG": 585, "wetKg": 1.167}}
-DONE["pipeline"]["stages"]["s9_export"]["summary"] = {"leakTest": {"piece": "bottom", "files": ["PETG_bottom_core.3mf"]}}
+DONE["pipeline"]["stages"]["s9_export"]["summary"] = {"leakTest": {"piece": "bottom", "files": ["bottom_core.3mf"]}}
 
 
 class PartsTest(unittest.TestCase):
@@ -89,9 +89,9 @@ class PartsTest(unittest.TestCase):
 
     def test_s9_key_results_print_first(self):
         s9 = {"summary": {"files": 12, "byKind": {"casing": 8, "clip": 4}, "clipCount": 78,
-                          "leakTest": {"piece": "bottom", "files": ["PETG_bottom_core.3mf", "PETG_clip_short_x74.3mf"]}}}
+                          "leakTest": {"piece": "bottom", "files": ["bottom_core.3mf", "clip_short_x74.3mf"]}}}
         keys = dict(RV.key_results("s9_export", s9))
-        self.assertEqual(keys["Print first (leak test)"], "piece bottom: PETG_bottom_core.3mf, PETG_clip_short_x74.3mf")
+        self.assertEqual(keys["Print first (leak test)"], "piece bottom: bottom_core.3mf, clip_short_x74.3mf")
         self.assertEqual(keys["Files"], "12 (casing 8, clip 4)")
         self.assertEqual(keys["Clips to print"], "78")
         for gone in ("Fit tests", "Fit test files"):
@@ -169,7 +169,7 @@ class BuildTest(unittest.TestCase):
         self.assertEqual(keys["Plaster pieces"], "3 (layout sides2Bottom)")
         self.assertEqual(keys["Plaster batch"], "836 g dry plaster + 585 g water (15% spare), wet 1.17 kg")
         self.assertEqual(keys["Printed casing parts"], "2")
-        self.assertEqual(keys["Print first (leak test)"], "piece bottom: PETG_bottom_core.3mf")
+        self.assertEqual(keys["Print first (leak test)"], "piece bottom: bottom_core.3mf")
         self.assertEqual(keys["Export files"], "3")
         self.assertLessEqual(len(keys), RV.MAX_KEYS)
         self.assertIn('<a class="btn" href="%s">Process sheet</a>' % sheet, text)

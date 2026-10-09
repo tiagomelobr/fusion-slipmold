@@ -1,4 +1,4 @@
-"""S1 creates the seven input parameters; overrides equal to the engine's value change no hash."""
+"""S1 creates the six input parameters; overrides equal to the engine's value change no hash."""
 import os
 import sys
 import unittest
@@ -36,7 +36,7 @@ class S1InputsTest(unittest.TestCase):
         self.assertEqual(sorted(made), sorted(R.input_names(DEFAULTS)))
         self.assertEqual(P.missing_params(DEFAULTS, made), [])
         self.assertEqual(sorted(made), sorted("mold_" + n for n in (
-            "plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "casingMaterial", "shrinkagePct")))
+            "plasterWall", "spareHeight", "spareStepOut", "layout", "splitAzimuth", "shrinkagePct")))
 
     def test_override_equal_to_the_engine_value_keeps_every_hash(self):
         inputs = s1_create({})
