@@ -309,7 +309,38 @@ Site checks (S8, Fusion booleans on each dovetail clip site; a problem fails the
 The plain-language text of every check and problem is in `moldkit/core/explain.py`. The user-facing table is
 [USER_GUIDE.md](USER_GUIDE.md) section 11.
 
-## 10. Not yet validated
+## 10. Bottle 01: a narrow neck and the slip well size (2026-10-11)
+
+Bottle 01 (revolved, 78.85 mm body under a 31.3 mm neck, 125.6 mm tall, 442.6 cm3, foot recess 2.1 mm), Make mold
+headless, no saves, nozzle 0.6. Four fixes, then S0 to S9 in one chain: done.
+
+| Stage | Before | Fix | After |
+|---|---|---|---|
+| S2 | fail "plug is wider (78.848 mm) than the spare top" | fail only when S0 found separate outer loops (`multiOuterZ_mm`, now kept in mold.json); a bulge is a warning | warn; S3 `sides2Bottom`, 3 pieces, undercut 0 mm2 |
+| S8 | error ASM_BAD_BOUNDARY_COEDGE cutting the channel of `clip_round_23mm_r88` | each round-clip piece starts on the previous piece's real end section (side faces twisted up to 4.5 um) | 1481.7 mm3, one shell |
+| S8 | fail "clip binds 7.0 mm above its seat (1.40 mm3)", ledge clips `_g` / `_g_m` 78 mm | the floor overhangs the ledge end by 0.22 mm: the floor groove runs 2 mm past it (CASING_BUILD 12) | 28 sites, none failed, ledge clips raised 0 mm3 |
+| S2 | 20 mm well, 51 cm3 | slip well sizing (CER-12, `moldkit/core/spare.py`): extrude `max(mold_spareHeight ; need)` | 30 mm, holds 84 cm3; 412 cm2 wetted x 4 mm x 0.24 = 40 cm3 drawn, level drop 12.2 mm |
+
+Plaster 1852 cm3 (Bottom 430, sides 711 each), S6 32 checks, 18 export files. Warnings left: core and sector
+overhangs, sector draft 2.18 deg, push force of the 145 mm dovetail clips 62.6 N (limit 40).
+
+## 11. Matching marks and the plaster batch label (2026-10-12)
+
+Read-only check on Cup 02 (`sides2Bottom`, side2 cast in the side1 casing): S7's builder made the side1 and
+bottom casings as temporary bodies with and without the marks, then ran S7's piece checks on the marked parts.
+The document's timeline was not touched.
+
+| Item | Result |
+|---|---|
+| Plan | side1: rungs 1 (core / sector1), 2 (sector1 / sector2), 3 (sector2 / core); ticks 1 and 2 on the sector feet; none on the core ledge. bottom (closed ring of 3): rungs 1, 2, 3; ticks 1, 2, 3, all clear of the round clip stations. Depth 0.6 mm (1.0 mm left outside the outer groove) |
+| Cut volume | every part lost exactly the planned grooves (count x 1.0 x 0.6 x 3.5 or 3.0 mm per joint): side1 core 8.40, floor 5.40, sector1 8.10, sector2 14.10 mm3; bottom core 10.80, sectors 10.20, 9.90, 15.90 mm3. One lump each |
+| Checks | cavity gap 0, interference 0 on every pair, release orders feasible (side1 8, bottom 24); the overhang warnings are the ones the last full S7 run reported (bottom sectors 591 mm2, side1 core 1889 mm2) |
+| Plaster batch | bottom `Gesso/água: 480g / 336g`, side1 `Gesso/água: 623g / 436g`, the process sheet's numbers; both go to sector1 |
+
+What it does not prove: the engraved label with three lines (it needs the sketch text, so a full S7 run), and the
+marks' legibility on a print.
+
+## 12. Not yet validated
 
 - Any print of the dovetail clips (head and clip fit, the 8 mm run before the lug, the push-on force by hand and
   with a mallet, PETG-on-PETG friction, force kept after an hour at 50 C, the plaster setting expansion against
@@ -322,6 +353,11 @@ The plain-language text of every check and problem is in `moldkit/core/explain.p
   ring inside the lower arm tips, and a circular foot other than the unit-test mug.
 - Any print of the new seals and clips (ridge fit, clip grip, water and plaster leak tests), and any pour: plaster
   pieces cast from these casings. The plaster keys have no test print.
+- Twin pieces (`mold_twinPieces` `'auto'`, 2026-10-12): unit-tested only (`tests/test_natches.py` TwinTest,
+  `tests/test_twins.py`). Not yet run in Fusion: the half-turn boolean comparison of the split and finished
+  pieces (S5 check `twinPieces`), the S6 unique fit from the live keys with the half turn accepted, S7 building
+  only the side1 casing with `x2` labels, and a pour of side2 from the side1 casing. Every validated run above
+  predates it; a turned ware such as Bottle 01 (sides 711 cm3 each) or the Small Cup should now get twin sides.
 - `sides3Bottom` and `sides4Bottom` (proposed by S3, not splittable), handles and spouts, casing parts larger than
   the bed, `contoured` plaster on non-revolved shapes, wavy or scalloped rims.
 - A cancelled-then-resumed S9 and the oversize message in a live S7 run (the per-piece S7 path to its check step

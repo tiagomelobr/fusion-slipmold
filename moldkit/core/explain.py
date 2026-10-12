@@ -53,6 +53,17 @@ def _e(key, pattern, title, what, fix, sample, stages=None):
 
 
 ENTRIES = [
+    # ------------------------------------------------------------------ several molds (moldkit.fusion.variants)
+    _e("moldNotFound", r"no mold called",
+       "No mold by that name",
+       "The design holds no SlipMold component with that name or key.",
+       ["Pick the mold in Make mold's Mold list, or pass one of the names listed (or \"new\" for a new mold)."],
+       "no mold called 'Thin' (molds: SlipMold, SlipMold 2; or \"new\")"),
+    _e("moldNameTaken", r"a mold called .* exists",
+       "That mold name is taken",
+       "Another SlipMold component already has that name.",
+       ["Choose another name for the new mold (or leave it empty: SlipMold 2, SlipMold 3, ...)."],
+       "a mold called 'SlipMold 2' exists: choose another name"),
     # ------------------------------------------------------------------ the model (S0, S2)
     _e("modelMoved", r"is moved or rotated",
        "The model's component has been moved",
@@ -137,6 +148,34 @@ ENTRIES = [
         "by 5 mm (both widen the slip well top)."],
        "plug is wider (127.359 mm) than the spare top (110.718 mm): the model is wider below the rim than at it "
        "(a handle or a bulge?)"),
+    _e("bulgeBelowRim", r"the ware bulges below its rim",
+       "The ware is wider than its neck",
+       "The ware is wider below its rim than the top of the slip well (a bottle or a closed form with a narrow "
+       "neck). No handle was found, so the mold is built: the side pieces release the bulge, the bottom piece the "
+       "foot, and the spare only has to fill the neck.",
+       ["Check the S3 layout: it must report 0 mm2 of undercut. Then nothing to do.",
+        "S2 makes the narrow slip well taller to hold the slip the cast draws; top it up while casting if the level "
+        "still drops below the knife ledge."],
+       "the ware bulges below its rim: 76.734 mm wide under a 62.034 mm spare top (a narrow neck); S3 checks that "
+       "the side pieces release it"),
+    _e("spareRaised", r"slip well built (?P<h>NUM) mm tall",
+       "The slip well was made taller",
+       "While the wall casts, the plaster draws water out of the slip and its level drops. S2 built the well "
+       "{h} mm tall so it holds twice that drop and the slip stays 5 mm above the knife ledge (mold_spareHeight is "
+       "the least height).",
+       ["Nothing to do. For a thinner or thicker cast, override mold_castWall (add the user parameter; default "
+        "4 mm): the well follows it.",
+        "Or widen the well with mold_spareStepOut, which lowers it. Calibrate mold_slipDropRatio (default 0.24) "
+        "from a test cast: the level drop in mm x the well's area / the cast wall volume."],
+       "slip well built 33 mm tall (mold_spareHeight 20 mm): a 4 mm wall draws about 46 cm3 of slip (level drop "
+       "13.7 mm); the well holds 94 cm3"),
+    _e("spareCapped", r"slip well capped at",
+       "The slip well cannot be tall enough",
+       "The ware draws more slip than a well of the largest height can hold over its narrow rim.",
+       ["Raise mold_spareStepOut (a wider well holds more per mm).",
+        "Or plan to top the slip up while casting and override mold_castWall with a thinner wall."],
+       "slip well capped at 200 mm: it cannot hold the slip a 4 mm wall draws (900 cm3); widen it with "
+       "mold_spareStepOut"),
     _e("looseSketches", r"sketches not fully constrained",
        "Some model sketches are not fully constrained",
        "A sketch of the model is free to move, so changing a user parameter could silently reshape the ware.",
@@ -202,15 +241,16 @@ ENTRIES = [
        "ran.",
        ["Open SlipMold > Parameters (or Modify > Change Parameters) and set mold_{param} to one of the values listed "
         "in the message, in single quotes, for example 'auto'. Its comment lists the choices.",
-        "Then click Make mold. If it is an override (mold_plasterOuterTaper or mold_natchGender), deleting it also works: "
+        "Then click Make mold. If it is an override (mold_plasterOuterTaper, mold_natchGender or mold_twinPieces), "
+        "deleting it also works: "
         "SlipMold then uses its own value."],
        "mold_layout = 'sides5' is not one of: auto | dropOut | sides2 | sides2Bottom | sides3Bottom | sides4Bottom"),
-    _e("textParam", r"mold_(?P<param>plasterOuterTaper|plasterOuterShape|natchGender) '",
+    _e("textParam", r"mold_(?P<param>plasterOuterTaper|plasterOuterShape|natchGender|twinPieces) '",
        "A text parameter has an unknown value",
        "The value of mold_{param} is not one of the words it accepts.",
        ["Set mold_{param} to one of the values listed in the message, in single quotes (SlipMold > Parameters "
-        "or Modify > Change Parameters). If it is an override (mold_plasterOuterTaper or mold_natchGender), you can "
-        "delete it instead."],
+        "or Modify > Change Parameters). If it is an override (mold_plasterOuterTaper, mold_natchGender or "
+        "mold_twinPieces), you can delete it instead."],
        "mold_natchGender 'both': expected one of mixed, single"),
     _e("paramDeleted", r"missing from the design \(deleted or renamed",
        "A mold input parameter was deleted or renamed",
@@ -228,8 +268,8 @@ ENTRIES = [
        "Fusion did not accept a value you typed (wrong unit, bad number, or text without quotes).",
        ["Fix the parameter value (SlipMold > Parameters or Modify > Change Parameters): give lengths a unit (5 mm) "
         "and angles deg (15 deg).",
-        "Text parameters (mold_layout, mold_plasterOuterShape, mold_plasterOuterTaper, mold_natchGender) need single "
-        "quotes, for example 'auto'.",
+        "Text parameters (mold_layout, mold_plasterOuterShape, mold_plasterOuterTaper, mold_natchGender, "
+        "mold_twinPieces) need single quotes, for example 'auto'.",
         "Only the mold_ parameters of defaults.json can be set."],
        "invalid expression(s), nothing changed: mold_plasterWall = 25 mmm"),
     _e("hybridSwitch", r"could not switch the design to Hybrid",
@@ -548,6 +588,35 @@ ENTRIES = [
         "Parameters; the default is 3, and 2 on a round ware is symmetric).",
         "Or mark the pieces by hand before each cast."],
        "unique fit: ambiguous, 2 wrong assemblies (limit unique)"),
+    _e("twinPiecesUnchecked", r"^twinPieces: .*comparison boolean failed",
+       "The twin side pieces could not be compared",
+       "The side pieces got the same keys so one casing could cast both, but Fusion's boolean that compares the "
+       "finished pieces failed, so SlipMold cannot confirm they are the same piece and S5 stopped.",
+       ["Click Make mold again: a boolean that fails once often works on the next run.",
+        "If it fails again, turn twin pieces off for this mold: add the user parameter mold_twinPieces = 'off' in "
+        "Change Parameters, then click Make mold (each piece gets its own casing).",
+        LOG],
+       "twinPieces: side1|side2: the half-turn comparison boolean failed (limit half turn maps side1 onto side2 "
+       "within 0.001 cm3)"),
+    _e("twinPieces", check("twinPieces"),
+       "The twin side pieces came out different",
+       "The two side pieces were the same piece turned half a turn after the split, so SlipMold gave them the same "
+       "keys to cast both from one casing, but the finished pieces differ by about {value} cm3. Casting one from the "
+       "other's "
+       "casing would give a wrong piece, so S5 stopped.",
+       ["Turn twin pieces off for this mold: add the user parameter mold_twinPieces = 'off' in Change Parameters, "
+        "then click Make mold (each piece gets its own casing and one-way keys).",
+        LOG],
+       "twinPieces: side1|side2: 0.0123 cm3 differ under a half turn (over 0.001 cm3) (limit half turn maps side1 "
+       "onto side2 within 0.001 cm3)"),
+    _e("twinNotLaidOut", r"^twin pieces not (?:laid out|checked)",
+       "The side pieces get their own casings",
+       "The side pieces could have been twins (one casing casting both), but SlipMold could not lay the keys out "
+       "for that or could not compare the pieces, so it used one-way keys and a casing per piece. The mold is fine.",
+       ["No action needed. To avoid the extra casing, try other keys: override mold_natchesPerSeam with 2 or 4 (add "
+        "the user parameter in Change Parameters; the default is 3), then click Make mold."],
+       "twin pieces not laid out (face side1|side2#1: no natch point whose copy keeps the margins): natches placed "
+       "one way only"),
     _e("genderMixed", r"^mixed genders|" + check("genderMixed"),
        "A seam has only bumps or only sockets on one piece",
        "With mixed key genders each piece should carry both bumps and sockets on a seam with two or more keys.",

@@ -30,10 +30,18 @@ natch forms and plug details are exact:
   (lugHeight above the foot) to the top, for the rail clips slid down from the top (clipRailStyle snap), or
   instead tapered dovetail heads over the same run with a stop lug under it (clipRailStyle dovetail,
   moldkit.core.dovetail; the edge corner chamfered). No stand part (removed 2026-10-08).
+  Matching marks (moldkit.core.marks, planned by casing.plan_marks): grooves across every vertical sector seam
+  (level rungs on the flange ends, seam k along the arc: k lines) and every sector foot seam (upright ticks on the
+  outer rim, sector k: k ticks), cut from both parts after the labels. Labels: the design name over the part
+  name; one part per casing also carries the plaster batch of one pour (grams of plaster and water).
 Checks: L4 release order search (TemporaryBRep moves 0.05 / 0.2 / 1.0 cm along each part's pull
 against the piece and the parts still present, tolerance releaseToleranceCm3); L5 cavity gap,
 part-piece and part-part interference; L6 bed fit in print orientation, overhang area beyond
 45 deg, nozzle multiples, part mass.
+
+T1 twin pieces: a piece that mold.json names a twin copy (pieces[].twinOf, written by S5) gets no casing: its
+master's casing casts it too (labels end in " x2", mold.json casings.casts {master: [master, copy]}); a call
+with {"piece": copy} returns without building.
 
 args: {} all pieces in one call | {"piece": id} one piece (build + its checks; replaces only that
 piece's casing; mold.json "casings" becomes status partial, so S8 / S9 / the pipeline refuse it until
@@ -62,7 +70,9 @@ from moldkit.core import demold as DM
 from moldkit.core import dovetail as DV
 from moldkit.core import labels as LB
 from moldkit.core import params as P
+from moldkit.core import process as PR
 from moldkit.core import report
+from moldkit.core import twins as TW
 from moldkit.fusion import context as C
 from moldkit.fusion import frame as F
 from moldkit.fusion import labels as FL
@@ -73,6 +83,7 @@ PLUG = "plug"
 COMPONENT = "Casings"
 STEPS_CM = (0.05, 0.2, 1.0)
 BIG = 2000.0  # mm, half-space box size
+GROOVE_RUN_ON = 2.0  # mm: a core ledge's floor groove runs this far past the ledge's end (the floor overhangs it)
 # {"piece": id, "phase": "build"} -> what its "checks" call needs: {piece: {"key", "plan", "extra", "tb"}}
 # (temporary BRep bodies; kept between the steps of one add-in chain, rebuilt when missing)
 _BUILT = {}
@@ -522,13 +533,53 @@ def build_piece(tbm, plan, desc, ol, p, ex, piece_n, plug_n, labels=None):
             plain[q["id"]] = G.copy(out[q["id"]])  # for the overhang check: the letters' roofs print as ledges
             G.cut(out[q["id"]], G.inter(G.copy(tool), skin))
             engraved.append(q["id"])
+    # matching marks after the labels: "plain" (the overhang, interference and cavity checks) is without them
+    mark_log, marks = mark_cuts(G, plan, out, of, ft)
     envelope = cavity_envelope(G, plan, parts, p, d, lat, ends, H, T, ex["fillHeight"])
     if chamfers is not None:  # the clip edge chamfers are meant to be open
         G.cut(envelope, chamfers)
     if boxes is not None:  # and so are the engraved labels
         G.cut(envelope, boxes)
-    return out, {"ridges": ridge_log, "clipFeatures": clip_log, "booleans": G.booleans, "envelope": envelope,
-                 "clearance": clear, "piece": piece, "H": H, "T": T, "engraved": engraved, "plain": plain}
+    if marks is not None:  # and the matching marks
+        G.cut(envelope, marks)
+    return out, {"ridges": ridge_log, "clipFeatures": clip_log, "marks": mark_log, "booleans": G.booleans,
+                 "envelope": envelope, "clearance": clear, "piece": piece, "H": H, "T": T, "engraved": engraved,
+                 "plain": plain}
+
+
+def mark_cuts(G, plan, out, of, ft):
+    """Matching marks (the plan joints' "marks", moldkit.core.marks), cut from both parts of each seam: rungs =
+    level grooves across a vertical seam's flange ends (the plane at the flange offset, u across the seam), ticks =
+    upright grooves across a foot seam's lap plane on the outer rim (the outline offset by the flange offset), each
+    depthMm deep. -> (log rows, the union of the cut bodies or None)."""
+    c = G.c
+    log, cuts = [], None
+    for j in plan["joints"]:
+        m = j.get("marks") or {}
+        if not m.get("count"):
+            continue
+        dep, hw, a = m["depthMm"], m["widthMm"] / 2.0, m["halfMm"]
+        tool = None
+        if m["kind"] == "rungs":
+            u = E_dot(j["plane"]["normal"], j["plane"]["origin"])
+            b = m["azDeg"]
+            w = E_add(E_dot(_dirv(b), c), E_mul(G.R(b, 0.0), -1.0))
+            for zc in m["zp"]:
+                tool = _join_opt(G, tool, G.prism([(u, ">=", -a), (u, "<=", a), (w, ">=", of - dep),
+                                                   (w, "<=", of + 1.0)], zc - hw, zc + hw))
+        else:
+            zl = m["zp"]
+            shell = G.cut(G.cone(zl - a, zl + a, of + 1.0), G.cone(zl - a - 1.0, zl + a + 1.0, of - dep))
+            for beta in m["deg"]:
+                t = E_dot(_tanv(beta), c)
+                tool = _join_opt(G, tool, G.inter(G.copy(shell), G.ge(E_dot(_dirv(beta), c), 0.0),
+                                                  G.ge(t, -hw), G.le(t, hw)))
+        for part in j["parts"]:
+            G.cut(out[part], G.copy(tool))
+        cuts = _join_opt(G, cuts, tool)
+        log.append({"joint": j["id"], "kind": m["kind"], "count": m["count"], "parts": list(j["parts"]),
+                    "clearOfClips": m.get("clear", True)})
+    return log, cuts
 
 
 LABEL_REACH_MM = 20.0  # half the label solid's through-depth (moldkit.fusion.labels.EXTRUDE_MM / 2)
@@ -710,10 +761,15 @@ def clip_features(G, plan, parts, out, p, d, lat, ends, ob, of, L, B, T):
                 l0, l1 = hv["lugMm"]
                 lug = G.prism([(d, "<=", de), (d, ">=", de - D), (s, ">=", l0), (s, "<=", l1)], zf - 0.05, L + lug_top)
                 G.union(out[Bp], cap, lug)
+                # the groove runs on GROOVE_RUN_ON past the ledge's end (the entry), still deepening: the floor
+                # overhangs the ledge end (0.22 mm on Bottle 01) and a groove stopping at it left a web across
+                # the tongue's way in (S8: "clip binds 7.0 mm above its seat")
+                g_run = [(s, ">=", h0 - GROOVE_RUN_ON), (s, "<=", h1)] if k == 0 else \
+                    [(s, ">=", h0), (s, "<=", h1 + GROOVE_RUN_ON)]
                 groove = G.prism([(E_add(E_ZP, E_mul(sh, tT)), "<=", B + gmin + head * tT),
                                   (E_add(md, E_mul(E_ZP, tA)), ">=", xl - de + B * tA),
-                                  (E_add(md, E_mul(E_ZP, -tA)), "<=", xr - de - B * tA)] + run,
-                                 B - 1.0, B + gmin + head * tT + 0.01)
+                                  (E_add(md, E_mul(E_ZP, -tA)), "<=", xr - de - B * tA)] + g_run,
+                                 B - 1.0, B + gmin + (head + GROOVE_RUN_ON) * tT + 0.01)
                 G.cut(out[A], groove)
                 chamfers = groove if chamfers is None else G.union(chamfers, G.copy(groove))
             edge = G.prism([(E_add(md, E_ZP), "<=", ch - de + B), (d, "<=", de + 1.0), (s, ">=", -1.0),
@@ -1316,8 +1372,11 @@ def aggregate(r, d, mold, phash, piece_ids, defaults, p, live_bodies):
     if not all(v["multiple"] for v in summary["nozzle"].values()):
         report.warn(r, "not a nozzle multiple: %s" % [k for k, v in summary["nozzle"].items() if not v["multiple"]])
     status = r["status"] if r["status"] in ("pass", "warn") else "fail"
+    shared = TW.shared(mold)
+    if shared:
+        summary["casts"] = shared
     entry = {"status": status, "paramHash": phash, "build": PIPE.CASING_BUILD, "date": datetime.date.today().isoformat(),
-             "pieces": piece_ids, "ridgeRule": "safe", "parts": parts, "joints": joints,
+             "pieces": piece_ids, "casts": shared, "ridgeRule": "safe", "parts": parts, "joints": joints,
              "orders": {pr["piece"]: pr["orders"] for pr in results},
              "checks": {"cavityGapMm3": summary["cavityGapMm3"], "jointClearanceMm3": summary["jointClearanceMm3"],
                         "maxInterferenceMm3": summary["maxInterferenceMm3"],
@@ -1360,7 +1419,8 @@ def run(args):
         return r
     if F.occurrence_warning(occ):
         report.warn(r, F.occurrence_warning(occ))
-    piece_ids = [q["id"] for q in mold["pieces"]]
+    piece_ids = TW.casing_pieces(mold)  # T1: a twin copy is cast in its master's casing
+    casts = TW.casts(mold)
 
     if args.get("check"):
         r["reportPath"] = C.report_path(STAGE_NAME)
@@ -1375,6 +1435,13 @@ def run(args):
         return r
 
     todo = [args["piece"]] if args.get("piece") else list(piece_ids)
+    twin_of = TW.copies(mold)
+    if args.get("piece") in twin_of:
+        r["reportPath"] = None
+        r["summary"] = {"piece": args["piece"], "twinOf": twin_of[args["piece"]], "phase": args.get("phase"),
+                        "note": "%s is cast in the %s casing (twin pieces): nothing to build"
+                                % (args["piece"], twin_of[args["piece"]])}
+        return r
     bad = [x for x in todo if x not in pieces]
     if bad:
         report.error(r, "unknown piece(s) %s; pieces: %s" % (bad, piece_ids))
@@ -1419,11 +1486,12 @@ def run(args):
     plans = {pid: allp[pid] for pid in todo}
     tbm = adsk.fusion.TemporaryBRepManager.get()
     timings = {}
+    plaster = plaster_rows(mold, defaults)
     if phase == "labels":  # the label solids alone (about 1 s a label): the build step reuses them
         pid = args["piece"]
-        tools, rows = make_labels(d, plans, [pid])
+        tools, rows = make_labels(d, plans, [pid], casts, plaster)
         _LABELS.clear()
-        _LABELS[pid] = {"key": _labels_key(phash, pid), "tools": tools.get(pid, {}), "rows": rows}
+        _LABELS[pid] = {"key": _labels_key(phash, pid, plaster.get(pid)), "tools": tools.get(pid, {}), "rows": rows}
         r["summary"] = {"piece": pid, "phase": "labels", "paramHash": phash, "labels": len(tools.get(pid, {})),
                         "skipped": [x["part"] for x in rows if x.get("skipped")], "seconds": round(time.time() - t0, 2)}
         return r
@@ -1462,10 +1530,11 @@ def run(args):
             C.delete_stage_outputs(d, "s8")
             occ_c, comp = _casings_comp(slip)
             tl = d.timeline
+            mine = C.mold_scope(d)
             for i in range(tl.count - 1, -1, -1):
                 ent = tl.item(i).entity
                 if ent is not None and C.get_attr(ent, "stage") == STAGE and C.get_attr(ent, "role") == "casingBase" \
-                        and C.get_attr(ent, "piece") == args["piece"]:
+                        and C.get_attr(ent, "piece") == args["piece"] and mine(ent):
                     ent.deleteMe()
         else:
             cp = C.Checkpoint(d, replace=STAGE)
@@ -1481,14 +1550,16 @@ def run(args):
         timings["prepare"] = round(time.time() - t, 2)
         t = time.time()
         memo = _LABELS.pop(args["piece"], None) if args.get("piece") else None
-        if memo and memo["key"] == _labels_key(phash, args["piece"]):
+        if memo and memo["key"] == _labels_key(phash, args["piece"], plaster.get(args["piece"])):
             label_tools, label_rows = {args["piece"]: memo["tools"]}, memo["rows"]
         else:  # no labels phase before (or moldkit reloaded since): make them here
-            label_tools, label_rows = make_labels(d, plans, todo)
+            label_tools, label_rows = make_labels(d, plans, todo, casts, plaster)
         timings["labels"] = round(time.time() - t, 2)
         for row in label_rows:
             if row.get("skipped"):
                 report.warn(r, "%s: no label (%s)" % (row["part"], row["skipped"]))
+            if row.get("plasterSkipped"):
+                report.warn(r, "%s: label without the plaster batch (%s)" % (row["part"], row["plasterSkipped"]))
         for pid in todo:
             t = time.time()
             plan = plans[pid]
@@ -1574,19 +1645,66 @@ def run(args):
                    defaults)
 
 
-def make_labels(d, plans, todo):
+def plaster_rows(mold, defaults):
+    """{piece: plaster label lines} (moldkit.core.labels.plaster_lines): each mold.json piece's batch per pour as
+    the process sheet computes it (moldkit.core.process.plaster_batch, defaults.json process settings overlaid by
+    mold.json's)."""
+    proc = dict(defaults["settings"]["process"], **((mold.get("settings") or {}).get("process") or {}))
+    return {q["id"]: LB.plaster_lines(PR.plaster_batch(q["volumeCm3"], {"process": proc}))
+            for q in mold.get("pieces") or [] if q.get("id") and q.get("volumeCm3")}
+
+
+def make_labels(d, plans, todo, casts=None, plaster=None):
     """Label solids of the pieces in todo (moldkit.fusion.labels), placed on their plan labels: the design
-    name over the part name -> ({piece: {part id: body}}, rows [{"piece", "part", "lines", "hMm", "wMm"} or
-    {"piece", "part", "lines", "skipped"}])."""
+    name over the part name (" x2" after it when the casing casts twin pieces, casts {piece: [pieces]}), and on
+    one part per casing (moldkit.core.labels.plaster_parts, the first where the text fits) the plaster batch under
+    them (plaster {piece: lines}) -> ({piece: {part id: body}}, rows [{"piece", "part", "lines", "hMm", "wMm",
+    "plaster"?} or {"piece", "part", "lines", "skipped"}]; "plasterSkipped" on the last part tried when none
+    had room for the batch)."""
     name = C.doc_name()
-    keys, specs = [], []
+    keys, specs, todo_plaster = [], [], {}
     for pid in todo:
+        n_cast = len((casts or {}).get(pid) or [pid])
+        extra = (plaster or {}).get(pid) or []
+
+        def base_lines(q, n_cast=n_cast):
+            return LB.lines(name, TW.label_id(q["id"], n_cast), q["label"]["lines"])
+
+        cands = LB.plaster_parts(plans[pid]["parts"], lambda q: base_lines(q) + extra) if extra else []
         for q in plans[pid]["parts"]:
             lab = q.get("label")
             if lab:
                 keys.append((pid, q["id"], lab))
-                specs.append({"lines": LB.lines(name, q["id"], lab["lines"]), "maxW": lab["maxW"], "maxH": lab["maxH"]})
+                specs.append({"lines": base_lines(q), "maxW": lab["maxW"], "maxH": lab["maxH"], "plaster": False})
+        if cands:
+            todo_plaster[pid] = (cands, extra)
+    k_of = {(pid, part): k for k, (pid, part, _lab) in enumerate(keys)}
+    for pid, (cands, extra) in todo_plaster.items():
+        k = k_of[(pid, cands[0])]
+        specs[k] = dict(specs[k], lines=specs[k]["lines"] + extra, plaster=True)
     got = FL.make_bodies(d, specs) if specs else []
+    tries = {pid: 0 for pid in todo_plaster}
+    while True:  # no room for the batch: that part keeps its name lines and the next candidate takes the batch
+        redo = []
+        for pid, (cands, extra) in todo_plaster.items():
+            if tries[pid] >= len(cands):
+                continue
+            k = k_of[(pid, cands[tries[pid]])]
+            if got[k] is not None or not specs[k]["plaster"]:
+                continue
+            specs[k] = dict(specs[k], lines=specs[k]["lines"][:-len(extra)], plaster=False)
+            redo.append(k)
+            tries[pid] += 1
+            if tries[pid] < len(cands):
+                n = k_of[(pid, cands[tries[pid]])]
+                specs[n] = dict(specs[n], lines=specs[n]["lines"] + extra, plaster=True)
+                redo.append(n)
+            else:
+                specs[k]["plasterSkipped"] = True
+        if not redo:
+            break
+        for k, g in zip(redo, FL.make_bodies(d, [specs[k] for k in redo])):
+            got[k] = g
     tools, rows = {}, []
     for (pid, part, lab), spec, g in zip(keys, specs, got):
         if g is None:
@@ -1595,13 +1713,19 @@ def make_labels(d, plans, todo):
                              lab["maxW"], lab["maxH"], LB.LABEL["hMinMm"])})
             continue
         tools.setdefault(pid, {})[part] = FL.place(g["body"], lab)
-        rows.append({"piece": pid, "part": part, "lines": g["lines"], "hMm": g["hMm"], "wMm": g["wMm"]})
+        row = {"piece": pid, "part": part, "lines": g["lines"], "hMm": g["hMm"], "wMm": g["wMm"]}
+        if spec["plaster"]:
+            row["plaster"] = True
+        if spec.get("plasterSkipped"):
+            row["plasterSkipped"] = "%.0f x %.1f mm free: no room for the plaster batch" % (lab["maxW"], lab["maxH"])
+        rows.append(row)
     return tools, rows
 
 
-def _labels_key(phash, pid):
-    """Identity of a piece's label solids (labels phase -> build): parameters, design name, piece."""
-    return [phash, C.doc_name(), pid]
+def _labels_key(phash, pid, plaster=None):
+    """Identity of a piece's label solids (labels phase -> build): parameters, design name, piece, plaster
+    batch lines."""
+    return [phash, C.doc_name(), pid, list(plaster or [])]
 
 
 def _built_key(phash, bodies):
@@ -1633,7 +1757,7 @@ def _checks(r, args, t0, built, descs, pieces, tbm, p, tol, phash, timings, comp
                     "build": PIPE.CASING_BUILD,
                     "labels": {q["id"]: [C.get_attr(bodies[q["id"]], "label"), C.get_attr(bodies[q["id"]], "labelMm")]
                                for q in plan["parts"] if C.get_attr(bodies[q["id"]], "label")},
-                    "booleans": extra["booleans"], "buildSeconds": tb, "date": datetime.date.today().isoformat()})
+                    "marks": extra.get("marks"), "booleans": extra["booleans"], "buildSeconds": tb, "date": datetime.date.today().isoformat()})
         res["timings"]["check"] = round(time.time() - t, 2)
         report.write(dict(res, stage=STAGE_NAME, summary={"piece": pid, "status": pr["status"]}), partial_path(pid))
         results[pid] = res

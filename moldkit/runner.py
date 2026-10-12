@@ -26,6 +26,7 @@ import os
 from moldkit import pipeline as PIPE
 from moldkit.core import explain as EX
 from moldkit.core import state as ST
+from moldkit.core import twins as TW
 
 PIPELINE = "pipeline"
 # stages that change the design (saved after a successful run); the others only write files
@@ -256,7 +257,7 @@ class Runner:
             if not res["ok"]:
                 return self._result(PIPE.S7, "error", ["Stopped: " + res["message"]],
                                     error=self._error(res["message"], PIPE.S7))
-            pieces = [q.get("id") for q in self._mold().get("pieces") or [] if q.get("id")]
+            pieces = TW.casing_pieces(self._mold())  # T1: no step for a twin copy (its master's casing casts it)
             # three steps per piece (about 5, 4 and 4 s): its label solids, its casing, then its checks
             self._s7 = {"todo": [(pid, ph) for pid in pieces for ph in ("labels", "build", "checks")], "done": []}
         todo = self._s7["todo"]

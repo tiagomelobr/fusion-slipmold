@@ -18,10 +18,10 @@ import os
 PIPELINE_KEY = "pipeline"
 # report keys later stages (or the pipeline driver) read back, per stage
 KEEP = {
-    "s0_intake": {"summary": ("body", "volume_cm3", "bbox_mm")},
+    "s0_intake": {"summary": ("body", "volume_cm3", "bbox_mm", "multiOuterZ_mm")},
     "s2_plug": {"summary": ("source", "sourceVolumeCm3")},
     "s4_plaster": {"summary": ("pieces", "zBottomMm", "zTopMm", "wall3d"), "data": ("outline",)},
-    "s5_split": {"summary": ("paramHash", "plasterVolumeCm3"), "data": ("natches",)},
+    "s5_split": {"summary": ("paramHash", "plasterVolumeCm3", "twins"), "data": ("natches",)},
     "s6_verify": {"summary": ("batchTotal",)},  # the Results page (moldkit/core/reportview.py)
     "s7_casings": {"summary": ("nParts", "totalMassG")},  # the Results page
     "s8_clips": {"data": ("siteChecks", "checks")},

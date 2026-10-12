@@ -494,5 +494,132 @@ class Keepout3dTest(unittest.TestCase):
         self.assertIsNone(empty["natches"][0]["castMm3d"])
 
 
+HALF_TURN = {"transform": natches.rotation_tf((0, 0, 0), (0, 0, 1), 180.0), "pieceMap": {"side1": "side2", "side2": "side1"}}
+U_LOOP = [[(-65, 0), (65, 0), (65, 100), (40, 100), (40, 15), (-40, 15), (-40, 100), (-65, 100)]]
+SIDES = [{"id": "side1", "pull": [0, 1, 0]}, {"id": "side2", "pull": [0, -1, 0]}]
+
+
+def u_face():
+    """The sides2 seam: one U-shaped face on the y = 0 plane that the half turn maps onto itself."""
+    f = face("u1", U_LOOP, {"origin": [0, 0, 0], "u": [1, 0, 0], "v": [0, 0, 1]}, "side1", "side2", (0, -1, 0))
+    f["interface"] = "side1|side2"
+    return f
+
+
+class TwinTest(unittest.TestCase):
+    """T1: twin pieces under a half turn get the same keys."""
+
+    def assert_twins(self, plan):
+        ns = plan["natches"]
+        self.assertTrue(plan["twin"]["planned"])
+        nmap = natches.natch_map(ns, HALF_TURN["transform"], HALF_TURN["pieceMap"])
+        self.assertIsNotNone(nmap)  # every key of side1 lands on the same key of side2, and back
+        self.assertEqual(plan["pieceCounts"]["side1"], plan["pieceCounts"]["side2"])
+        byid = {n["id"]: n for n in ns}
+        for n in ns:
+            if n.get("twinOf"):
+                self.assertEqual(nmap[n["twinOf"]], n["id"])
+                self.assertEqual(byid[n["twinOf"]]["face"] == n["face"], n["face"] == "u1")  # copy on the image face
+        return nmap
+
+    def test_mug_mixed_twins_are_unique_up_to_the_half_turn(self):
+        plan = natches.plan_natches(mug_faces(), R, HD, C, M, gender="mixed", pieces=PIECES, symmetry=HALF_TURN)
+        self.assert_twins(plan)
+        self.assertEqual(plan["twin"]["faces"], [{"face": "b1", "image": "b2"}, {"face": "v1", "image": "v2"}])
+        self.assertEqual(sum(1 for n in plan["natches"] if n.get("twinOf")), len(plan["natches"]) // 2)
+        fit = plan["fit"]
+        self.assertTrue(fit["uniqueFit"])
+        self.assertEqual(fit["symmetries"][0]["natchesMatch"], True)
+        self.assertGreater(fit["symmetricSkipped"], 0)  # 180 deg and its neighbours within the play
+        self.assertTrue(plan["asymmetry"]["passed"])
+        self.assertTrue(natches.gender_constraint_ok(plan["natches"]))
+        self.assertFalse(plan["warnings"])
+        # the same keys without the twin symmetry: the half turn is a wrong assembly again
+        self.assertFalse(natches.unique_fit(plan["natches"], PIECES)["uniqueFit"])
+
+    def test_mug_single_twins(self):
+        plan = natches.plan_natches(mug_faces(), R, HD, C, M, gender="single", pieces=PIECES, symmetry=HALF_TURN)
+        self.assert_twins(plan)
+        self.assertEqual(plan["pieceCounts"]["bottom"], {"bumps": 6, "sockets": 0})
+        by_face = {}
+        for n in plan["natches"]:
+            by_face.setdefault(n["face"], set()).add(n["bumpPiece"])
+        self.assertEqual(by_face["v1"], {"side1"})
+        self.assertEqual(by_face["v2"], {"side2"})  # the copy's bump follows the piece map
+        self.assertTrue(plan["fit"]["uniqueFit"])
+
+    def test_copies_keep_the_axis_line(self):
+        plan = natches.plan_natches(mug_faces(), R, HD, C, M, gender="mixed", pieces=PIECES, symmetry=HALF_TURN)
+        for n in plan["natches"]:
+            prot = [-x for x in n["seamProtrusion"]] if n["reversed"] else n["seamProtrusion"]
+            self.assertEqual(n["protrusion"], prot)
+            self.assertGreaterEqual(n["marginMm"], M - 1e-6)
+
+    def test_face_mapping_onto_itself(self):
+        plan = natches.plan_natches([u_face()], R, HD, C, M, gender="mixed", pieces=SIDES, symmetry=HALF_TURN)
+        self.assert_twins(plan)
+        ns = plan["natches"]
+        self.assertEqual(len(ns), 4)  # ceil(3 / 2) on one half, copied onto the other
+        self.assertEqual(plan["twin"]["faces"], [{"face": "u1", "image": "u1"}])
+        own = [n for n in ns if not n.get("twinOf")]
+        rs = natches.socket_footprint_radius(R, HD, C)
+        self.assertTrue(all(n["centre"][0] >= (2 * rs + M) / 2 for n in own))
+        self.assertTrue(all(math.dist(a["centre"], b["centre"]) >= 2 * rs + M - 1e-6
+                            for i, a in enumerate(ns) for b in ns[i + 1:]))
+        self.assertEqual({n["bumpPiece"] for n in ns}, {"side1", "side2"})
+
+    def test_faces_that_do_not_pair_fall_back(self):
+        fs = mug_faces()
+        fs[3]["frame"] = dict(fs[3]["frame"], origin=[-70, 0, 0])  # v2 moved 5 mm out: no twin of v1
+        plan = natches.plan_natches(fs, R, HD, C, M, gender="mixed", pieces=PIECES, symmetry=HALF_TURN)
+        self.assertFalse(plan["twin"]["planned"])
+        self.assertTrue(plan["twin"]["requested"])
+        self.assertIn("v1", plan["twin"]["reason"])
+        self.assertTrue(plan["warnings"][0].startswith("twin pieces not laid out"))
+        plain = natches.plan_natches(fs, R, HD, C, M, gender="mixed", pieces=PIECES)
+        self.assertEqual([n["centre"] for n in plan["natches"]], [n["centre"] for n in plain["natches"]])
+        self.assertFalse(any(n.get("twinOf") for n in plan["natches"]))
+
+    def test_symmetry_is_accepted_only_when_the_keys_match(self):
+        ns = [ring_natch("N1", 30, "bottom", "side1"), ring_natch("N2", 210, "bottom", "side1")]
+        natches.assign_genders(ns, "single", PIECES)  # Bottom turned 180 deg closes; both sockets on side1
+        fit = natches.unique_fit(ns, PIECES, symmetries=[HALF_TURN])
+        self.assertFalse(fit["symmetries"][0]["natchesMatch"])  # side1's keys are not side2's
+        self.assertFalse(fit["uniqueFit"])
+        self.assertEqual(fit["symmetricSkipped"], 0)
+
+    def test_shifted_primary_takes_its_copies_along(self):
+        plan = natches.plan_natches(mug_faces(), R, HD, C, M, per_seam=2, gender="mixed", pieces=PIECES,
+                                    symmetry=HALF_TURN)
+        self.assertTrue(plan["shifts"])  # 2 keys a seam: the half annuli need the F6 fraction shift
+        self.assertTrue(all(sh["face"] in ("b1", "v1") for sh in plan["shifts"]))  # only primaries move
+        self.assert_twins(plan)
+        self.assertTrue(plan["asymmetry"]["passed"])
+        self.assertTrue(plan["fit"]["uniqueFit"])
+        faces = {f["id"]: f for f in plan["faces"]}
+        self.assertEqual(faces["b2"]["fractions"], faces["b1"]["fractions"])
+
+    def test_other_wrong_assemblies_are_still_reported(self):
+        ns = [ring_natch("N1", 45, "bottom", "side1"), ring_natch("N2", 135, "bottom", "side1"),
+              ring_natch("N3", 225, "bottom", "side2"), ring_natch("N4", 315, "bottom", "side2")]
+        natches.assign_genders(ns, "single", PIECES)  # twin keys, but the Bottom also closes turned 90 deg
+        fit = natches.unique_fit(ns, PIECES, symmetries=[HALF_TURN])
+        self.assertTrue(fit["symmetries"][0]["natchesMatch"])
+        self.assertGreater(fit["symmetricSkipped"], 0)
+        self.assertFalse(fit["uniqueFit"])
+        self.assertEqual(sorted({round(w["transform"]["angleDeg"]) for w in fit["wrongAssemblies"]}), [90, 270])
+
+    def test_rotation_helpers(self):
+        a = natches.rotation_tf((0, 0, 0), (0, 0, 1), 180.0)
+        self.assertTrue(natches.same_rotation(a, natches.rotation_tf((0, 0, 5), (0, 0, -1), -180.0)))
+        self.assertFalse(natches.same_rotation(a, natches.rotation_tf((1, 0, 0), (0, 0, 1), 180.0)))
+        self.assertFalse(natches.same_rotation(a, natches.rotation_tf((0, 0, 0), (0, 0, 1), 179.0)))
+        ring = [{"centre": [50, 0, 0], "dir": [0, 0, 1]}, {"centre": [-50, 0, 0], "dir": [0, 0, 1]}]
+        self.assertEqual(natches.rotational_symmetry(ring)["angleDeg"], 180.0)
+        self.assertIsNone(natches.rotational_symmetry(ring, skip_deg=(180.0,)))
+        with self.assertRaises(natches.NoTwin):
+            natches.twin_faces(mug_faces(), natches.rotation_tf((0, 0, 0), (0, 0, 1), 90.0), HALF_TURN["pieceMap"])
+
+
 if __name__ == "__main__":
     unittest.main()

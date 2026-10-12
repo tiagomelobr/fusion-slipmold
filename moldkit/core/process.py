@@ -177,7 +177,8 @@ def _has_clip(s, prefix):
 
 
 def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=None, settings=None,
-                nozzle_mm=0.4, casing_wall_mm=None, exports=None, joints=None, fit=None, run_warnings=None):
+                nozzle_mm=0.4, casing_wall_mm=None, exports=None, joints=None, fit=None, run_warnings=None,
+                casts=None):
     """Process-sheet data.
 
     pieces        [{"id", "volumeCm3"}] plaster pieces
@@ -192,6 +193,8 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
                   parts were built with (PRN-22), optional
     run_warnings  [text] the warnings of the stage runs that made this mold (mold.json pipeline), listed at
                   the top of the sheet: warnings no longer stop a run
+    casts         {casing piece: [pieces it casts, itself first]} for casings shared by twin pieces (T1,
+                  moldkit.core.twins.shared); the copies have no parts of their own
     """
     pr = _proc(settings)
     clips = clips or {}
@@ -223,7 +226,8 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
         part_rows.append(row)
     bodies = [b for b in clips.get("bodies") or [] if isinstance(b, dict)]
     counts = clip_counts(joints, bodies)
-    lt = leak_test_piece([pc.get("id") for pc in pieces or []], parts, joints)
+    copies = {c: m for m, v in (casts or {}).items() for c in v[1:]}
+    lt = leak_test_piece([pc.get("id") for pc in pieces or [] if pc.get("id") not in copies], parts, joints)
     leak = None
     if lt is not None:
         leak = {"piece": lt, "parts": [pt.get("name") for pt in parts or []
@@ -245,7 +249,34 @@ def build_sheet(design, pieces, parts, clips=None, orders=None, plaster_order=No
             "layers": {"fine": F.scaled_layer(pr["layerFine"], nozzle_mm),
                        "draft": F.scaled_layer(pr["layerDraft"], nozzle_mm)},
             "printer": dict(fit or {}, nozzle=_r(float(nozzle_mm or F.FIT_REF_NOZZLE), 2)), "warnings": warnings,
-            "runWarnings": [str(w) for w in run_warnings or []]}
+            "runWarnings": [str(w) for w in run_warnings or []],
+            "casts": {k: list(v) for k, v in (casts or {}).items()}}
+
+
+def _cast_by(s):
+    """{copy piece: master piece} of the shared casings (T1)."""
+    return {c: m for m, v in (s.get("casts") or {}).items() for c in v[1:]}
+
+
+def _piece_label(s, pid):
+    """A casing piece with twins as "side1 + side2" (the pieces its casing casts)."""
+    v = (s.get("casts") or {}).get(pid)
+    return " + ".join(v) if v else (pid or "-")
+
+
+def pour_text(s):
+    """Section 3: independent pours, or a shared twin casing poured once per piece."""
+    by = _cast_by(s)
+    if not by:
+        return ("Each piece has its own casing, so the pours are independent: all pieces can be poured in one "
+                "session, in any order. Dry-fit the plaster pieces after demolding.")
+    shared = "; ".join("%s are the same piece turned half a turn, so the %s casing casts all of them (labels end "
+                       "in x%d): pour %s, demold it once it has set, reassemble the casing and pour %s" % (
+                           " and ".join(v), m, len(v), m, " then ".join(v[1:]))
+                       for m, v in s["casts"].items())
+    return (shared + ". To pour them in one session instead, print that casing's parts and clips once more. "
+            "Every other piece has its own casing, poured in any order. The plaster table above counts every "
+            "piece, so mix one batch per pour. Dry-fit the plaster pieces after demolding.")
 
 
 def _fmt(v, nd=0):
@@ -318,30 +349,34 @@ def sheet_blocks(sheet):
         B += [("h2", "Warnings from this run"), ("ul", list(s["runWarnings"]))]
     B += leak_blocks(s)
     B += [("h2", "2. Plaster per piece"),
-          ("p", "%s at consistency %s (%s g water per 100 g plaster); batch includes %s %% overage." %
-           (s["plaster"], s["consistency"], s["consistency"], s["overagePct"]))]
-    rows = [[p["id"], _fmt(p["volumeCm3"], 1), _fmt(p["dryPlasterG"]), _fmt(p["waterG"]),
-             _fmt(p["wetKg"], 2) + (" (!)" if p["warning"] else "")] for p in s["pieces"]]
+          ("p", "%s at consistency %s (%s g water per 100 g plaster); batch includes %s %% overage. Each "
+                "casing also carries its batch (one pour) engraved under the name on one part, usually its first "
+                "sector." % (s["plaster"], s["consistency"], s["consistency"], s["overagePct"]))]
+    by = _cast_by(s)
+    rows = [[p["id"] + (" (%s casing)" % by[p["id"]] if p["id"] in by else ""), _fmt(p["volumeCm3"], 1),
+             _fmt(p["dryPlasterG"]), _fmt(p["waterG"]), _fmt(p["wetKg"], 2) + (" (!)" if p["warning"] else "")]
+            for p in s["pieces"]]
     t = s["totals"]
     B.append(("table", ["Piece", "Volume cm3", "Dry plaster g", "Water g", "Wet piece kg"], rows, (1, 2, 3, 4),
               ["Total", "", _fmt(t["dryPlasterG"]), _fmt(t["waterG"]), _fmt(t["wetKg"], 2)]))
     B += [("p", "Warning: %s" % w) for w in s["warnings"]]
     B += [("h2", "3. Pour order"),
-          ("p", "Each piece has its own casing, so the pours are independent: all pieces can be poured in one "
-                "session, in any order. Dry-fit the plaster pieces after demolding."),
+          ("p", pour_text(s)),
           ("h2", "4. Casing assembly")]
     counts = s["clips"].get("counts") or {}
-    pieces = [p["id"] for p in s["pieces"]] or sorted(counts)
+    pieces = [p["id"] for p in s["pieces"] if p["id"] not in by] or sorted(counts)
     items = []
     for pid in pieces:
         names = [x["name"] for x in s["parts"] if x.get("piece") == pid and x["role"] != "clip"]
         asm = list(reversed(s["orders"].get(pid) or []))
-        items.append((pid, ": %s; clips %s.%s" % (", ".join(names) or "-", _counted(counts.get(pid)),
+        items.append((_piece_label(s, pid), ": %s; clips %s.%s" % (", ".join(names) or "-", _counted(counts.get(pid)),
                                                    " Assembly order: %s." % " -> ".join(asm) if asm else "")))
     B.append(("ul", items))
     B += [("p", "Assemble each casing in the order listed (the demold order of section 5 reversed): the base goes "
                 "down first, and each next part moves in along its pull, so its grooves slide over the "
-                "ridges. Then fit the clips."),
+                "ridges. Match the marks: short grooves cross every seam between a sector and its neighbour, its "
+                "core or its floor, and both parts of a seam show the same count (vertical seams: 1, 2, 3 ... level "
+                "lines along the arc; a sector's foot: as many upright ticks as its number). Then fit the clips."),
           ("p", (ROUND_TEXT if _has_clip(s, "clip_round") else "")
                 + (SHORT_TEXT if _has_clip(s, "clip_short") else "")
                 + (DOVE_TEXT if _has_clip(s, "clip_dove") else RAIL_TEXT if _has_clip(s, "clip_rail") else "")
@@ -356,10 +391,10 @@ def sheet_blocks(sheet):
                                      "arm). "
                                      "Then the casing parts, per piece, in this order:")]
     order = [pid for pid in pieces if pid in s["orders"]] + sorted(set(s["orders"]) - set(pieces))
-    B.append(("ul", ["%s: %s" % (pid, " -> ".join(s["orders"][pid])) for pid in order]))
+    B.append(("ul", ["%s: %s" % (_piece_label(s, pid), " -> ".join(s["orders"][pid])) for pid in order]))
     if s["plasterOrder"]:
         B.append(("p", "Plaster pieces off the cast (mold opening order): %s." % " -> ".join(s["plasterOrder"])))
-    rows = [[x["name"], x.get("piece") or "-", str(x.get("count", 1)), _fmt(x["layerMm"], 2),
+    rows = [[x["name"], _piece_label(s, x.get("piece")), str(x.get("count", 1)), _fmt(x["layerMm"], 2),
              "%d x nozzle" % x["wallLines"] if x.get("wallLines") else "-", x["orientation"], _fmt(x.get("massG"), 1)]
             for x in s["parts"]]
     B += [("h2", "6. Printed parts"),

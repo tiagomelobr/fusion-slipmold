@@ -242,6 +242,22 @@ class StepTest(Base):
         self.fake.answers[("pipeline", "plan")] = {"stage": "pipeline", "status": "pass", "summary": {"plan": [PI.S8]}}
         self.assertEqual(r.step()["stage"], PI.S8)  # S7 done: back to the pipeline
 
+    def test_s7_per_piece_skips_a_twin_copy(self):
+        self.write("mold.json", dict(MOLD, pieces=[{"id": "bottom"}, {"id": "side1"},
+                                                   {"id": "side2", "twinOf": "side1"}]))
+        answers = {
+            ("pipeline", "plan"): {"stage": "pipeline", "status": "pass", "summary": {"plan": [PI.S7, PI.S8]}},
+            ("pipeline", "reset"): {"stage": "pipeline", "status": "pass", "summary": {"deleted": 0}},
+            PI.S7: {"stage": PI.S7, "status": "pass", "summary": {}},
+            ("pipeline", "run"): {"stage": "pipeline", "status": "pass",
+                                  "summary": {"ran": [[PI.S7, "pass"]], "plan": [PI.S8]}},
+        }
+        r = self.runner([], answers, s7PerPiece=True)
+        for _ in range(7):  # bottom and side1 (labels, build, checks), then the aggregate; side2 is cast in side1's
+            r.step()
+        pieces = [x.get("piece") for n, x in self.fake.calls if n == PI.S7]
+        self.assertEqual(pieces, ["bottom"] * 3 + ["side1"] * 3)
+
     def test_s7_per_piece_failure(self):
         answers = {
             ("pipeline", "plan"): {"stage": "pipeline", "status": "pass", "summary": {"plan": [PI.S7]}},

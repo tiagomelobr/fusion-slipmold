@@ -152,10 +152,10 @@ def _fatal(what):
 
 # ---------------------------------------------------------------------------- entry points (plain scripts, MCP)
 def make_mold(headless=False, body=None, save=None, status_path=None, s7_per_piece=None, stop_when=None,
-              stage_args=None, show_results=None):
+              stage_args=None, show_results=None, mold=None, mold_name=None):
     return impl().make_mold(host(), headless=headless, body=body, save=save, status_path=status_path,
                             s7_per_piece=s7_per_piece, stop_when=stop_when, stage_args=stage_args,
-                            show_results=show_results)
+                            show_results=show_results, mold=mold, mold_name=mold_name)
 
 
 start_regenerate = make_mold  # old name (scripts); no approve argument any more

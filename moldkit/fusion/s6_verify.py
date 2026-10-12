@@ -454,7 +454,11 @@ def run(args):
     sym = nat.get("plugSymmetry")
     fit_pts, fit_rots = S5.fit_args(revolved, sym if sym is not None else nat.get("plugSelfMap"))
     fit = N.unique_fit(live, [{"id": p["id"], "pull": p["pull"]} for p in pieces], revolved,
-                       plug_points=fit_pts, rotations_deg=fit_rots, kmax=S5.FIT_KMAX) if live else None
+                       plug_points=fit_pts, rotations_deg=fit_rots, kmax=S5.FIT_KMAX,
+                       symmetries=nat.get("twinSymmetry") or None) if live else None  # T1: S5 checked the twins
+    if fit and any(not s["natchesMatch"] for s in fit.get("symmetries") or []):
+        report.warn(r, "twin pieces: the live keys do not map onto each other under the half turn (S5 laid them out "
+                       "for twins); the half turn counts as a wrong assembly")
     live_counts = S5.piece_counts(live, ids)
     mism = owner_mismatches(live, natches, R, hd, c)
     if natches or live:

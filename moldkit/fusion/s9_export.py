@@ -64,6 +64,7 @@ from moldkit.core import mesh3mf as M
 from moldkit.core import params as P
 from moldkit.core import process as PR
 from moldkit.core import report
+from moldkit.core import twins as TW
 from moldkit.fusion import context as C
 
 STAGE_NAME = "s9_export"
@@ -611,6 +612,7 @@ def _finish(r, ctx, pending):
                            exports=["%s (%s, x%d)" % (x["file"], x["role"], x["count"])
                                     for x in manifest],
                            joints=joints, fit=printer_fit(values, ctx.get("nozzleOverride", False)),
+                           casts=TW.shared(mold),
                            run_warnings=run_warnings(C.read_mold_json(), r["warnings"]))
     modes = {x["name"]: x.get("printMode") for x in manifest}
     roles = {x["name"]: x.get("role") for x in manifest}

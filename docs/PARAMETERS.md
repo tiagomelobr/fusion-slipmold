@@ -1,12 +1,12 @@
 # Parameter reference
 
-Generated from `moldkit/defaults.json` by `python tools/gen_param_docs.py`: do not edit by hand. 61 parameters: 6 you set, 10 printer profile values and 45 engine values. The guide for using them is [USER_GUIDE.md](USER_GUIDE.md).
+Generated from `moldkit/defaults.json` by `python tools/gen_param_docs.py`: do not edit by hand. 64 parameters: 6 you set, 10 printer profile values and 48 engine values. The guide for using them is [USER_GUIDE.md](USER_GUIDE.md).
 
 Every parameter has a name `mold_<name>`, but only some are user parameters in the design:
 
 - **Parameters you set** (6): SlipMold creates them as user parameters. Edit them in Fusion's own Change Parameters dialog: SlipMold > Parameters opens it (and first creates any missing one), or use Modify > Change Parameters > User Parameters.
 - **Printer profile** (10): your printer's bed, nozzle and print clearances. They are not in the design: you set them once in the user config file and they apply to every mold.
-- **Engine values** (45): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).
+- **Engine values** (48): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).
 
 Each user parameter's comment starts with the group title in brackets, for example `[Plaster]`. Values are expressions with units, for example `25 mm` or `15 deg`, and may be formulas that use the model's own parameters (`mold_plasterWall = cupHeight / 4`); SlipMold compares the evaluated values, so a change of `cupHeight` alone is seen through the model it reshapes (everything runs again), and after changing a parameter that does not shape the model use Reset from stage. Text parameters keep their single quotes (`'auto'`) and accept only the choices listed below; Make mold stops with a message before any stage runs when a Text value is not one of them. Changes apply on the next Make mold. The defaults below are research values (rule ids point to `docs/research/design-rules.md`); calibrate the ones marked in the description with the leak test (process sheet section 1: one piece's casing printed first). Model sizes are in millimetres whatever the document unit.
 
@@ -35,7 +35,7 @@ These 6 are the only `mold_` user parameters SlipMold creates. Change them in Ch
 | Parameter | Default | Unit | Group | Runs again | Description | Rule |
 |---|---|---|---|---|---|---|
 | `mold_plasterWall` | `25 mm` | mm | Plaster | S4 onward | Nominal plaster wall around the cast plug | CER-09 |
-| `mold_spareHeight` | `20 mm` | mm | Spare | S2 onward | Slip well height above the rim | CER-12 |
+| `mold_spareHeight` | `20 mm` | mm | Spare | S2 onward | Least slip well height above the rim: S2 builds the well taller when the slip the cast draws needs it (castWall, slipDropRatio) | CER-12 |
 | `mold_spareStepOut` | `10 mm` | mm | Spare | S2 onward | Outward step at rim height = flat plaster knife ledge for trimming | CER-12 |
 | `mold_layout` | `'auto'` | text | Layout | S3 onward | Plaster piece layout: auto (S3 picks the best) \| dropOut \| sides2 \| sides2Bottom \| sides3Bottom \| sides4Bottom. Choices: `'auto'`, `'dropOut'`, `'sides2'`, `'sides2Bottom'`, `'sides3Bottom'`, `'sides4Bottom'` | SW-13 |
 | `mold_splitAzimuth` | `0 deg` | deg | Layout | S3 onward | Azimuth of the first vertical split plane, used with a fixed layout or a turned (revolved) ware; with layout auto on any other ware S3 searches the azimuth itself | CER-06 |
@@ -83,6 +83,8 @@ A change of a value in this group runs again: S2 onward (S2, S3, S4, S5, S6, S7,
 | Parameter | Engine value | Unit | Description | Rule |
 |---|---|---|---|---|
 | `mold_spareFlare` | `15 deg` | deg | Outward flare of the well walls | CER-12 |
+| `mold_castWall` | `4 mm` | mm | Cast wall thickness you aim for: sizes the slip well (the slip the plaster draws while it casts) | CER-24 |
+| `mold_slipDropRatio` | `0.24` | - | Slip the plaster draws out of the well per volume of cast wall (cm3 per cm3; uncalibrated): the well holds twice the level drop plus 5 mm | CER-12 |
 
 ### Layout
 
@@ -124,7 +126,8 @@ A change of a value in this group runs again: S5 onward (S5, S6, S7, S8, S9).
 | `mold_natchClearance` | `0.5 mm` | mm | Radial play between plaster bump and socket (independent casings); plaster to plaster, so it does not follow the printer fit (printed dome and cup errors both loosen it) | CER-15 |
 | `mold_natchesPerSeam` | `3` | - | Keys per seam, asymmetric | CER-14 |
 | `mold_natchEdgeMargin` | `5 mm` | mm | Min distance from a key to the cast (measured in 3D) and from its footprint to the seam edges | CER-14 |
-| `mold_natchGender` | `'mixed'` | text | Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) \| single (all bumps of an interface on one piece). Choices: `'mixed'`, `'single'` | CER-14 |
+| `mold_natchGender` | `'mixed'` | text | Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) \| single (all bumps of a seam face on one piece). Choices: `'mixed'`, `'single'` | CER-14 |
+| `mold_twinPieces` | `'auto'` | text | Twin pieces: auto (when a half turn maps one side piece onto the other, both get the same keys and one casing casts both) \| off (keys one way only, a casing per piece). Choices: `'auto'`, `'off'` | CER-14 |
 
 ### Casing
 
@@ -197,6 +200,7 @@ These live in the `settings` block of `moldkit/defaults.json` and apply to every
 | analysis | `plasterWallFailRatio` | `0.6` |
 | analysis | `plasterWallMinAbsMm` | `15.0` |
 | analysis | `releaseToleranceCm3` | `1e-05` |
+| analysis | `twinToleranceCm3` | `0.001` |
 | analysis | `casingDraftWarnDeg` | `3.0` |
 | analysis | `casingDraftFailDeg` | `1.0` |
 | process | `plaster` | `USG No. 1 Pottery Plaster` |

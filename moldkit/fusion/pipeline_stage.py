@@ -197,7 +197,8 @@ def run(args):
     else:
         report.error(r, "unknown action %r (plan | regenerate | run | reset)" % action)
 
-    r["summary"].update({"action": action, "doc": C.doc_name(), "moldDir": C.mold_dir().replace("\\", "/"),
+    r["summary"].update({"action": action, "doc": C.doc_name(), "mold": C.mold_key(),
+                         "moldDir": C.mold_dir().replace("\\", "/"),
                          "ran": [(x["stage"], x["status"]) for x in ran], "stale": PIPE.stale_summary(ev),
                          "plan": ev["run"], "blocked": ev.get("blocked")})
     return r

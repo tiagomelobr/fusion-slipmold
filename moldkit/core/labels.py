@@ -6,7 +6,12 @@ name in capitals over the part name,
 
 engraved LABEL["depthMm"] deep in a bold sans font. The stand, too low for two lines, carries them on one line
 ("SMALL CUP LEAK TEST - side2 stand"). Clips carry no label: they are too small, and their grooves and file
-names tell them apart.
+names tell them apart. One part per casing (plaster_part: the first sector where it fits) adds the plaster batch
+of one pour by weight under its name, dry plaster / water in grams,
+
+    Gesso/água: 1764g / 1234g
+
+as the process sheet gives it (overage included).
 
 The casing planner (moldkit.core.casing.plan_piece) places one label per part ("label": a planar face or a band
 of an outline offset surface, with a free box away from clips, flanges and the stand); S7 writes the text as
@@ -32,6 +37,8 @@ LABEL = {
     "marginMm": 3.0,       # free border around a label box
     "separator": " - ",    # between the two lines on a one-line label
 }
+# the plaster batch lines (plaster_part): one part per casing carries them under its name
+PLASTER = {"format": "Gesso/água: %.0fg / %.0fg", "charW": 0.65, "lineH": 1.2, "minMm": 4.0}
 
 
 def _ascii(s):
@@ -70,6 +77,39 @@ def lines(design_name, part_id, count=2):
     if count == 1 and len(rows) > 1:
         return [LABEL["separator"].join(rows)]
     return rows
+
+
+def plaster_lines(batch):
+    """The plaster batch of one pour (moldkit.core.process.plaster_batch: overage included) as one label line,
+    by weight: dry plaster / water in grams (1 g of water = 1 ml), in Portuguese (the user's shop)."""
+    return [PLASTER["format"] % (batch["dryPlasterG"], batch["waterG"])]
+
+
+def est_height(lab, rows):
+    """Rough text height (mm) of rows on a label box, before the text is measured (PLASTER["charW"] wide
+    characters, PLASTER["lineH"] tall lines; fit_height measures it later)."""
+    n = len(rows)
+    if not n:
+        return 0.0
+    w = PLASTER["charW"] * max(len(t) for t in rows)
+    return min(LABEL["hMaxMm"], lab["maxW"] / w, lab["maxH"] / (PLASTER["lineH"] + LABEL["pitch"] * (n - 1)))
+
+
+def plaster_parts(parts, rows_of):
+    """Ids of the casing parts that may carry the plaster batch, best first: the sectors (by number), then the
+    core, then the base part, whose labels are estimated to fit rows_of(part) at PLASTER["minMm"]; then the
+    others, tallest text first. parts: plan parts with "label"; rows_of(part) -> lines."""
+    rank = {"sector": 0, "core": 1}
+    cands = sorted([q for q in parts if q.get("label")],
+                   key=lambda q: (rank.get(q["role"], 2), (q.get("sector") or {}).get("index", 0)))
+    hs = {q["id"]: est_height(q["label"], rows_of(q)) for q in cands}
+    fit = [q["id"] for q in cands if hs[q["id"]] >= PLASTER["minMm"]]
+    return fit + sorted((q["id"] for q in cands if q["id"] not in fit), key=lambda k: -hs[k])
+
+
+def plaster_part(parts, rows_of):
+    """The first of plaster_parts, or None when no part has a label."""
+    return (plaster_parts(parts, rows_of) or [None])[0]
 
 
 def fit_height(ratios, max_w, max_h, n_lines, h_min=LABEL["hMinMm"], h_max=LABEL["hMaxMm"], pitch=LABEL["pitch"]):

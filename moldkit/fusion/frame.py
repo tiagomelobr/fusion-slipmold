@@ -12,6 +12,7 @@ import json
 
 import adsk.core
 
+from moldkit.core import variants as V
 from moldkit.fusion import context as C
 
 FRAME_TOL_MM = 1e-3
@@ -86,10 +87,13 @@ def _empty(comp):
 
 
 def place_mold_component(d, origin_mm):
-    """(occurrence, component, note): the SlipMold occurrence at the ware frame. Call after S2 deleted
-    the s2+ outputs. A new occurrence is created at the frame; an existing one at another frame is
-    recreated when its component is empty, else RuntimeError (its contents would move with it)."""
+    """(occurrence, component, note): the active mold's SlipMold occurrence at the ware frame. Call after S2
+    deleted the s2+ outputs. A new occurrence is created at the frame; an existing one at another frame is
+    recreated (same name and mold key) when its component is empty, else RuntimeError (its contents would move
+    with it)."""
     occ, comp = C.mold_component(d)
+    key = C.active_key(d)
+    name = comp.name if comp is not None else V.name_for(key)
     note = None
     if occ is not None:
         m = occ.transform2.asArray()
@@ -106,8 +110,9 @@ def place_mold_component(d, origin_mm):
         occ.deleteMe()
     occ = d.rootComponent.occurrences.addNewComponent(matrix(origin_mm))
     comp = occ.component
-    comp.name = C.MOLD_COMPONENT
+    comp.name = name
     C.set_attr(comp, "role", "moldComponent")
+    C.set_attr(comp, C.MOLD_KEY_ATTR, key)
     C.set_attr(comp, "frameMm", origin_mm)
     return occ, comp, note
 

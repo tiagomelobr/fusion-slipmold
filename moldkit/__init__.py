@@ -22,6 +22,7 @@ STAGES = {
     "s8_clips": "moldkit.fusion.s8_clips",
     "s9_export": "moldkit.fusion.s9_export",
     "pipeline": "moldkit.fusion.pipeline_stage",  # driver: plan / regenerate / run / reset
+    "molds": "moldkit.fusion.variants",  # several molds per design: list / new / activate
 }
 
 

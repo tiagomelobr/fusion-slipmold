@@ -233,12 +233,35 @@ li { margin:2px 0; }
 <tr><td>seated clip hits &lt;part&gt; (V mm3)</td><td>the seated clip overlaps another part: a feature (label, ledge) crosses the clip path</td><td>report it; no clip parameter moves it</td></tr>
 </tbody></table>
 <p>The plain-language text of every check and problem is in <code>moldkit/core/explain.py</code>. The user-facing table is <a href="user-guide.html">USER_GUIDE.md</a> section 11.</p>
-<h2 id="10-not-yet-validated">10. Not yet validated</h2>
+<h2 id="10-bottle-01-a-narrow-neck-and-the-slip-well-size-2026-10-11">10. Bottle 01: a narrow neck and the slip well size (2026-10-11)</h2>
+<p>Bottle 01 (revolved, 78.85 mm body under a 31.3 mm neck, 125.6 mm tall, 442.6 cm3, foot recess 2.1 mm), Make mold headless, no saves, nozzle 0.6. Four fixes, then S0 to S9 in one chain: done.</p>
+<table>
+<thead><tr><th>Stage</th><th>Before</th><th>Fix</th><th>After</th></tr></thead>
+<tbody>
+<tr><td>S2</td><td>fail "plug is wider (78.848 mm) than the spare top"</td><td>fail only when S0 found separate outer loops (<code>multiOuterZ_mm</code>, now kept in mold.json); a bulge is a warning</td><td>warn; S3 <code>sides2Bottom</code>, 3 pieces, undercut 0 mm2</td></tr>
+<tr><td>S8</td><td>error ASM_BAD_BOUNDARY_COEDGE cutting the channel of <code>clip_round_23mm_r88</code></td><td>each round-clip piece starts on the previous piece's real end section (side faces twisted up to 4.5 um)</td><td>1481.7 mm3, one shell</td></tr>
+<tr><td>S8</td><td>fail "clip binds 7.0 mm above its seat (1.40 mm3)", ledge clips <code>_g</code> / <code>_g_m</code> 78 mm</td><td>the floor overhangs the ledge end by 0.22 mm: the floor groove runs 2 mm past it (CASING_BUILD 12)</td><td>28 sites, none failed, ledge clips raised 0 mm3</td></tr>
+<tr><td>S2</td><td>20 mm well, 51 cm3</td><td>slip well sizing (CER-12, <code>moldkit/core/spare.py</code>): extrude <code>max(mold_spareHeight ; need)</code></td><td>30 mm, holds 84 cm3; 412 cm2 wetted x 4 mm x 0.24 = 40 cm3 drawn, level drop 12.2 mm</td></tr>
+</tbody></table>
+<p>Plaster 1852 cm3 (Bottom 430, sides 711 each), S6 32 checks, 18 export files. Warnings left: core and sector overhangs, sector draft 2.18 deg, push force of the 145 mm dovetail clips 62.6 N (limit 40).</p>
+<h2 id="11-matching-marks-and-the-plaster-batch-label-2026-10-12">11. Matching marks and the plaster batch label (2026-10-12)</h2>
+<p>Read-only check on Cup 02 (<code>sides2Bottom</code>, side2 cast in the side1 casing): S7's builder made the side1 and bottom casings as temporary bodies with and without the marks, then ran S7's piece checks on the marked parts. The document's timeline was not touched.</p>
+<table>
+<thead><tr><th>Item</th><th>Result</th></tr></thead>
+<tbody>
+<tr><td>Plan</td><td>side1: rungs 1 (core / sector1), 2 (sector1 / sector2), 3 (sector2 / core); ticks 1 and 2 on the sector feet; none on the core ledge. bottom (closed ring of 3): rungs 1, 2, 3; ticks 1, 2, 3, all clear of the round clip stations. Depth 0.6 mm (1.0 mm left outside the outer groove)</td></tr>
+<tr><td>Cut volume</td><td>every part lost exactly the planned grooves (count x 1.0 x 0.6 x 3.5 or 3.0 mm per joint): side1 core 8.40, floor 5.40, sector1 8.10, sector2 14.10 mm3; bottom core 10.80, sectors 10.20, 9.90, 15.90 mm3. One lump each</td></tr>
+<tr><td>Checks</td><td>cavity gap 0, interference 0 on every pair, release orders feasible (side1 8, bottom 24); the overhang warnings are the ones the last full S7 run reported (bottom sectors 591 mm2, side1 core 1889 mm2)</td></tr>
+<tr><td>Plaster batch</td><td>bottom <code>Gesso/água: 480g / 336g</code>, side1 <code>Gesso/água: 623g / 436g</code>, the process sheet's numbers; both go to sector1</td></tr>
+</tbody></table>
+<p>What it does not prove: the engraved label with three lines (it needs the sketch text, so a full S7 run), and the marks' legibility on a print.</p>
+<h2 id="12-not-yet-validated">12. Not yet validated</h2>
 <ul>
 <li>Any print of the dovetail clips (head and clip fit, the 8 mm run before the lug, the push-on force by hand and with a mallet, PETG-on-PETG friction, force kept after an hour at 50 C, the plaster setting expansion against the clip), and a dovetail run on a mold other than the test cup.</li>
 <li>A Fusion run of the changes after the first dovetail run (two-sided laps, ledge clips with the floor groove, clip reuse, the way-in check), and a print of the floor groove (the bridge printed without supports) and of a ledge clip's tongue.</li>
 <li>Any print of the round clips (Fusion run above): the stepped head and groove on the arc, the notch pocket, pushing a clip on radially and sliding it clockwise to the lug, the 4 mm seat gap and travel at the 1:40 taper, the stand ring inside the lower arm tips, and a circular foot other than the unit-test mug.</li>
 <li>Any print of the new seals and clips (ridge fit, clip grip, water and plaster leak tests), and any pour: plaster pieces cast from these casings. The plaster keys have no test print.</li>
+<li>Twin pieces (<code>mold_twinPieces</code> <code>'auto'</code>, 2026-10-12): unit-tested only (<code>tests/test_natches.py</code> TwinTest, <code>tests/test_twins.py</code>). Not yet run in Fusion: the half-turn boolean comparison of the split and finished pieces (S5 check <code>twinPieces</code>), the S6 unique fit from the live keys with the half turn accepted, S7 building only the side1 casing with <code>x2</code> labels, and a pour of side2 from the side1 casing. Every validated run above predates it; a turned ware such as Bottle 01 (sides 711 cm3 each) or the Small Cup should now get twin sides.</li>
 <li><code>sides3Bottom</code> and <code>sides4Bottom</code> (proposed by S3, not splittable), handles and spouts, casing parts larger than the bed, <code>contoured</code> plaster on non-revolved shapes, wavy or scalloped rims.</li>
 <li>A cancelled-then-resumed S9 and the oversize message in a live S7 run (the per-piece S7 path to its check step ran in T1).</li>
 <li>The natch 3D keep-out on a spline (non-cone) ware, where the sections rather than the edge samples find the nearest cast point.</li>

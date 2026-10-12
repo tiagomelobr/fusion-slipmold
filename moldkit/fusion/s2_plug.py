@@ -5,8 +5,10 @@ mold_shrinkagePct; resolve.ware_scale). mold_spareFlare is an engine value: the 
 parameter when the mold overrides it, else the resolved value as a constant.
 
 The plug lives in the SlipMold component. The source body is never modified. The spare is a
-knife ledge (offset of the rim outline by mold_spareStepOut) extruded mold_spareHeight up with an
-outward flare of mold_spareFlare, joined to the plug. Every feature is parameter-driven and
+knife ledge (offset of the rim outline by mold_spareStepOut) extruded up with an outward flare of
+mold_spareFlare, joined to the plug. Its height is max(mold_spareHeight ; need): need is the shortest well that
+holds the slip the plaster draws while a castWall wall casts (moldkit.core.spare, CER-12), measured on the built
+plug, so mold_spareHeight is the least height. Every feature is parameter-driven and
 tagged stage=s2; re-running deletes s2+ outputs first. When the spare closes an opening (a shelled,
 hollow ware) or the source holds an internal void, the void shells are removed with a parametric
 Delete Face feature ("cavity_fill") so the plug is solid.
@@ -31,6 +33,7 @@ import adsk.fusion
 
 from moldkit.core import report
 from moldkit.core import resolve as R
+from moldkit.core import spare as SP
 from moldkit.fusion import context as C
 from moldkit.fusion import frame as F
 from moldkit.fusion import s0_intake as S0
@@ -78,6 +81,13 @@ def _rim_face(body):
 
 def rim_method(has_top_face):
     return "planarFace" if has_top_face else "crownSection"
+
+
+def bulge_only(multi_outer):
+    """True when a plug wider than its spare top is only a bulge (a bottle's body under a narrow neck): S0 found
+    no height with separate outer loops (multiOuterZ_mm == []). None (an S0 run before the key was kept) or
+    any range (a handle or appendage) -> False, and S2 stops."""
+    return isinstance(multi_outer, list) and not multi_outer
 
 
 def outer_loop_index(loop_boxes):
@@ -282,7 +292,6 @@ def run(args):
         step = p.itemByName("mold_spareStepOut").value * 10
         height = p.itemByName("mold_spareHeight").value * 10
         flare = float(vals["spareFlare"])
-        expect_w = rim_w + 2 * step + 2 * (height + depth) * math.tan(math.radians(flare))
         plug = ext.bodies.item(0) if ext.bodies.count else plug
 
         def top_width():
@@ -293,13 +302,37 @@ def run(args):
         if top_width() < rim_w + 2 * step - 0.01 and flare > 0:
             ext.taperAngleOne.expression = "-(%s)" % flare_expr
             flipped = True
-        width = top_width()
         n_void, fill = _fill_cavities(feats, plug)
         if fill is not None:
             plug = fill.bodies.item(0) if fill.bodies.count else plug
             left = sum(1 for sh in plug.shells if sh.isVoid)
             if left:
                 report.fail(r, "%d void shell(s) remain in the plug after the cavity fill" % left)
+
+        # slip well sizing (moldkit.core.spare): tall enough to hold the slip the plaster draws while the wall
+        # casts; mold_spareHeight is the least height (the extrude is max(mold_spareHeight ; need))
+        tan_f = math.tan(math.radians(abs(flare)))
+        a_base = sum(pr.areaProperties().area for pr in profs) * 100.0
+        p_base = sum(c.length for c in oc.childCurves) * 10.0
+        open_top = _top_face(plug).area * 100.0
+        ware_area = plug.area * 100.0 - open_top - SP.wetted_area(p_base, step, tan_f, height + depth)
+        well = SP.size(ware_area, a_base, p_base, step, abs(flare), float(vals["castWall"]),
+                       float(vals["slipDropRatio"]))
+        h_expr = "max(mold_spareHeight ; %g mm)" % well["heightMm"]
+        adsk.fusion.DistanceExtentDefinition.cast(ext.extentOne).distance.expression = (
+            "%s + %g mm" % (h_expr, depth) if depth else h_expr)
+        plug = (fill if fill is not None else ext).bodies.item(0)
+        if well["heightMm"] > height:
+            report.warn(r, "slip well built %.0f mm tall (mold_spareHeight %.0f mm): a %g mm wall draws about %.0f cm3 "
+                           "of slip (level drop %.1f mm); the well holds %.0f cm3"
+                           % (well["heightMm"], height, float(vals["castWall"]), well["dropCm3"], well["dropMm"],
+                              well["volumeCm3"]))
+            height = well["heightMm"]
+        if well["heightMm"] >= SP.MAX_HEIGHT_MM:
+            report.fail(r, "slip well capped at %.0f mm: it cannot hold the slip a %g mm wall draws (%.0f cm3); widen "
+                           "it with mold_spareStepOut" % (SP.MAX_HEIGHT_MM, float(vals["castWall"]), well["dropCm3"]))
+        expect_w = rim_w + 2 * step + 2 * (height + depth) * tan_f
+        width = top_width()
         bb = C.bbox_mm(plug)
         if abs(width - expect_w) > 0.05:
             report.fail(r, "spare top width %.3f mm, expected %.3f mm" % (width, expect_w))
@@ -310,8 +343,13 @@ def run(args):
         if not plug.isSolid:
             report.fail(r, "plug is not a closed solid")
         if abs(bb[3] - bb[0] - width) > 0.01:
-            report.fail(r, "plug is wider (%.3f mm) than the spare top (%.3f mm): the model is wider below the rim "
-                           "than at it (a handle or a bulge?)" % (bb[3] - bb[0], width))
+            s0_sum = C.stage_report("s0_intake").get("summary") or {}
+            if bulge_only(s0_sum.get("multiOuterZ_mm")):
+                report.warn(r, "the ware bulges below its rim: %.3f mm wide under a %.3f mm spare top (a narrow "
+                               "neck); S3 checks that the side pieces release it" % (bb[3] - bb[0], width))
+            else:
+                report.fail(r, "plug is wider (%.3f mm) than the spare top (%.3f mm): the model is wider below the "
+                               "rim than at it (a handle or a bulge?)" % (bb[3] - bb[0], width))
 
         C.tag(plug, STAGE, "plug", source=src_name)
         r["summary"] = {
@@ -320,6 +358,8 @@ def run(args):
             "sourceVolumeCm3": round(src.volume, 3), "rimZMm": round(rim_z, 3), "rimWidthMm": round(rim_w, 3),
             "ledgeWidthMm": round(rim_w + 2 * step, 3), "spareTopWidthMm": round(width, 3),
             "spareHeightMm": height, "flareDeg": flare, "taperFlipped": flipped,
+            "spareNeedMm": well["heightMm"], "castWallMm": float(vals["castWall"]), "slipDropCm3": well["dropCm3"],
+            "levelDropMm": well["dropMm"], "spareVolumeCm3": well["volumeCm3"], "wettedAreaCm2": well["wettedCm2"],
             "profiles": profs.count, "deletedPrior": len(deleted), "cavityFilled": n_void,
             "sourceFound": found["how"], "rimMethod": method, "frameMm": frame,
             "wareScale": round(factor, 6) if factor is not None else None,

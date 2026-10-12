@@ -26,6 +26,7 @@ import re
 from moldkit.core import params as P
 from moldkit.core import resolve as R
 from moldkit.core import state as ST
+from moldkit.core import twins as TW
 
 S0, S1, S2, S3, S4, S5, S6 = ("s0_intake", "s1_params", "s2_plug", "s3_moldability", "s4_plaster",
                               "s5_split", "s6_verify")
@@ -59,8 +60,11 @@ STEP_SECONDS = 4.0  # time budget of one S3/S8 call (the add-in's target is abou
 # labels, part names without the material, 2026-10-08; 9: dovetail heads and stop lugs on straight seams
 # for the dovetail clips, clipRailStyle, 2026-10-08; 10: standard dovetail clip lengths, two-sided laps on
 # standing cores, dovetail clips on core ledges with a recessed groove in the floor's underside, 2026-10-08;
-# 11: round clip stations on circular foot seams -- stepped curved heads, lugs, grooves, notch pockets).
-CASING_BUILD = 11
+# 11: round clip stations on circular foot seams -- stepped curved heads, lugs, grooves, notch pockets;
+# 12: the core ledges' floor groove runs on past the ledge's end (the floor overhangs it), 2026-10-11;
+# 13: twin pieces share one casing (casings.casts, " x2" labels), 2026-10-12;
+# 14: matching marks across the sector seams and feet, the plaster batch on one label per casing, 2026-10-12).
+CASING_BUILD = 14
 # Layouts S5 can split today (moldkit.fusion.s5_split.SUPPORTED); S3 may still propose the others.
 SPLIT_LAYOUTS = ("dropOut", "sides2", "sides2Bottom")
 _STAGE_RE = re.compile(r"^s(\d+)_")
@@ -286,7 +290,7 @@ def _s7_reasons(mold, outputs, hashes):
     if not c:
         return out
     built = sorted(set(c.get("pieces") or [p.get("piece") for p in c.get("parts") or []]))
-    want = sorted(p.get("id") for p in mold.get("pieces") or [])
+    want = sorted(TW.casing_pieces(mold))  # T1: twin copies are cast in their master's casing
     if built != want:
         out.append("casings built for pieces %s, pieces are %s" % (built, want))
     out += _missing("casing bodies", [p.get("name") for p in c.get("parts") or []], outputs.get("casingParts"))

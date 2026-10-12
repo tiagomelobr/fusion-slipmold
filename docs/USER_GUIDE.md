@@ -11,11 +11,14 @@ add-in internals and the scripting entry points), [VALIDATION.md](VALIDATION.md)
 
 From one solid (a mug, cup, bowl, vase...) it builds, inside your Fusion document:
 
-1. a plug: your model plus a "spare" (the slip well above the rim, with a flat knife ledge for trimming);
+1. a plug: your model plus a "spare" (the slip well above the rim, with a flat knife ledge for trimming), tall
+   enough to hold the slip the plaster draws while the wall casts (at least `mold_spareHeight`; a bottle's
+   narrow neck gets a taller well);
 2. a plaster block around the plug, cut into 1 to 4 plaster pieces with spherical keys (natches) so they
    register and release from the cast;
 3. for every plaster piece, a printable casing (mother mold: a core plate plus ring sectors, flanges and clip
-   sites) that you fill with plaster;
+   sites) that you fill with plaster. When the two side pieces are the same piece turned half a turn (twin
+   pieces: a plain cup, vase or oval dish), one casing casts both (section 10);
 4. printed clips that hold the casing flanges together (one dovetail clip on each straight vertical seam, two
    on each core ledge, round clips on the curved foot seams of a circular outline and short snap clips on
    other curved foot seams);
@@ -104,6 +107,9 @@ All buttons live in Design > Solid > SlipMold. Make mold, Parameters and Results
 Reset from stage and Help are in the Advanced drop-down.
 
 1. **Make mold.** The one button that builds. Its dialog has:
+   - **Mold** (once the design holds a mold): the mold to build. The active mold is selected; another one switches
+     to it; **New mold (keep the others)** keeps every mold as it is and builds a new one. See "Several molds"
+     below.
    - **Model body**: a selection box for the solid body of the ware. It starts with the body you selected in
      the canvas; if none, the tagged body (the one used before), a body named `master_part`, or the only visible
      solid body. Choosing another body tags it as the mold source (the tag moves) and S0 and what depends on the
@@ -151,6 +157,24 @@ Reset from stage and Help are in the Advanced drop-down.
 
 A normal first session: select the model, Make mold (set the printer in its dialog), read the Results page, print
 the leak-test piece. Parameters is for changing a value afterwards.
+
+### Several molds (variations)
+
+A design can hold several molds side by side, for example the same cup with a thicker plaster wall, or a mold for
+a second ware. Each mold is one component in the root (`SlipMold`, `SlipMold 2`, ...); one is **active**: Make
+mold, Run stage, Reset from stage and Results work on it only, and the other molds are never deleted or rebuilt.
+
+- **A new variation.** Change the parameters (or select another model body), click Make mold, choose **New mold
+  (keep the others)** in the Mold list and OK. The mold that was active is kept exactly as it was built: its plug
+  stops following the `mold_` parameters (they become plain values) and it is hidden, since every mold sits on
+  its ware. The new mold starts with the current parameters and model body and is built from S0.
+- **Back to an earlier mold.** Choose it in the Mold list. Its parameters come back as you left them (the
+  parameters of the mold you leave are kept for it), the source tag moves back to its model body, and it is shown
+  while the others are hidden. Make mold then runs only what is out of date for that mold.
+- Rename a mold's component in the browser if you like: its results folder keeps its first name (the `moldKey`
+  attribute). To drop a mold, delete its component; its folder stays on disk.
+- The printer settings (nozzle, fit offset) and the options are shared by every mold; a `mold_nozzle` or
+  `mold_fitOffset` user parameter belongs to the mold like the others.
 
 Pipeline stages, so the messages make sense: S0 intake (checks the model), S1 params (creates the input
 parameters), S2 plug, S3 moldability (layout), S4 plaster block, S5 split into pieces and natches, S6 verify
@@ -203,6 +227,12 @@ Check:
 
 - S6 verdict is pass and its page lists no failed check;
 - S5 "Fit" is `unique`: each piece fits only one way (a wrong assembly would be a defect);
+- S5 "Twin pieces": `side2 = side1 turned 180 deg (one casing)` when a half turn about the axis maps side1 onto
+  side2 and the bottom onto itself (`mold_twinPieces` `'auto'`, the default). S5 then gives both side pieces the
+  same keys, compares the finished pieces (check `twinPieces`: they may differ by at most 0.001 cm3) and S7 builds
+  one casing that casts both. Swapping twin pieces gives the same mold, so the fit stays `unique`. "no: ..." says
+  why not, for example a handle or a decoration on one side ("side1|side2: 12.3 cm3 differ under a half turn");
+  such a mold keeps its one-way keys and a casing per piece;
 - "Demold order" is the order you will open the mold in, and `Max interference` is 0;
 - no wet piece above 6 kg (S6 warns), and the plaster wall is what you want (`mold_plasterWall`, 25 mm). The
   wall check skips the small chamfer on the top rim edge, where the plaster is about 3 mm thinner by design
@@ -246,11 +276,13 @@ parameters, the ones you set; it works out the rest, and your printer comes from
 | Want to | Parameter | How | Re-runs from |
 |---|---|---|---|
 | Fired-size model | `mold_shrinkagePct` | set | S2 |
-| Taller or wider slip well, bigger knife ledge | `mold_spareHeight`, `mold_spareStepOut`; `mold_spareFlare` | set; override | S2 |
+| Taller or wider slip well, bigger knife ledge | `mold_spareHeight` (the least height), `mold_spareStepOut`; `mold_spareFlare` | set; override | S2 |
+| Slip well sized for your cast wall | `mold_castWall` (default 4 mm), `mold_slipDropRatio` (default 0.24, uncalibrated) | override | S2 |
 | Thicker or thinner plaster | `mold_plasterWall` (the base and the natch size follow it; override `mold_plasterBase` to change only the base) | set | S4 |
 | Force the layout | `mold_layout`; `mold_splitAzimuth` | set | S3 |
 | Allow more or fewer pieces | `mold_maxPieces` (default 5) | override | S3 |
 | Looser or tighter keys | `mold_natchClearance` (plaster dry fit) | override | S5 |
+| A casing per side piece even when they are twins | `mold_twinPieces`: `'auto'` (default: twin side pieces share one casing) or `'off'` (one-way keys, a casing per piece) | override | S5 |
 | Your printer | `bedX`, `bedY`, `bedZ`, `bedMargin`, `nozzle`, `fitOffset`, `printTolerance` | printer profile (nozzle and fit offset: SlipMold > Make mold) | S7 |
 | Casing wall, freeboard | `mold_casingFreeboard`; the casing wall follows the nozzle | override | S7 |
 | Ridge fit | `seamClearance` (calibrate with the leak test) | printer profile | S7 |
@@ -270,7 +302,8 @@ again). For an override or the printer profile see "Overrides and the printer pr
   SlipMold compares the evaluated values, so a change of `cupHeight` alone is seen through the model it reshapes
   (everything runs again); after changing a parameter that does not shape the model, use Reset from stage.
 - Text parameters (the input `mold_layout`, and the overrides `mold_plasterOuterShape`,
-  `mold_plasterOuterTaper`, `mold_natchGender` and `mold_clipRailStyle`) take one word in single quotes, for example `'auto'` or
+  `mold_plasterOuterTaper`, `mold_natchGender`, `mold_twinPieces` and `mold_clipRailStyle`) take one word in single
+  quotes, for example `'auto'` or
   `'sides2Bottom'`. Fusion has no list type, so the comment lists the allowed words. Make mold checks them before
   any stage runs and stops with a message such as "mold_layout = 'sides5' is not one of: auto | dropOut | ...".
 - Do not delete or rename one of the parameters you set. If one goes missing, Make mold stops with "... missing
@@ -379,12 +412,32 @@ Everything below comes from the process sheet in the exports folder (`process-sh
    build-plate supports; sand that ring flat after removing them. The sheet lists each part with its piece,
    quantity, orientation (for example "plate back on the bed, working face up") and its mass. Every casing part
    carries an engraved label on its outside: the design name in capitals over the part name
-   (`SMALL CUP` / `side1 core`). Clips have no label.
+   (`SMALL CUP` / `side1 core`). One part per casing, its first sector where the text fits (else the core or the
+   floor), also carries the plaster batch for one pour, by weight: `Gesso/água: 1764g / 1234g` (dry plaster / water), as in the
+   process sheet (overage included). Clips have no label. Twin pieces: a casing whose labels end in `x2`
+   (`side1 core x2`) casts side1 and side2, and there are no side2 casing files. Pour side1, demold it once it
+   has set, reassemble the casing and pour side2 (the plaster table still lists both pieces: mix one batch per
+   pour). To pour both at once, print that casing's parts and clips twice.
 2. **Weigh the plaster.** USG No. 1 Pottery Plaster at consistency 70 (70 g water per 100 g plaster). The
-   sheet gives dry plaster and water per piece and the batch total with 15 % overage. Mix water at 21 C, never
-   warm.
+   sheet gives dry plaster and water per piece and the batch total with 15 % overage; each casing carries its own
+   batch on its label. Weigh both on a kitchen scale: the consistency is a weight ratio, dry plaster by volume
+   varies with how it settles, and a gram of water is a millilitre. Another plaster takes another ratio: set
+   both `consistency` (g water per 100 g plaster) and `dryPlasterGPerCm3` (g of dry plaster per cm3 of set
+   plaster, 0.985 at consistency 70) in `settings.process` from its data sheet. Slip-casting molds need a
+   pottery or ceramic plaster (consistency about 65 to 80). A stone plaster (gesso pedra, about 30) sets too
+   dense to draw water from the slip, and gesso cola is a construction adhesive, not a mold plaster. Mix water
+   at 21 C, never warm. A label
+   engraved before you changed the process settings (`settings.process` in `mold.json`) is out of date: rebuild
+   the casings (S7) or follow the sheet.
 3. **Assemble each casing.** Per piece, the sheet (section 4) lists the parts, the clip counts and the assembly
    order: the demold order reversed. Set the base part down first, then add each part in order.
+   - Match the marks. Short grooves cross every seam where a sector meets a neighbour, its side core or its
+     floor, half on each part, so both parts of a seam show the same pattern. Vertical seams carry level lines,
+     counted along the arc from its start: 1, 2, 3 ... (in groups of three: `||| |` is 4). A sector's foot
+     carries as many upright ticks as the sector's number, continued on the floor (or the bottom core) where
+     that sector stands. Sector 2 of a side piece: 2 lines on the seam with sector 1, 3 on the seam with the
+     core, 2 ticks on its foot. Four or more ticks can sit under a short snap clip; look before clipping. The
+     core ledge on the floor has no mark: the ledge places it.
    - Round clips go on the curved foot seams of a circular outline (the sector foot on the floor or the bottom
      core), at the stations along each seam (see "Round clips" below). At a station's notch push the clip on
      radially, wide end toward the ledge, its tongue up into the pocket in the base's underside. Then slide it
@@ -524,7 +577,8 @@ time, for example `[3.8 s]`.
 | source body is not a closed solid | the body is a surface or open shell | repair it into one closed solid |
 | model may not be +Z up ... / model looks upside down ... / model may be upside down ... | warnings: the rim is not facing +Z | rotate so the opening faces +Z and run again (rotate 180 deg about X if upside down, 90 deg if on its side) |
 | more than one outer loop at z ranges ... (handle/appendage?) | a handle or spout | handles are not supported: model the cup without it |
-| plug is wider (X mm) than the spare top (Y mm): the model is wider below the rim than at it (a handle or a bulge?) | S2: a handle, or a body wider than its rim | remove the handle (mold it separately), or widen the spare with `mold_spareStepOut` |
+| plug is wider (X mm) than the spare top (Y mm): the model is wider below the rim than at it (a handle or a bulge?) | S2: the ware is wider than its spare top and S0 found a handle (separate outer loops) | remove the handle (mold it separately), or widen the spare with `mold_spareStepOut` |
+| the ware bulges below its rim: X mm wide under a Y mm spare top (a narrow neck) ... | warning, S2: a bottle or closed form with no handle; the mold is built and S3 checks that the side pieces release the bulge | check that the S3 layout reports 0 mm2 of undercut; top up the slip while casting (the narrow slip well holds little slip) |
 | sketches not fully constrained in ... | a sketch can reshape the ware when parameters change | constrain the sketch before changing parameters |
 | some horizontal sections are not star-shaped ... | an overhang that the plaster-block method may not wrap | check the layout and the plaster result; simplify the shape if S4 fails |
 | invalid expression(s), nothing changed ... | a parameter value Fusion cannot parse | fix the value in Parameters (units included, text in single quotes) |
@@ -612,13 +666,15 @@ molds/<design>/
   runs/addin.log           the add-in log: each step with its wall time, and full tracebacks
   runs/addin_status.json    live status of a running Make mold
   exports/                  3MF files and process-sheet.html
+  <moldKey>/                every other mold of the design ("Several molds", section 4): its own mold.json,
+                            runs/ and exports/
 ```
 
 Whether a stage is out of date comes from `mold.json` (run numbers and parameter hashes), never from file times
 or from `runs/`: deleting `runs/` breaks nothing (the stage pages then show less detail).
 
-The models stay in your Fusion document: component `SlipMold` with the plug, the plaster pieces and
-sub-components Casings and Clips. With "Save a version after each stage" on (and the document saved
+The models stay in your Fusion document: component `SlipMold` (and `SlipMold 2`, ... for more molds) with the
+plug, the plaster pieces and sub-components Casings and Clips. With "Save a version after each stage" on (and the document saved
 once), Fusion keeps a version after S1, S2, S4, S5, S7 and S8, so you can go back.
 
 Moving the results folder: install with `-MoldsDir D:\Molds`, or set the environment variable
@@ -649,3 +705,7 @@ def run(_context):
 Fusion is busy while it runs. The add-in's own entry points do the same without freezing Fusion for long (one step
 per event, status in `runs/addin_status.json`): see [ADDIN.md](ADDIN.md). `r.reset_from("s4")` resets from a stage
 and `r.plan()` shows what is stale without running anything.
+
+Several molds from a script: `moldkit.run_stage("molds", {"action": "new", "name": "Thick wall"})` starts a new
+mold, `{"action": "activate", "mold": "SlipMold"}` switches to a mold by name or key, and `{"action": "list"}` (the
+default) lists them; the runner then builds the active mold.

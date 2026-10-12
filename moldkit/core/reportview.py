@@ -24,6 +24,7 @@ from urllib.request import pathname2url
 from moldkit.core import explain as EX
 from moldkit.core import htmlpage as P
 from moldkit.core import state as ST
+from moldkit.core import twins as TW
 
 MAX_ROWS = 40  # items per problem/warning list and rows in the check table
 MAX_CELL = 160  # characters per table cell
@@ -224,6 +225,19 @@ def _count(path):
     return get
 
 
+def _twins(rep):
+    """S5 twin pieces (T1): which piece the twin's casing casts, or why there are none."""
+    tw = _get(rep, "summary.twins")
+    if not isinstance(tw, dict) or not tw.get("status"):
+        return None
+    if tw["status"] == "twins":
+        return "; ".join("%s = %s turned 180 deg (one casing)" % (" and ".join(p.get("copies") or []), p.get("master"))
+                         for p in tw.get("pairs") or []) or "yes"
+    if tw["status"] == "off":
+        return "off (mold_twinPieces)"
+    return "no" + (": %s" % tw["reason"] if tw.get("reason") else "")
+
+
 def _order(rep):
     order = _get(rep, "summary.plannedOrder")
     if not isinstance(order, list) or not order:
@@ -322,10 +336,11 @@ KEY_FIELDS = {
     "s1_params": [("Parameters created", _num("summary.created", "", 0)),
                   ("Parameters updated", _num("summary.updated", "", 0)),
                   ("Parameters kept", _num("summary.kept", "", 0)), ("Set by you", _text("summary.set"))],
-    "s2_plug": [("Plug volume", _num("summary.plugVolumeCm3", "cm3", 0)), ("Rim height", _num("summary.rimZMm", "mm")),
-                ("Rim width", _num("summary.rimWidthMm", "mm")),
+    "s2_plug": [("Plug volume", _num("summary.plugVolumeCm3", "cm3", 0)), ("Rim width", _num("summary.rimWidthMm", "mm")),
                 ("Spare top width", _num("summary.spareTopWidthMm", "mm")),
-                ("Spare height", _num("summary.spareHeightMm", "mm"))],
+                ("Spare height", _num("summary.spareHeightMm", "mm")),
+                ("Slip drawn while casting", _num("summary.slipDropCm3", "cm3", 0)),
+                ("Slip well holds", _num("summary.spareVolumeCm3", "cm3", 0))],
     "s3_moldability": [("Layout", _text("summary.layout")), ("Pieces", _num("summary.pieces", "", 0)),
                        ("Moldable", _moldable), ("Bottom split", _num("summary.bottomSplitMm", "mm")),
                        ("Seam length", _num("summary.seamMm", "mm", 0)),
@@ -337,7 +352,7 @@ KEY_FIELDS = {
     "s5_split": [("Pieces", _count("summary.pieces")), ("Keys (natches)", _num("summary.natchCount", "", 0)),
                  ("Fit", _text("summary.fitStatus")),
                  ("Closest key to a piece edge", _num("summary.minMarginMm", "mm", 2)),
-                 ("Closest approach across seams", _num("summary.crossSeamMinMm", "mm"))],
+                 ("Closest approach across seams", _num("summary.crossSeamMinMm", "mm")), ("Twin pieces", _twins)],
     "s6_verify": [("Verdict", _text("summary.verdict")),
                   ("Closest key to the cast", _num("summary.minNatchToCastMm", "mm", 2)),
                   ("Demold order", _order), ("Plaster batch", _batch),
@@ -723,7 +738,9 @@ def key_numbers(mold, reports):
         lay = mold.get("layout") or {}
         n = lay.get("pieces") or len(mold.get("pieces") or []) or _get(rep("s3_moldability"), "summary.pieces")
         if n:
-            rows.append(("Plaster pieces", "%s" % _n(n, 0) + (" (layout %s)" % lay["name"] if lay.get("name") else "")))
+            tw = TW.describe(mold)
+            rows.append(("Plaster pieces", "%s" % _n(n, 0) + (" (layout %s)" % lay["name"] if lay.get("name") else "")
+                         + ("; %s" % tw if tw else "")))
     batch = _batch(rep("s6_verify")) or _plaster_totals(rep("s9_export"))
     if not batch and "s4_plaster" in reports and _is_num((mold.get("plaster") or {}).get("volumeCm3")):
         batch = "%s cm3 of plaster" % _n(mold["plaster"]["volumeCm3"], 0)
@@ -794,6 +811,8 @@ def details_html(mold, reports, exports_dir=None):
 def results_body(mold_dir, mold, reports, exports_dir=None, sheet_url=None, error=None, outcome=None,
                  pending=None, notes=None, log_lines=(), help_url=None):
     doc = (mold or {}).get("doc") or os.path.basename(mold_dir or "") or "no design"
+    if (mold or {}).get("moldName"):  # one of several molds (moldkit.fusion.variants)
+        doc = "%s, %s" % (doc, mold["moldName"])
     out = ["<h1>SlipMold results: %s</h1>" % P.esc(doc)]
     err = error if error is not None else stage_failure(mold)
     items = _warning_items(mold, notes)

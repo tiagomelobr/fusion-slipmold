@@ -149,6 +149,17 @@ class ResolvedShapeTest(unittest.TestCase):
         self.assertIsInstance(vals["plasterOuterDraftMax"], float)  # derived: present without a parameter
 
 
+class S2BulgeTest(unittest.TestCase):
+    def test_bulge_only_without_islands(self):
+        from moldkit.core import state as ST
+        from moldkit.fusion import s2_plug as s2
+
+        self.assertTrue(s2.bulge_only([]))  # a bottle: wider below a narrow neck, one outer loop everywhere
+        self.assertFalse(s2.bulge_only([[20.0, 60.0]]))  # a handle
+        self.assertFalse(s2.bulge_only(None))  # S0 ran before the key was kept
+        self.assertIn("multiOuterZ_mm", ST.KEEP["s0_intake"]["summary"])
+
+
 class HeldRangeTest(unittest.TestCase):
     def test_trailing_items_with_marker_at_end(self):
         self.assertTrue(C.held_range([7, 8, 9], 10, 10))

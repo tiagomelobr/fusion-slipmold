@@ -17,6 +17,12 @@ implemented. Steps (all features in component SlipMold, tagged stage=s5):
      A natch keeps its axis line; the bump is joined to its owner and the socket cut from the mate;
   5. bump caps (sphere R, depth hd) and socket caps (R + c, depth hd + c) as TemporaryBRep solids
      in one BaseFeature, joined into the bump pieces and cut from the socket pieces.
+T1 twin pieces (mold_twinPieces 'auto', the default; layouts sides2 and sides2Bottom): when a half turn
+about Z maps the split side1 onto side2 (and the bottom onto itself) to within twinToleranceCm3 of
+symmetric difference, the natches are laid out so the half turn maps the keys too (plan_natches symmetry),
+and the finished pieces are compared again (check twinPieces). Twins get mold.json pieces[].twinOf and
+"twins"; S7 builds one casing for side1 that casts side2 as well. With mold_natchGender 'single' the keys
+copied onto side2's seam face have their bumps on side2 (each seam face still has its bumps on one piece).
 A re-run holds the earlier s5+ outputs behind the timeline marker and deletes them after the new
 pieces are built and checked; an exception rolls back and restores them.
 
@@ -24,7 +30,8 @@ Inputs: bodies "plaster" (stage s4) and "plug" in SlipMold; mold.json "layout" c
 current layout-scope mold_* hash; mold.json "plaster" built by a passing s4 run with the current
 plaster-scope hash and that layout
 (plaster_gate); mold_natchRadius, mold_natchDepth, mold_natchClearance, mold_natchesPerSeam,
-mold_natchEdgeMargin, mold_natchGender (Text 'mixed' | 'single', default 'mixed' when absent).
+mold_natchEdgeMargin, mold_natchGender (Text 'mixed' | 'single', default 'mixed' when absent), mold_twinPieces
+(Text 'auto' | 'off', default 'auto' when absent).
 mold.json gets "s5Status" on every completed run (a failed run keeps its pieces; S6 refuses them).
 """
 import math
@@ -273,6 +280,48 @@ def parse_gender(text):
     if g not in GENDERS:
         raise ValueError("mold_natchGender %r: expected one of %s" % (text, ", ".join(GENDERS)))
     return g
+
+
+TWIN_MODES = ("auto", "off")
+TWIN_LAYOUTS = ("sides2", "sides2Bottom")
+TWIN_MASTER, TWIN_COPY = "side1", "side2"
+TWIN_TOL_CM3 = 1e-3  # default symmetric difference of twin pieces (settings.analysis.twinToleranceCm3)
+
+
+def parse_twin(text):
+    """mold_twinPieces value -> 'auto' | 'off' (ValueError otherwise)."""
+    t = (text or "").strip().strip("'\"").strip().lower()
+    if t not in TWIN_MODES:
+        raise ValueError("mold_twinPieces %r: expected one of %s" % (text, ", ".join(TWIN_MODES)))
+    return t
+
+
+def twin_symmetry():
+    """The half turn about the mold axis (Z through the origin) that swaps side1 and side2 (plan_natches)."""
+    return {"transform": N.rotation_tf((0.0, 0.0, 0.0), (0.0, 0.0, 1.0), 180.0),
+            "pieceMap": {TWIN_MASTER: TWIN_COPY, TWIN_COPY: TWIN_MASTER}}
+
+
+def twin_verdict(diffs, tol):
+    """diffs {name: symmetric difference cm3 or None (boolean failed)} -> (ok, reason or None)."""
+    for k, v in diffs.items():
+        if v is None:
+            return False, "%s: the half-turn comparison boolean failed" % k
+        if v > tol:
+            return False, "%s: %.4f cm3 differ under a half turn (over %g cm3)" % (k, v, tol)
+    return True, None
+
+
+def twin_entry(mode, status, reason=None, diffs=None, tol=TWIN_TOL_CM3):
+    """mold.json "twins" (also the S5 summary): {mode, status ('twins' | 'none' | 'off'), reason, pairs, toleranceCm3}.
+    pairs: [{"master", "copies", "angleDeg", "diffCm3"}] when status is 'twins'."""
+    diffs = diffs or {}
+    pairs = []
+    if status == "twins":
+        pairs = [{"master": TWIN_MASTER, "copies": [TWIN_COPY], "angleDeg": 180.0,
+                  "diffCm3": round(diffs.get("side1|side2") or 0.0, 6)}]
+    return {"mode": mode, "status": status, "reason": reason, "pairs": pairs, "toleranceCm3": tol,
+            "diffCm3": {k: None if v is None else round(v, 6) for k, v in diffs.items()}}
 
 
 def fit_plug_points(revolved, self_map):
@@ -642,6 +691,37 @@ def _overlap_cm3(tbm, a, b):
         return None
 
 
+def _turned_diff_cm3(tbm, a, b, angle_deg=180.0):
+    """Volume (cm3) of (a turned about Z by angle_deg) xor b: 0 when the turn maps a onto b; None if a boolean
+    failed."""
+    try:
+        m = adsk.core.Matrix3D.create()
+        m.setToRotation(math.radians(angle_deg), adsk.core.Vector3D.create(0, 0, 1), adsk.core.Point3D.create(0, 0, 0))
+        out = 0.0
+        for turned_first in (True, False):
+            ta, tb = tbm.copy(a), tbm.copy(b)
+            if not tbm.transform(ta, m):
+                return None
+            tgt, tool = (ta, tb) if turned_first else (tb, ta)
+            if not tbm.booleanOperation(tgt, tool, adsk.fusion.BooleanTypes.DifferenceBooleanType):
+                return None
+            out += tgt.volume
+        return out
+    except Exception:
+        return None
+
+
+def _twin_diffs(tbm, bodies, vols, has_bottom, tol):
+    """Symmetric differences under the half turn: side1 vs side2, then the bottom vs itself. A volume gap above
+    tol is enough (no boolean); later comparisons are skipped once one fails."""
+    out = {}
+    gap = abs(vols[TWIN_MASTER] - vols[TWIN_COPY])
+    out["side1|side2"] = gap if gap > tol else _turned_diff_cm3(tbm, bodies[TWIN_MASTER], bodies[TWIN_COPY])
+    if has_bottom and out["side1|side2"] is not None and out["side1|side2"] <= tol:
+        out["bottom"] = _turned_diff_cm3(tbm, bodies["bottom"], bodies["bottom"])
+    return out
+
+
 def cross_seam_pairs(natch_list, R, c, m):
     """L3 pairs: natch caps of one piece that sit on different seam faces (bump R, socket R + c,
     both around the sphere centre). Each cap lies inside its sphere, so the sphere gap
@@ -737,9 +817,11 @@ def run(args):
     n_seam = int(round(vals["natchesPerSeam"]))
     try:
         gender = parse_gender(vals["natchGender"])
+        twin_mode = parse_twin(vals.get("twinPieces", "auto"))
     except ValueError as exc:
         report.fail(r, str(exc))
         return r
+    twin_tol = float(analysis.get("twinToleranceCm3", TWIN_TOL_CM3))
     try:
         capg = N.cap_geometry(R, hd, c)
     except ValueError as exc:
@@ -828,6 +910,22 @@ def run(args):
         split_cm3 = {p["id"]: _volume(p["body"]) for p in pieces}
         timings["split"] = round(time.time() - t, 2)
 
+        # T1 twin pieces: the split pieces must already map onto each other under the half turn
+        symmetry, twin_diffs, twin_reason = None, {}, None
+        if twin_mode == "auto":
+            if name in TWIN_LAYOUTS:
+                t = time.time()
+                # 1 mm3, or 1e-6 of a piece on large molds (boolean slivers on many-faced pieces)
+                twin_tol = max(twin_tol, 1e-6 * max(split_cm3.values()))
+                twin_diffs = _twin_diffs(tbm, bodies, split_cm3, has_bottom, twin_tol)
+                ok, twin_reason = twin_verdict(twin_diffs, twin_tol)
+                symmetry = twin_symmetry() if ok else None
+                if None in twin_diffs.values():
+                    report.warn(r, "twin pieces not checked (%s): one casing per piece" % twin_reason)
+                timings["twinSplit"] = round(time.time() - t, 2)
+            else:
+                twin_reason = "layout %s has no side pieces to pair" % name
+
         # F4 seams, F6 placement
         t = time.time()
         faces = _seam_faces(pieces, order) if len(pieces) > 1 else []
@@ -843,7 +941,11 @@ def run(args):
         fit_pts, fit_rots = fit_args(revolved, self_maps)
         plan = N.plan_natches(faces, R, hd, c, m, per_seam=n_seam, revolved=revolved, gender=gender,
                               pieces=[{"id": s["id"], "pull": s["pull"]} for s in specs],
-                              plug_points=fit_pts, rotations_deg=fit_rots, kmax=FIT_KMAX) if faces else None
+                              plug_points=fit_pts, rotations_deg=fit_rots, kmax=FIT_KMAX,
+                              symmetry=symmetry) if faces else None
+        if symmetry is not None and not (plan and plan["twin"]["planned"]):
+            twin_reason = (plan and plan["twin"]["reason"]) or "no seam faces"
+            symmetry = None
         if plan and plan["fit"] and not revolved:
             plan["fit"]["geometry"] = {
                 "checked": any(v is not None for v in self_maps.values()),
@@ -953,6 +1055,17 @@ def run(args):
         if gender == "mixed" and natch_list:
             _check(r, checks, "genderMixed", N.gender_constraint_ok(natch_list), None,
                    "each piece a bump and a socket on every >= 2-natch interface")
+        twin_status = "off" if twin_mode == "off" else "none"
+        if symmetry is not None:
+            # the keys were laid out for twins: the finished pieces must be twins (else the half turn the
+            # unique-fit check accepted would be a wrong assembly)
+            byid0 = {p["id"]: p["body"] for p in pieces}
+            twin_diffs = _twin_diffs(tbm, byid0, vol, has_bottom, twin_tol)
+            ok, twin_reason = twin_verdict(twin_diffs, twin_tol)
+            _check(r, checks, "twinPieces", ok, twin_reason or {k: round(v, 6) for k, v in twin_diffs.items()},
+                   "half turn maps side1 onto side2 within %g cm3" % twin_tol)
+            twin_status = "twins" if ok else "none"
+        twins = twin_entry(twin_mode, twin_status, twin_reason, twin_diffs, twin_tol)
         overlaps = {}
         ids = [p["id"] for p in pieces]
         for i, a in enumerate(ids):
@@ -1051,6 +1164,7 @@ def run(args):
             "gender": gender, "revolved": revolved, "flips": plan["flips"] if plan else [],
             "uniqueFit": fit["uniqueFit"] if fit else None, "fitStatus": fit["status"] if fit else None,
             "transformsTested": sum(t["count"] for t in fit["tested"]) if fit else 0,
+            "symmetricSkipped": fit.get("symmetricSkipped", 0) if fit else 0, "twins": twins,
             "shifts": plan["shifts"] if plan else [],
             "keepout3d": None if keepout is None else dict(
                 {k: v for k, v in keepout.items() if k != "facesWithoutSamples"},
@@ -1070,6 +1184,7 @@ def run(args):
             "fit": fit_report(fit),
             "natches": [{"id": nt["id"], "seam": nt["face"], "interface": nt.get("interface"),
                          "bump": nt["bumpPiece"], "socket": nt["socketPiece"], "reversed": bool(nt.get("reversed")),
+                         "twinOf": nt.get("twinOf"),
                          "centreMm": [round(x, 6) for x in nt["centre"]],
                          "axis": [round(x, 6) for x in nt["protrusion"]], "marginMm": round(nt["marginMm"], 3),
                          "castMm3d": _round_min([nt.get("castMm3d")]),
@@ -1087,13 +1202,17 @@ def run(args):
         upd = {"s5Status": r["status"]}
         if r["status"] in ("pass", "warn"):
             upd.update({
-                "pieces": [{"id": p["id"], "name": p["body"].name, "pull": p["pull"],
-                            "volumeCm3": round(vol[p["id"]], 3)} for p in pieces],
+                "pieces": [dict({"id": p["id"], "name": p["body"].name, "pull": p["pull"],
+                                 "volumeCm3": round(vol[p["id"]], 3)},
+                                **({"twinOf": TWIN_MASTER} if twin_status == "twins" and p["id"] == TWIN_COPY else {}))
+                           for p in pieces],
+                "twins": twins,
                 "natches": {"count": len(natch_list), "R": round(R, 4), "hd": round(hd, 4), "c": round(c, 4),
                             "gender": gender, "revolved": revolved, "plugSelfMap": self_map,
                             "plugSymmetry": self_maps and {str(k): v for k, v in self_maps.items()},
                             "uniqueFit": fit["uniqueFit"] if fit else None,
                             "fitStatus": fit["status"] if fit else None,
+                            "twinSymmetry": [symmetry] if twin_status == "twins" else [],
                             "tested": fit["tested"] if fit else [], "flips": plan["flips"] if plan else [],
                             "pieces": piece_counts(natch_list, [p["id"] for p in pieces]),
                             "list": [{"id": nt["id"], "seam": nt["face"], "bump": nt["bumpPiece"],

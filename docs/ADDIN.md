@@ -170,11 +170,15 @@ The Make mold chain can run without dialogs from another script in the same Fusi
 import sys
 sm = sys.modules["SlipMold_addin"]          # the running add-in
 st = sm.make_mold(headless=True, body="master_part", save=False, s7_per_piece=True, show_results=False,
-                  stop_when=None, stage_args=None, status_path=None)   # returns at once; st["statusPath"]
+                  stop_when=None, stage_args=None, status_path=None,
+                  mold=None, mold_name=None)                           # returns at once; st["statusPath"]
 ```
 
-`body` is the name of the solid body to tag as the mold source first (`select_model` without creating the
-parameters; S1 does that); omit it to use the tagged body or S0's lookup. `save`: None uses the config. `stop_when(step_result)
+`mold` picks the mold to build when the design holds several (user guide, "Several molds"): `"new"` starts a new
+one next to the others (named `mold_name`, default "SlipMold 2", ...), a mold key or component name switches to
+that mold first (its parameters and model body come back); omit it to build the active mold. `body` is the name of
+the solid body to tag as the mold source (`select_model` without creating the parameters; S1 does that), after
+the mold switch; omit it to use the tagged body or S0's lookup. `save`: None uses the config. `stop_when(step_result)
 -> True` cancels after that step. `stage_args` is `{stage: args}`. `show_results` defaults to False when
 headless. The call returns the first status dict; the chain then runs on custom events and rewrites the status
 file `<moldDir>/runs/addin_status.json` (or `status_path`) after every step. Poll that file from disk until

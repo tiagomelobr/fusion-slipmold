@@ -9,6 +9,7 @@ import adsk.fusion
 from moldkit import REPO_ROOT
 from moldkit.core import params as P
 from moldkit.core import state as ST
+from moldkit.core import variants as V
 
 ATTR_GROUP = "slipmold"
 DEFAULT_SOURCE_BODY = "master_part"
@@ -91,8 +92,10 @@ def molds_root():
     return os.path.join(REPO_ROOT, "molds")
 
 
-def mold_dir(name=None):
-    return os.path.join(molds_root(), P.slug(name or doc_name()))
+def mold_dir(name=None, key=None):
+    """The active mold's folder (or mold `key`'s): molds/<doc>/ for the first mold, molds/<doc>/<key>/ for the
+    others (moldkit.core.variants)."""
+    return V.folder(os.path.join(molds_root(), P.slug(name or doc_name())), mold_key() if key is None else key)
 
 
 def unsaved_text(name, root=None):
@@ -169,18 +172,100 @@ def tag(entity, stage, role, **extra):
         set_attr(entity, k, v)
 
 
-def mold_component(d, create=False):
-    """(occurrence, component) of the SlipMold component; created on request."""
-    root = d.rootComponent
-    for occ in root.occurrences:
-        if occ.component.name == MOLD_COMPONENT:
-            return occ, occ.component
-    if not create:
-        return None, None
-    occ = root.occurrences.addNewComponent(adsk.core.Matrix3D.create())
-    occ.component.name = MOLD_COMPONENT
-    set_attr(occ.component, "role", "moldComponent")
-    return occ, occ.component
+# Several molds (moldkit.fusion.variants): every SlipMold component in the root is one mold, keyed by its
+# moldKey attribute (no key: the first mold, V.DEFAULT_KEY). The root component's activeMold attribute names the
+# one the stages build; without it, the first mold in the browser.
+MOLD_KEY_ATTR = "moldKey"
+ACTIVE_MOLD_ATTR = "activeMold"
+
+
+def is_mold_component(comp):
+    return get_attr(comp, "role") == "moldComponent" or comp.name == MOLD_COMPONENT
+
+
+def key_of(comp):
+    k = get_attr(comp, MOLD_KEY_ATTR)
+    return k if isinstance(k, str) and k else V.DEFAULT_KEY
+
+
+def molds(d):
+    """[(occurrence, component, key)] of the molds in the root, in browser order (a later component with a key
+    already listed, a pasted copy, is left out)."""
+    out, seen = [], set()
+    for occ in d.rootComponent.occurrences:
+        comp = occ.component
+        if not is_mold_component(comp):
+            continue
+        key = key_of(comp)
+        if key not in seen:
+            seen.add(key)
+            out.append((occ, comp, key))
+    return out
+
+
+def active_key(d):
+    """The key of the mold the stages build: the root's activeMold attribute (its component may be gone: S2
+    builds it again), else the first mold's, else V.DEFAULT_KEY."""
+    stored = get_attr(d.rootComponent, ACTIVE_MOLD_ATTR)
+    if isinstance(stored, str) and stored:
+        return stored
+    found = molds(d)
+    return found[0][2] if found else V.DEFAULT_KEY
+
+
+def mold_key():
+    """active_key of the active design; V.DEFAULT_KEY when there is none (never raises)."""
+    try:
+        return active_key(design())
+    except Exception:
+        return V.DEFAULT_KEY
+
+
+def mold_component(d, key=None):
+    """(occurrence, component) of the active mold (or mold `key`); (None, None) when it has no component."""
+    key = key or active_key(d)
+    for occ, comp, k in molds(d):
+        if k == key:
+            return occ, comp
+    return None, None
+
+
+def _owner(ent):
+    """The component a timeline entity is in; for an occurrence, the component it holds."""
+    if ent.objectType == "adsk::fusion::Occurrence":
+        return ent.component
+    for prop in ("parentComponent", "component"):  # a construction plane has no parentComponent
+        try:
+            comp = getattr(ent, prop)
+        except Exception:
+            continue
+        if comp is not None:
+            return comp
+    return None
+
+
+def mold_scope(d):
+    """A test ent -> True for the timeline entities of the active mold: in its SlipMold component or one of its
+    sub-components, or in no mold at all (stray outputs). Other molds' entities are never the active mold's."""
+    key = active_key(d)
+    mine, others = set(), set()
+    for occ in d.rootComponent.occurrences:
+        comp = occ.component
+        if not is_mold_component(comp):
+            continue
+        ids = {comp.id} | {o.component.id for o in comp.allOccurrences}
+        if key_of(comp) == key and not mine:
+            mine = ids
+        else:
+            others |= ids
+
+    def belongs(ent):
+        try:
+            comp = _owner(ent)
+        except Exception:
+            return True
+        return comp is None or comp.id in mine or comp.id not in others
+    return belongs
 
 
 # Printed parts carried a material prefix until 2026-10-08 ("PETG_Casings", "PETG_side1_core", "PETG_clip_short");
@@ -240,8 +325,9 @@ def drop_name_prefixes(comp, name, stage, role, key):
 
 
 def delete_stage_outputs(d, first_stage):
-    """Delete every timeline item tagged with first_stage or a later stage (newest first)."""
+    """Delete every timeline item of the active mold tagged with first_stage or a later stage (newest first)."""
     doomed = set(STAGE_ORDER[STAGE_ORDER.index(first_stage):])
+    mine = mold_scope(d)
     deleted = []
     tl = d.timeline
     for i in range(tl.count - 1, -1, -1):
@@ -252,7 +338,7 @@ def delete_stage_outputs(d, first_stage):
             continue
         if ent is None:
             continue
-        if get_attr(ent, "stage") in doomed:
+        if get_attr(ent, "stage") in doomed and mine(ent):
             name = item.name
             if ent.deleteMe():
                 deleted.append(name)
@@ -260,8 +346,9 @@ def delete_stage_outputs(d, first_stage):
 
 
 def stage_item_indices(d, first_stage):
-    """Timeline indices of the items tagged with first_stage or a later stage."""
+    """Timeline indices of the active mold's items tagged with first_stage or a later stage."""
     doomed = set(STAGE_ORDER[STAGE_ORDER.index(first_stage):])
+    mine = mold_scope(d)
     out = []
     tl = d.timeline
     for i in range(tl.count):
@@ -269,7 +356,7 @@ def stage_item_indices(d, first_stage):
             ent = tl.item(i).entity
         except Exception:
             continue
-        if ent is not None and get_attr(ent, "stage") in doomed:
+        if ent is not None and get_attr(ent, "stage") in doomed and mine(ent):
             out.append(i)
     return out
 
@@ -340,16 +427,17 @@ def vi(expr):
     return adsk.core.ValueInput.createByReal(expr)
 
 
-def write_mold_json(d, updates):
-    """Merge updates into molds/<doc>/mold.json (atomic: a crash mid-dump never truncates it, repair 2 R3)."""
-    path = os.path.join(mold_dir(), "mold.json")
+def write_mold_json(d, updates, key=None):
+    """Merge updates into the active mold's (or mold `key`'s) mold.json (atomic: a crash mid-dump never truncates
+    it, repair 2 R3)."""
+    path = os.path.join(mold_dir(key=key), "mold.json")
     ST.write(path, updates)
     return path.replace("\\", "/")
 
 
-def read_mold_json():
-    """molds/<doc>/mold.json content ({} when missing or unreadable)."""
-    return ST.load(os.path.join(mold_dir(), "mold.json"))
+def read_mold_json(key=None):
+    """The active mold's (or mold `key`'s) mold.json content ({} when missing or unreadable)."""
+    return ST.load(os.path.join(mold_dir(key=key), "mold.json"))
 
 
 def stage_report(stage):

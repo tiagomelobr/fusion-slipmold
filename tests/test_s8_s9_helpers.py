@@ -177,6 +177,19 @@ class S8HelpersTest(unittest.TestCase):
         self.assertEqual(s8.m4_translate([1.0, -2.0, 3.5]),
                          [[1.0, 0.0, 0.0, 1.0], [0.0, 1.0, 0.0, -2.0], [0.0, 0.0, 1.0, 3.5], [0.0, 0.0, 0.0, 1.0]])
 
+    def test_round_far_section(self):
+        R, a = 88.22, 0.15
+        sec = [(6.0, 6.9), (-1.7, 9.0), (-2.6, -6.5), (5.3, -6.5)]
+        p = [s8._arc_pt(R, x, y, 0.0) for x, y in sec]
+        q = [s8._arc_pt(R, x, y, a) for x, y in sec]
+        for got, want in zip(s8.far_section(p, q, a, R), q):  # no taper: planar sides end on q
+            self.assertTrue(all(abs(g - w) < 1e-9 for g, w in zip(got, want)))
+        q2 = [s8._arc_pt(R, x, y - (0.5 if y > 0 else 0.0), a) for x, y in sec]  # tapered top: twisted sides
+        far = s8.far_section(p, q2, a, R)
+        for f in far:  # on the radial plane at a
+            self.assertAlmostEqual(math.sin(a) * f[0] + math.cos(a) * f[2], math.sin(a) * R, places=9)
+        self.assertLess(max(math.dist(f, w) for f, w in zip(far, q2)), 0.05)
+
 
 class S8RepairTest(unittest.TestCase):
     def test_failed_intersection_is_unknown_not_clean(self):

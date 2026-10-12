@@ -27,6 +27,7 @@ import adsk.fusion
 import slipmold_helpers as H
 
 DEFAULT_S7_PER_PIECE = True
+NEW_MOLD_ITEM = "New mold (keep the others)"  # the last item of Make mold's Mold list
 STALE_CHAIN_S = 60  # a running chain with queued jobs and no event for this long lost its step event
 NATIVE_PARAMS_CMD = "ChangeParameterCommand"  # Fusion's Modify > Change Parameters (SolidModifyPanel)
 NATIVE_PARAMS_MISSING = ("Fusion's Change Parameters command was not found.\n\nUse Modify > Change Parameters: the "
@@ -181,9 +182,10 @@ def _new_chain(host, headless, save=None, s7_per_piece=None, stop_when=None, sta
 
 
 def _chain(host, headless=None):
-    """The current chain when it can take more jobs for the active document, else a new one."""
+    """The current chain when it can take more jobs for the active document and mold, else a new one."""
     ch = host.STATE.get("chain") or {}
-    if ch.get("runner") is not None and ch.get("state") != "running" and _same_doc(ch.get("doc"), _app().activeDocument):
+    if ch.get("runner") is not None and ch.get("state") != "running" and _same_doc(ch.get("doc"), _app().activeDocument) \
+            and ch.get("moldDir") == _mold_dir_or_none(host):
         if headless is not None and bool(headless) != ch.get("headless"):
             ch["headless"] = bool(headless)
         ch["error"] = ch["message"] = None
@@ -253,19 +255,63 @@ def _start(host, ch, jobs):
     return H.status_doc(ch)
 
 
+def choose_mold(host, choice, name=None):
+    """Make the mold `choice` active before a run: "new" starts a new mold (named `name`, default "SlipMold 2",
+    ...) and keeps the others; a mold key or component name switches to that mold (its parameters and source
+    come back). None or the active mold: nothing changes. Returns {"ok", "message", "key", "changed"}."""
+    host.load_moldkit()
+    C = _C(host)
+    VR = _mod(host, "moldkit.fusion.variants")
+    V = _mod(host, "moldkit.core.variants")
+    d = C.design()
+    if not choice:
+        return {"ok": True, "message": None, "key": C.active_key(d), "changed": False}
+    try:
+        if str(choice).strip().lower() == V.NEW:
+            res = VR.new_mold(d, name)
+            msg = "New mold %s (folder key %s); the other molds are kept as they are." % (res["name"], res["key"])
+            _log(host, msg)
+            return {"ok": True, "message": msg, "key": res["key"], "changed": True}
+        res = VR.activate(d, choice)
+    except ValueError as exc:
+        return {"ok": False, "message": str(exc), "key": None, "changed": False}
+    msg = None
+    if res["changed"]:
+        p = res.get("params") or {}
+        msg = "Active mold: %s (parameters: %d changed, %d added, %d deleted)." % (
+            res["name"], len(p.get("set") or []), len(p.get("added") or []), len(p.get("deleted") or []))
+        if res["notes"]:
+            msg += " " + "; ".join(res["notes"])
+        _log(host, msg)
+    return {"ok": True, "message": msg, "key": res["key"], "changed": res["changed"], "notes": res["notes"]}
+
+
 def make_mold(host, headless=False, body=None, save=None, status_path=None, s7_per_piece=None, stop_when=None,
-              stage_args=None, show_results=None):
+              stage_args=None, show_results=None, mold=None, mold_name=None):
     """Make mold: run every out-of-date stage to the exports (one Runner.step() per CustomEvent). Returns the
     first status dict; the status file is rewritten after every step.
-    headless: no dialogs or progress (scripts, MCP); body: the name of the solid body to tag as the mold source
-    first (select_model), else the tagged (or only) body; show_results: open the Results page at the end
-    (default: not headless). The run stops only on a failure or cancel(); warnings never stop it."""
+    headless: no dialogs or progress (scripts, MCP); mold: "new" (a new mold next to the others, named mold_name)
+    or the key or name of the mold to build (choose_mold), else the active one; body: the name of the solid body
+    to tag as the mold source first (select_model), else the tagged (or only) body; show_results: open the
+    Results page at the end (default: not headless). The run stops only on a failure or cancel(); warnings never
+    stop it."""
     host.STATE.pop("openCommand", None)  # a lost Parameters event must not open Change Parameters mid-chain
     busy = _busy(host)
     if busy:
         if not headless:
             _msg(host, busy)
         return dict(status(host), message=busy)
+    if mold:
+        try:
+            picked = choose_mold(host, mold, mold_name)
+        except Exception as exc:
+            picked = {"ok": False, "message": str(exc)}
+        if not picked["ok"]:
+            err = {"message": picked["message"], "hint": "Name an existing mold, or \"new\".",
+                   "explain": _explain(host, picked["message"])}
+            if not headless:
+                _msg(host, H.friendly_error(err))
+            return {"state": "error", "running": False, "error": err}
     if body:
         picked = select_model(host, body, ensure=False)
         if not picked.get("ok"):
@@ -671,6 +717,17 @@ def _build_make_mold(host, cmd, inputs):
         cur = S0.resolve_source(C.design())
     except Exception as exc:
         S0, cur = None, {"error": str(exc)}
+    try:
+        mlist = _mod(host, "moldkit.fusion.variants").mold_list(C.design())
+    except Exception:
+        mlist = []
+    if mlist:  # no mold yet: S2 makes the first one
+        md = inputs.addDropDownCommandInput("mold", "Mold", adsk.core.DropDownStyles.TextListDropDownStyle)
+        for m in mlist:
+            md.listItems.add(m["name"] + (" (to rebuild)" if m["missing"] else ""), m["active"])
+        md.listItems.add(NEW_MOLD_ITEM, False)
+        md.tooltip = ("The mold to build. Another mold: switch to it (its parameters and model body come back). "
+                      "%s: keep every mold as it is and build a new one with the current parameters." % NEW_MOLD_ITEM)
     sel = inputs.addSelectionInput("body", "Model body", "Select the solid body of the ware")
     sel.addSelectionFilter("SolidBodies")
     sel.setSelectionLimits(0, 1)
@@ -707,6 +764,10 @@ def _build_make_mold(host, cmd, inputs):
     inputs.addBoolValueInput("s7", "Casings one piece per step (S7)", True, "",
                              bool(cfg.get("s7PerPiece", DEFAULT_S7_PER_PIECE)))
     lines = [busy] if busy else []
+    act = next((m for m in mlist if m["active"]), None)
+    if act is not None:
+        lines.append("Mold: %s (%d in this design). The plan below is for it; %s keeps it as it is."
+                     % (act["name"], len(mlist), NEW_MOLD_ITEM))
     lines.append(now)
     try:
         RH = _mod(host, "moldkit.fusion.runner_host")
@@ -732,6 +793,10 @@ def _build_make_mold(host, cmd, inputs):
     cmd.okButtonText = "Make mold"
 
     def execute(a):
+        running = _busy(host)
+        if running:  # never switch molds or retag under a running chain
+            _msg(host, running)
+            return
         ins = a.command.commandInputs
         sv = ins.itemById("save").value
         s7 = ins.itemById("s7").value
@@ -742,13 +807,31 @@ def _build_make_mold(host, cmd, inputs):
             return
         bsel = ins.itemById("body")
         body = adsk.fusion.BRepBody.cast(bsel.selection(0).entity) if bsel and bsel.selectionCount else None
-        if body is not None:
-            if C.get_attr(body, "stage"):
-                _msg(host, "%s is a body SlipMold built. Select the ware (your model) instead.\n\nMake mold did "
-                     "not start." % body.name)
+        if body is not None and C.get_attr(body, "stage"):
+            _msg(host, "%s is a body SlipMold built. Select the ware (your model) instead.\n\nMake mold did "
+                 "not start." % body.name)
+            return
+        md = ins.itemById("mold")
+        choice = None
+        if md is not None and md.selectedItem is not None:
+            i = md.selectedItem.index
+            choice = "new" if i >= len(mlist) else (None if mlist[i]["active"] else mlist[i]["key"])
+        switched = False
+        if choice:
+            picked = choose_mold(host, choice)
+            if not picked["ok"]:
+                _msg(host, picked["message"] + "\n\nMake mold did not start.")
                 return
-            if cur.get("body") is None or cur["body"] != body or cur.get("how") != "tagged":
-                _log(host, tag_source(host, body, ensure=False)["message"])
+            switched = choice != "new"
+            if picked.get("notes"):
+                _msg(host, picked["message"])
+        if body is not None:
+            if switched and cur.get("body") is not None and body == cur["body"]:
+                pass  # the box still shows the previous mold's model: the chosen mold keeps its own
+            else:
+                now_src = _mod(host, "moldkit.fusion.s0_intake").resolve_source(C.design()) if switched else cur
+                if now_src.get("body") is None or now_src["body"] != body or now_src.get("how") != "tagged":
+                    _log(host, tag_source(host, body, ensure=False)["message"])
         upd = {"s7PerPiece": bool(s7), "printer": H.merge_printer(C.get_config(), printer)}
         if not unsaved:
             upd["saveAfterStage"] = bool(sv)

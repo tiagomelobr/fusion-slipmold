@@ -317,10 +317,46 @@ def _arc_pt(R, x, y, a):
     return (R - r * math.cos(a), y, r * math.sin(a))
 
 
+def _det3(a, b, c):
+    return (a[0] * (b[1] * c[2] - b[2] * c[1]) - a[1] * (b[0] * c[2] - b[2] * c[0])
+            + a[2] * (b[0] * c[1] - b[1] * c[0]))
+
+
+def _meet3(planes):
+    """The point on three planes [(n, h)] (n . p = h), by Cramer's rule."""
+    (n0, h0), (n1, h1), (n2, h2) = planes
+    d = _det3(n0, n1, n2)
+    if abs(d) < 1e-12:
+        raise RuntimeError("round clip: parallel section planes")
+    cols = list(zip(n0, n1, n2))
+    out = []
+    for k in range(3):
+        m = [list(c) for c in cols]
+        m[k] = [h0, h1, h2]
+        out.append(_det3(*[[m[0][r], m[1][r], m[2][r]] for r in range(3)]) / d)
+    return tuple(out)
+
+
+def far_section(p, q, a, R):
+    """Where a piece's planar side faces (side j through p[j], p[j+1] and q[j]) meet the radial plane at angle a:
+    the piece's real end section. The side faces are twisted a few micrometres (a tapered edge also rotates about
+    the arc axis), so this differs from the nominal q; the next piece starts on it and the two share that section
+    exactly (micrometre steps at the joints broke the channel cut, ASM_BAD_BOUNDARY_COEDGE, Bottle 01 2026-10-11)."""
+    n = len(p)
+    sides = []
+    for j in range(n):
+        p0, p1, q0 = p[j], p[(j + 1) % n], q[j]
+        nv = CL._cross([p1[k] - p0[k] for k in range(3)], [q0[k] - p0[k] for k in range(3)])
+        sides.append((nv, sum(nv[k] * p0[k] for k in range(3))))
+    end = ((math.sin(a), 0.0, math.cos(a)), math.sin(a) * R)
+    return [_meet3([sides[j - 1], sides[j], end]) for j in range(n)]
+
+
 def build_round(B, spec):
     """A round clip in its frame (moldkit.core.dovetail round_spec): per segment between two boundary sections,
     the outer block, the channel and the tongue as 3D prismoids between radial planes; outer less channel plus
-    tongue. The channel runs 0.05 mm past both ends so the cut leaves no skin."""
+    tongue. Each piece starts on the previous piece's real end section (far_section). The channel runs 0.05 mm
+    past both ends so the cut leaves no skin."""
     R = spec["radiusMm"]
     segs = spec["segments"]
 
@@ -331,14 +367,15 @@ def build_round(B, spec):
 
     def chain(key, ext=0.0):
         body = None
+        p0 = [_arc_pt(R, x, y, segs[0]["alpha"]) for x, y in segs[0][key]]
         for i in range(len(segs) - 1):
             g0, g1 = segs[i], segs[i + 1]
             a0 = g0["alpha"] - (ext / R if i == 0 else 0.0)
             a1 = g1["alpha"] + (ext / R if i == len(segs) - 2 else 0.0)
-            p0 = [_arc_pt(R, x, y, g0["alpha"]) for x, y in g0[key]]
             p1 = [_arc_pt(R, x, y, g1["alpha"]) for x, y in g1[key]]
             part = B.prismoid3(p0, p1, [plane(a0, 1), plane(a1, -1)])
             body = part if body is None else B.union(body, part)
+            p0 = far_section(p0, p1, g1["alpha"], R)
         return body
 
     body = chain("outer")

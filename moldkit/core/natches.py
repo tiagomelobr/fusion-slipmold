@@ -448,16 +448,20 @@ def _rotate(p, origin, axis, ang):
 
 
 def rotational_symmetry(natches, axis_origin=(0.0, 0.0, 0.0), axis_dir=(0.0, 0.0, 1.0), kmax=6,
-                        tol_mm=2.0, tol_deg=1.0):
+                        tol_mm=2.0, tol_deg=1.0, skip_deg=()):
     """First rotation 360*j/k deg (k = 2..kmax, j = 1..k-1) about the axis that maps the set onto
-    itself, or None. natches: [{"centre": [x,y,z], "dir": [x,y,z], "kind": optional}]."""
+    itself, or None. natches: [{"centre": [x,y,z], "dir": [x,y,z], "kind": optional}]. Angles in
+    skip_deg (the twin-piece symmetry, T1) are not tested."""
     if not natches:
         return None
     o, a = _v(axis_origin), _unit(_v(axis_dir))
     items = [(_v(n["centre"]), _unit(_v(n["dir"])), n.get("kind")) for n in natches]
     zero = (0.0, 0.0, 0.0)
+    skip = {round(x % 360.0, 6) for x in skip_deg}
     for k in range(2, kmax + 1):
         for j in range(1, k):
+            if round(360.0 * j / k, 6) in skip:
+                continue
             ang = 2 * math.pi * j / k
             if all(any(kind2 == kind
                        and math.dist(_rotate(c, o, a, ang), c2) <= tol_mm
@@ -522,15 +526,30 @@ def _min_cast(natches):
     return min(vals) if vals else None
 
 
+class NoTwin(Exception):
+    """The seam faces, or the points left on them, do not allow the twin layout (T1); plan_natches falls back."""
+
+
 def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid=0.5, bin_mm=2.0,
                  revolved=True, axis_origin=(0.0, 0.0, 0.0), axis_dir=(0.0, 0.0, 1.0), kmax=6,
                  tol_mm=2.0, tol_deg=1.0, max_tries=6, gender="single", pieces=None, plug_points=None,
-                 max_flips=8, fit_step_deg=1.0, rotations_deg=None):
+                 max_flips=8, fit_step_deg=1.0, rotations_deg=None, symmetry=None):
     """Place natches on every seam face and enforce asymmetry with the fraction-shift loop.
 
     K1/K2: after placement, bump owners are assigned by `gender` ('single': the seam's bumpPiece owns
     every bump, today's behaviour; 'mixed': alternate owners, then the unique-fit flip loop), see
     assign_genders. `pieces` ([{"id", "pull"}]), `plug_points` and `rotations_deg` feed unique_fit.
+
+    T1 twin pieces: symmetry = {"transform": a half turn (rotation_tf, 180 deg), "pieceMap": {piece: twin
+    piece}} under which the plaster pieces map onto each other. Natches are placed on the first face of each
+    face pair and copied onto the other face by the transform (a face that maps onto itself gets
+    ceil(per_seam / 2) on one half, at >= minSpacing / 2 from the axis, and their copies on the other half);
+    a point is used only if its copy keeps the margins (in-plane and 3D) of the face it lands on. Copied
+    natches carry "twinOf" (the natch they copy) and take the pieceMap image of its bump owner
+    (assign_genders), so the twins end up with the same keys. The F6 asymmetry check and the K2 unique-fit
+    check accept that one symmetry (turning the mold by it gives the same mold). When the faces do not pair
+    up, or no twin-safe point is left on a face, the plan is made without the symmetry, a warning says why
+    and plan["twin"]["reason"] holds it.
 
     faces: [{"id", "loops": [[(x, y), ...], ...] (face-local mm), "frame": {"origin","u","v"} (world mm),
              "bumpPiece", "socketPiece", "protrusion": [x,y,z] (world unit, bump -> socket),
@@ -542,21 +561,51 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
     without plug3d are placed as before (in-plane margin only).
     Returns {"rs", "clearance", "minSpacing", "faces": [...], "natches": [...], "shifts": [...],
              "asymmetry": {"checked", "passed", "symmetric": [...]}, "gender", "flips", "fit",
-             "pieceCounts", "warnings": [...]}. A face with plug3d also reports safePoints3d, plugSamples,
+             "pieceCounts", "twin": {"requested", "planned", "reason", "faces": [{"face", "image"}]},
+             "warnings": [...]}. A face with plug3d also reports safePoints3d, plugSamples,
     plugTolMm and planarOnlyMinCastMm (the min 3D cap-to-cast distance of the in-plane-only placement);
     its natches carry castMm3d (None: no sample within reach, i.e. farther than 2 x (margin + tol)).
     """
+    args = (faces, R, hd, c, margin, per_seam, short_spine_mm, grid, bin_mm, revolved, axis_origin, axis_dir,
+            kmax, tol_mm, tol_deg, max_tries, gender, pieces, plug_points, max_flips, fit_step_deg, rotations_deg)
+    if symmetry is None:
+        return _plan(*args)
+    try:
+        return _plan(*args, symmetry=symmetry)
+    except NoTwin as exc:
+        plan = _plan(*args)
+        plan["twin"].update(requested=True, reason=str(exc))
+        plan["warnings"].insert(0, "twin pieces not laid out (%s): natches placed one way only" % exc)
+        return plan
+
+
+def _plan(faces, R, hd, c, margin, per_seam, short_spine_mm, grid, bin_mm, revolved, axis_origin, axis_dir,
+          kmax, tol_mm, tol_deg, max_tries, gender, pieces, plug_points, max_flips, fit_step_deg, rotations_deg,
+          symmetry=None):
     rs = socket_footprint_radius(R, hd, c)
     clearance = rs + margin
     min_spacing = 2 * rs + margin
+    tf = symmetry["transform"] if symmetry else None
+    orbits = twin_faces(faces, tf, symmetry["pieceMap"]) if symmetry else None
     warnings, preps, results = [], [], []
-    for face in faces:
-        safe = safe_points(face["loops"], clearance, grid)
-        plane_safe, idx = safe, None
+    pre = []
+    for face in faces:  # in-plane safe points and the 3D keep-out of every face (a twin face needs its image's)
+        plane_safe = safe_points(face["loops"], clearance, grid)
+        idx, tol3, safe = None, None, plane_safe
         if face.get("plug3d") is not None:
             tol3 = float(face.get("plugTolMm", PLUG_TOL_MM))
             idx = PlugIndex(face["plug3d"], R + c, hd + c, margin, tol3)
             safe = idx.filter(plane_safe)
+        pre.append({"plane": plane_safe, "safe": safe, "plug": idx, "tol3": tol3})
+    for fi, face in enumerate(faces):
+        plane_safe, safe, idx, tol3 = pre[fi]["plane"], pre[fi]["safe"], pre[fi]["plug"], pre[fi]["tol3"]
+        orb = orbits[fi] if orbits else None
+        image = orb is not None and orb["primary"] != fi
+        if orb is not None and not image and safe:
+            j = orb["image"]
+            safe = _twin_safe(face, faces[j], pre[j]["plug"], safe, tf, clearance, min_spacing, orb["self"])
+            if not safe:
+                raise NoTwin("face %s: no natch point whose copy keeps the margins" % face["id"])
         sp = spine(safe, face.get("frame"), bin_mm)
         preps.append({"safe": safe, "spine": sp, "plug": idx})
         res = {"id": face["id"], "safePoints": len(plane_safe), "spineMm": sp["lengthMm"],
@@ -564,10 +613,15 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
                "natches": []}
         if idx is not None:
             old = None
-            if plane_safe:
+            if plane_safe and not image:
                 old_prep = {"safe": plane_safe, "spine": spine(plane_safe, face.get("frame"), bin_mm), "plug": idx}
                 old = _min_cast(_place_counted(face, old_prep, per_seam, short_spine_mm, min_spacing, rs)[0])
-            res.update(safePoints3d=len(safe), plugSamples=idx.count, plugTolMm=tol3, planarOnlyMinCastMm=old)
+            res.update(safePoints3d=len(pre[fi]["safe"]), plugSamples=idx.count, plugTolMm=tol3,
+                       planarOnlyMinCastMm=old)
+        if image:
+            res["twinOf"] = faces[orb["primary"]]["id"]
+            results.append(res)
+            continue
         if not plane_safe:
             warnings.append("face %s: no safe region for natches (rs %.2f + margin %.2f)"
                             % (face["id"], rs, margin))
@@ -579,12 +633,37 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
                             "mold_natchEdgeMargin or mold_natchRadius)" % (face["id"], rs, margin, len(plane_safe)))
             results.append(res)
             continue
-        natches, fr, count, wanted = _place_counted(face, preps[-1], per_seam, short_spine_mm, min_spacing, rs)
+        want = max(1, (per_seam + 1) // 2) if orb is not None and orb["self"] else per_seam
+        natches, fr, count, wanted = _place_counted(face, preps[-1], want, short_spine_mm, min_spacing, rs)
         if count < wanted:
             warnings.append("face %s: spacing allows only %d natch(es)" % (face["id"], count))
         res.update(count=count, fractions=list(fr), natches=natches)
         results.append(res)
 
+    def mirror(fi):
+        """Copy the natches placed on primary face fi onto its image face (or its other half)."""
+        orb, src = orbits[fi], results[fi]
+        own = src["natches"][:len(src["fractions"])]
+        j = orb["image"]
+        start = len(own) if j == fi else 0
+        copies = [_image_natch(n, tf, faces[j], start + k, rs, pre[j]["plug"]) for k, n in enumerate(own)]
+        for n in copies:
+            if n["marginMm"] < margin - 1e-6 or not _inside(n["centre2d"], faces[j]["loops"]):
+                raise NoTwin("natch copy on face %s misses the face margin (%.3f mm)" % (faces[j]["id"], n["marginMm"]))
+        if j == fi:
+            src.update(natches=own + copies, count=len(own) + len(copies))
+        else:
+            results[j].update(natches=copies, count=len(copies), fractions=list(src["fractions"]),
+                              shift=src["shift"])
+
+    if orbits:
+        for fi, orb in enumerate(orbits):
+            if orb["primary"] == fi:
+                mirror(fi)
+
+    skip = ()
+    if tf is not None and same_rotation(tf, rotation_tf(axis_origin, axis_dir, tf["angleDeg"])):
+        skip = (tf["angleDeg"],)
     shifts, symmetric, checked = [], [], bool(revolved)
     if revolved:
         shift_idx = {}
@@ -592,15 +671,17 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
         while True:
             symmetric = []
             for key, s in sorted(_natch_sets(faces, results).items()):
-                sym = rotational_symmetry(s["natches"], axis_origin, axis_dir, kmax, tol_mm, tol_deg)
+                sym = rotational_symmetry(s["natches"], axis_origin, axis_dir, kmax, tol_mm, tol_deg, skip_deg=skip)
                 if sym:
                     symmetric.append(dict(sym, set=key, faces=[faces[i]["id"] for i in s["faces"]],
                                           _later=s["faces"][-1]))
             if not symmetric or tries >= max_tries:
                 break
             fi = symmetric[0]["_later"]
+            if orbits:
+                fi = orbits[fi]["primary"]  # the copies follow their primary face
             res, face = results[fi], faces[fi]
-            base = default_fractions(res["count"])
+            base = default_fractions(len(res["fractions"]))
             placed = False
             while shift_idx.get(fi, 0) < len(SHIFT_SEQUENCE) and tries < max_tries:
                 sh = SHIFT_SEQUENCE[shift_idx.get(fi, 0)]
@@ -612,6 +693,8 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
                                "spacingOk": ok})
                 if ok:
                     res.update(fractions=fr, natches=natches, shift=sh)
+                    if orbits:
+                        mirror(fi)
                     placed = True
                     break
             if not placed:
@@ -625,19 +708,161 @@ def plan_natches(faces, R, hd, c, margin, per_seam=3, short_spine_mm=100.0, grid
         for n in res["natches"]:
             n["id"] = "N%d" % (len(all_natches) + 1)
             all_natches.append(n)
+    for n in all_natches:
+        src = n.pop("_src", None)
+        if src is not None:
+            n["twinOf"] = src["id"]
     gen = None
     if all_natches:
         gen = assign_genders(all_natches, gender, pieces, revolved, axis_origin, axis_dir, plug_points,
                              max_flips=max_flips, step_deg=fit_step_deg, tol_mm=tol_mm, tol_deg=tol_deg, kmax=kmax,
-                             rotations_deg=rotations_deg)
+                             rotations_deg=rotations_deg, symmetry=symmetry if orbits else None)
         warnings.extend(gen["warnings"])
+    twin = {"requested": symmetry is not None, "planned": orbits is not None, "reason": None,
+            "faces": [{"face": faces[i]["id"], "image": faces[o["image"]]["id"]}
+                      for i, o in enumerate(orbits or []) if o["primary"] == i]}
     return {"rs": rs, "clearance": clearance, "minSpacing": min_spacing, "faces": results,
             "natches": all_natches, "shifts": shifts,
             "asymmetry": {"checked": checked, "passed": (not symmetric) if checked else None,
                           "symmetric": symmetric},
             "gender": gender, "flips": gen["flips"] if gen else [], "fit": gen["fit"] if gen else None,
-            "pieceCounts": gen["pieces"] if gen else {},
+            "pieceCounts": gen["pieces"] if gen else {}, "twin": twin,
             "warnings": warnings}
+
+
+# ---------------------------------------------------------------- T1 twin pieces
+TWIN_TOL_MM = 0.05  # a natch copy lands within this of a natch (natch_map)
+TWIN_TOL_DEG = 0.5  # direction: a bump and a socket differ by 180 deg; S6 axes come from face centroids
+
+
+def _local(frame, p):
+    """World point -> face-local (x, y) (the inverse of _to_world on the face plane)."""
+    if not frame:
+        return (float(p[0]), float(p[1]))
+    o, u, v = frame["origin"], frame["u"], frame["v"]
+    q = [p[k] - o[k] for k in range(3)]
+    return (_dot(q, u), _dot(q, v))
+
+
+def _inside(pt, loops):
+    """Even-odd containment over all loops."""
+    return sum(1 for lp in loops if geom2d.point_in_polygon(pt, lp)) % 2 == 1
+
+
+def _face_centroid(face):
+    """Area centroid of a seam face (holes subtracted), world mm."""
+    loops = face["loops"]
+    sx = sy = st = 0.0
+    for info, lp in zip(geom2d.classify_loops(loops), loops):
+        s = info["area"] * (1 if info["depth"] % 2 == 0 else -1)
+        cx, cy = geom2d.centroid(lp)
+        sx, sy, st = sx + s * cx, sy + s * cy, st + s
+    if abs(st) < 1e-9:
+        pts = [p for lp in loops for p in lp]
+        x, y = sum(p[0] for p in pts) / len(pts), sum(p[1] for p in pts) / len(pts)
+    else:
+        x, y = sx / st, sy / st
+    frame = face.get("frame")
+    return _v(_to_world(frame, x, y)) if frame else (x, y, 0.0)
+
+
+def same_rotation(a, b, tol_mm=1e-4, tol_deg=1e-6):
+    """True if two rotation transforms (rotation_tf) are the same rigid motion: one axis line, one angle mod 360."""
+    da, db = _unit(_v(a["axisDir"])), _unit(_v(b["axisDir"]))
+    s = _dot(da, db)
+    if 1.0 - abs(s) > 1e-9:
+        return False
+    d = (a["angleDeg"] - (b["angleDeg"] if s > 0 else -b["angleDeg"])) % 360.0
+    if min(d, 360.0 - d) > tol_deg:
+        return False
+    w = [b["axisOrigin"][k] - a["axisOrigin"][k] for k in range(3)]
+    t = _dot(w, da)
+    return math.dist(w, [t * x for x in da]) <= tol_mm
+
+
+def twin_faces(faces, tf, piece_map, tol_mm=0.1, area_rel=0.01, tol_deg=0.05):
+    """T1: pair the seam faces under a half turn tf. Returns per face {"primary", "image", "self"} (indices; a
+    face's primary is the earlier face of its pair, the image the later one; "self" when the face maps onto
+    itself). Partners: the same two pieces after piece_map, centroid mapped within tol_mm, area within
+    area_rel, normal mapped onto the partner's normal line within tol_deg. Raises NoTwin when a face has none."""
+    if abs(tf["angleDeg"] % 360.0 - 180.0) > 1e-6:
+        raise NoTwin("only a half turn is supported, not %g deg" % tf["angleDeg"])
+    info = [(_face_centroid(f), abs(_face_area(f["loops"])), _v(f.get("protrusion") or (0.0, 0.0, 1.0)))
+            for f in faces]
+    out = [None] * len(faces)
+    for j, fj in enumerate(faces):
+        if out[j] is not None:
+            continue
+        pair = {piece_map.get(fj["bumpPiece"], fj["bumpPiece"]), piece_map.get(fj["socketPiece"], fj["socketPiece"])}
+        cj, nj = apply_tf(tf, info[j][0]), apply_tf(tf, info[j][2], True)
+        hit = None
+        for k in range(j, len(faces)):
+            fk = faces[k]
+            if out[k] is not None or {fk["bumpPiece"], fk["socketPiece"]} != pair:
+                continue
+            if (math.dist(cj, info[k][0]) <= tol_mm and abs(info[j][1] - info[k][1]) <= area_rel * max(info[j][1], 1e-9)
+                    and axis_angle_deg(nj, info[k][2]) <= tol_deg):
+                hit = k
+                break
+        if hit is None:
+            raise NoTwin("seam face %s has no twin face" % fj["id"])
+        out[j] = {"primary": j, "image": hit, "self": hit == j}
+        if hit != j:
+            out[hit] = {"primary": j, "image": hit, "self": False}
+    return out
+
+
+def _twin_safe(face, img, img_plug, safe, tf, clearance, min_spacing, self_map):
+    """Safe points of a primary face whose copies (tf) keep the in-plane clearance and the 3D keep-out of the
+    image face. On a face that maps onto itself only the half at >= min_spacing / 2 from the axis is used, so
+    a natch and every copy stay min_spacing apart."""
+    frame, iframe = face.get("frame"), img.get("frame")
+    grid = _SegGrid(_segments(img["loops"]), max(clearance, 0.5))
+    half = None
+    if self_map:
+        a, n = _unit(_v(tf["axisDir"])), _unit(_v(face.get("protrusion") or (0.0, 0.0, 1.0)))
+        d = (a[1] * n[2] - a[2] * n[1], a[2] * n[0] - a[0] * n[2], a[0] * n[1] - a[1] * n[0])
+        if _norm(d) < 1e-6:
+            raise NoTwin("face %s turns onto itself about its own normal" % face["id"])
+        half = (_v(tf["axisOrigin"]), _unit(d))
+    out = []
+    for p in safe:
+        w = _to_world(frame, p[0], p[1]) if frame else (p[0], p[1], 0.0)
+        if half is not None and _dot([w[k] - half[0][k] for k in range(3)], half[1]) < min_spacing / 2.0:
+            continue
+        q = _local(iframe, apply_tf(tf, w))
+        if grid.clear(q[0], q[1], clearance) and (img_plug is None or img_plug.clear(q[0], q[1])):
+            out.append(p)
+    return out
+
+
+def _image_natch(src, tf, face, index, rs, plug):
+    """The copy of natch src on face (tf): placed like a natch of that face (its seam bump, socket and
+    protrusion); assign_genders gives it the pieceMap image of src's owner."""
+    c2 = apply_tf(tf, src["centre"])
+    x, y = _local(face.get("frame"), c2)
+    n = {"face": face["id"], "index": index, "centre2d": [x, y], "centre": list(c2),
+         "protrusion": list(face["protrusion"]) if face.get("protrusion") else [0.0, 0.0, 1.0],
+         "bumpPiece": face.get("bumpPiece"), "socketPiece": face.get("socketPiece"),
+         "interface": face.get("interface"), "marginMm": boundary_distance((x, y), face["loops"]) - rs, "_src": src}
+    if plug is not None:
+        n["castMm3d"] = plug.min_distance(x, y)
+    return n
+
+
+def natch_map(natches, tf, piece_map, tol_mm=TWIN_TOL_MM, tol_deg=TWIN_TOL_DEG):
+    """{natch id: image id} when tf maps every natch onto a natch with the same protrusion whose bump and socket
+    pieces are the piece_map images of its own (the natch layout has that symmetry); None otherwise."""
+    out = {}
+    for n in natches:
+        c2, d2 = apply_tf(tf, n["centre"]), apply_tf(tf, n["protrusion"], True)
+        want = (piece_map.get(n["bumpPiece"], n["bumpPiece"]), piece_map.get(n["socketPiece"], n["socketPiece"]))
+        hit = next((m["id"] for m in natches if (m["bumpPiece"], m["socketPiece"]) == want
+                    and math.dist(c2, _v(m["centre"])) <= tol_mm and angle_deg(d2, m["protrusion"]) <= tol_deg), None)
+        if hit is None:
+            return None
+        out[n["id"]] = hit
+    return out
 
 
 def _face_area(loops):
@@ -792,26 +1017,42 @@ def candidate_moves(natches, pieces=None, revolved=True, axis_origin=(0.0, 0.0, 
 
 def unique_fit(natches, pieces=None, revolved=True, axis_origin=(0.0, 0.0, 0.0), axis_dir=(0.0, 0.0, 1.0),
                plug_points=None, plug_tol_mm=0.1, extra_transforms=None, kmax=6, step_deg=1.0,
-               tol_mm=2.0, tol_deg=1.0, max_report=5, rotations_deg=None):
+               tol_mm=2.0, tol_deg=1.0, max_report=5, rotations_deg=None, symmetries=None):
     """K2: is there a wrong assembly (a rigid motion != identity of a movable set that still closes)?
 
     natches: [{"id", "centre", "protrusion" (bump -> socket), "bumpPiece", "socketPiece"}] (mm).
     A move is a wrong assembly when every bump on the interface between the moved set and the rest lands
     on a socket of the other side and at least one natch pairs with a different natch than itself.
+    symmetries (T1 twin pieces): [{"transform", "pieceMap"}] under which the whole mold maps onto itself (the
+    caller has checked the piece bodies). When the natch layout has one of them (natch_map), a move of a set
+    that is its own image under its pieceMap whose natches all land on their natch_map images is that
+    symmetry within the natch play: the same mold, not a wrong assembly. Such moves are counted in
+    "symmetricSkipped".
     Returns {"uniqueFit", "status" ("unique" | "unique by geometry" | "not unique"), "uniqueByGeometry",
              "geometry", "axial", "sides", "tested": [{"moved", "transform", "count"}],
              "wrongAssemblies": [{"moved", "transform", "pairs": [{"moved", "onto", "role"}], "maxErrMm"}],
-             "wrongCount"}.
+             "wrongCount", "symmetries": [{"angleDeg", "pieceMap", "natchesMatch"}], "symmetricSkipped"}.
     """
     moves, geometry, axial, sides = candidate_moves(natches, pieces, revolved, axis_origin, axis_dir, plug_points,
                                                     plug_tol_mm, extra_transforms, kmax, step_deg, rotations_deg)
-    tested, found = [], {}
+    sym_rows, kept = [], []
+    for s in symmetries or ():
+        nmap = natch_map(natches, s["transform"], s["pieceMap"])
+        sym_rows.append({"angleDeg": round(s["transform"]["angleDeg"], 6), "pieceMap": dict(s["pieceMap"]),
+                         "natchesMatch": nmap is not None})
+        if nmap is not None:
+            kept.append((s["pieceMap"], nmap))
+    tested, found, skipped = [], {}, 0
     for moved, label, tfs in moves:
         tested.append({"moved": list(moved), "transform": label, "count": len(tfs)})
         mv, rest = _features(natches, set(moved))
+        maps = [nmap for pm, nmap in kept if {pm.get(p, p) for p in moved} == set(moved)]
         for tf in tfs:
             pairs = _try_move(mv, rest, tf, tol_mm, tol_deg)
             if pairs is None or (pairs and all(p[0] == p[1] for p in pairs)):
+                continue
+            if pairs and any(all(nmap.get(p[0]) == p[1] for p in pairs) for nmap in maps):
+                skipped += 1
                 continue
             key = (moved, frozenset((p[0], p[1]) for p in pairs))
             err = max((p[3] for p in pairs), default=0.0)
@@ -825,7 +1066,7 @@ def unique_fit(natches, pieces=None, revolved=True, axis_origin=(0.0, 0.0, 0.0),
     status = "unique by geometry" if by_geom else ("unique" if not wrong else "not unique")
     return {"uniqueFit": not wrong, "status": status, "uniqueByGeometry": by_geom, "geometry": geometry,
             "axial": axial, "sides": sides, "tested": tested, "wrongAssemblies": wrong[:max_report],
-            "wrongCount": len(wrong)}
+            "wrongCount": len(wrong), "symmetries": sym_rows, "symmetricSkipped": skipped}
 
 
 # ---------------------------------------------------------------- K1 genders
@@ -893,7 +1134,7 @@ def _flip_candidates(natches, ifaces, fit, base):
 
 def assign_genders(natches, gender="mixed", pieces=None, revolved=True, axis_origin=(0.0, 0.0, 0.0),
                    axis_dir=(0.0, 0.0, 1.0), plug_points=None, max_flips=8, step_deg=1.0, tol_mm=2.0,
-                   tol_deg=1.0, kmax=6, extra_transforms=None, rotations_deg=None):
+                   tol_deg=1.0, kmax=6, extra_transforms=None, rotations_deg=None, symmetry=None):
     """K1: set the bump owner of every natch (mutates natches) and run the K2 check.
 
     natches need "id", "centre", "protrusion", "bumpPiece", "socketPiece" (the seam default, kept as
@@ -903,6 +1144,9 @@ def assign_genders(natches, gender="mixed", pieces=None, revolved=True, axis_ori
     between interfaces (first-appearance order); if K2 fails, try the flips of _flip_candidates one at
     a time from that base (up to max_flips); without success the base assignment is kept.
     A flip keeps the natch axis: the bump moves to the other piece and the protrusion reverses.
+    T1 twin pieces (symmetry {"transform", "pieceMap"}, natches with "twinOf"): owners are chosen for the
+    natches that are not copies, and a copy gets the pieceMap image of its source's owner; a flip flips the
+    source and its copy; unique_fit gets the symmetry.
     Returns {"gender", "interfaces": [...], "flips": [{"try", "interface", "natches", "uniqueFit"}],
              "fit": unique_fit result, "pieces": {id: {"bumps", "sockets"}}, "constraintOk", "warnings"}.
     """
@@ -916,26 +1160,49 @@ def assign_genders(natches, gender="mixed", pieces=None, revolved=True, axis_ori
             n["interface"] = "%s|%s" % (n["seamBump"], n["seamSocket"])
     ifaces = _interfaces(natches)
     byid = {n["id"]: n for n in natches}
+    twin = symmetry is not None and any(n.get("twinOf") for n in natches)
+    pmap = symmetry["pieceMap"] if twin else {}
+    prim = [n for n in natches if not n.get("twinOf")] if twin else natches
+
+    def expand(owners):
+        """Copies follow their source: owner = pieceMap image of the source's owner."""
+        for n in natches:
+            if twin and n.get("twinOf"):
+                own = owners[n["twinOf"]]
+                own = pmap.get(own, own)
+                if own not in (n["seamBump"], n["seamSocket"]):
+                    raise ValueError("twin natch %s: owner %s is not on its seam" % (n["id"], own))
+                owners[n["id"]] = own
+        return owners
+
     base = {}
-    for k, idx in enumerate(ifaces.values()):
+    for k, idx in enumerate(_interfaces(prim).values()):
         for t, i in enumerate(idx):
-            n = natches[i]
+            n = prim[i]
             first = gender == "single" or (t + k) % 2 == 0
             base[n["id"]] = n["seamBump"] if first else n["seamSocket"]
+    base = expand(base)
     _set_owners(natches, base)
 
     def check():
         return unique_fit(natches, pieces, revolved, axis_origin, axis_dir, plug_points,
                           extra_transforms=extra_transforms, kmax=kmax, step_deg=step_deg,
-                          tol_mm=tol_mm, tol_deg=tol_deg, rotations_deg=rotations_deg)
+                          tol_mm=tol_mm, tol_deg=tol_deg, rotations_deg=rotations_deg,
+                          symmetries=[symmetry] if twin else None)
 
     fit, flips, warnings = check(), [], []
     if gender == "mixed" and not fit["uniqueFit"] and max_flips > 0:
-        for iface, cand in _flip_candidates(natches, ifaces, fit, base)[:max_flips]:
+        cands, seen = [], set()
+        for iface, cand in _flip_candidates(natches, ifaces, fit, base):
+            roots = tuple(sorted({byid[nid].get("twinOf") or nid for nid in cand})) if twin else cand
+            if roots not in seen:
+                seen.add(roots)
+                cands.append((iface, roots))
+        for iface, cand in cands[:max_flips]:
             owners = dict(base)
             for nid in cand:
                 owners[nid] = _other(byid[nid], base[nid])
-            _set_owners(natches, owners)
+            _set_owners(natches, expand(owners))
             f2 = check()
             flips.append({"try": len(flips) + 1, "interface": iface, "natches": list(cand),
                           "uniqueFit": f2["uniqueFit"]})

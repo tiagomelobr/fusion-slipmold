@@ -269,5 +269,57 @@ class CavityEvalTest(unittest.TestCase):
                          [True, True, False])
 
 
+class PlasterLabelTest(unittest.TestCase):
+    DEFAULTS = {"settings": {"process": {"consistency": 70, "dryPlasterGPerCm3": 0.985, "overagePct": 15,
+                                         "wetDensityGPerCm3": 1.58, "wetPieceWeightWarnKg": 6.0}}}
+
+    def test_rows_follow_the_process_sheet(self):
+        mold = {"pieces": [{"id": "side1", "volumeCm3": 1000.0}, {"id": "side2"}]}
+        self.assertEqual(s7.plaster_rows(mold, self.DEFAULTS), {"side1": ["Gesso/água: 1133g / 793g"]})
+        mold["settings"] = {"process": {"consistency": 60}}
+        self.assertEqual(s7.plaster_rows(mold, self.DEFAULTS)["side1"], ["Gesso/água: 1133g / 680g"])
+
+    def test_make_labels(self):
+        def lab(h):
+            return {"maxW": 80.0, "maxH": h, "lines": 2}
+
+        plans = {"side1": {"parts": [{"id": "side1_core", "role": "core", "label": lab(60.0)},
+                                     {"id": "side1_sector1", "role": "sector", "sector": {"index": 1}, "label": lab(40.0)},
+                                     {"id": "side1_sector2", "role": "sector", "sector": {"index": 2}, "label": lab(40.0)}]}}
+        calls = []
+
+        def make_bodies(_d, specs, fits=lambda s: True):
+            calls.append([list(s["lines"]) for s in specs])
+            return [{"body": s["lines"], "hMm": 5.0, "wMm": 50.0, "lines": s["lines"]} if fits(s) else None
+                    for s in specs]
+
+        old = (s7.FL.make_bodies, s7.FL.place, s7.C.doc_name)
+        s7.FL.place, s7.C.doc_name = (lambda body, _lab: body), (lambda: "Cup 02")
+        try:
+            s7.FL.make_bodies = make_bodies
+            tools, rows = s7.make_labels(None, plans, ["side1"], {"side1": ["side1", "side2"]},
+                                         {"side1": ["Gesso/água: 1133g / 793g"]})
+            self.assertEqual(tools["side1"]["side1_sector1"],
+                             ["CUP 02", "side1 sector1 x2", "Gesso/água: 1133g / 793g"])
+            self.assertEqual(tools["side1"]["side1_core"], ["CUP 02", "side1 core x2"])
+            self.assertEqual([r.get("plaster", False) for r in rows], [False, True, False])
+            self.assertEqual(len(calls), 1)
+            # no room on the sectors: the batch moves on to the next part (sector2, then the core)
+            calls.clear()
+            s7.FL.make_bodies = lambda d, specs: make_bodies(d, specs, lambda s: len(s["lines"]) < 3 or s["maxH"] > 50)
+            tools, rows = s7.make_labels(None, plans, ["side1"], None, {"side1": ["Gesso/água: 1133g / 793g"]})
+            self.assertEqual(tools["side1"]["side1_sector1"], ["CUP 02", "side1 sector1"])
+            self.assertEqual(tools["side1"]["side1_core"][2:], ["Gesso/água: 1133g / 793g"])
+            self.assertEqual([r.get("plaster", False) for r in rows], [True, False, False])
+            self.assertEqual(len(calls), 3)
+            # no room anywhere: every part keeps its name, the last one tried reports it
+            s7.FL.make_bodies = lambda d, specs: make_bodies(d, specs, lambda s: len(s["lines"]) < 3)
+            tools, rows = s7.make_labels(None, plans, ["side1"], None, {"side1": ["Gesso/água: 1133g / 793g"]})
+            self.assertEqual(sorted(len(v) for v in tools["side1"].values()), [2, 2, 2])
+            self.assertEqual([bool(r.get("plasterSkipped")) for r in rows], [True, False, False])
+        finally:
+            s7.FL.make_bodies, s7.FL.place, s7.C.doc_name = old
+
+
 if __name__ == "__main__":
     unittest.main()

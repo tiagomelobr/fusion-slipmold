@@ -51,12 +51,12 @@ li { margin:2px 0; }
 </style></head>
 <body><nav><button onclick="history.back()" title="Back">&#9664; Back</button><a href="user-guide.html">User guide</a><a href="parameters.html" class="on">Parameters</a><a href="validation.html">Tested shapes</a><a href="add-in.html">Add-in reference</a></nav><main>
 <h1 id="parameter-reference">Parameter reference</h1>
-<p>Generated from <code>moldkit/defaults.json</code> by <code>python tools/gen_param_docs.py</code>: do not edit by hand. 61 parameters: 6 you set, 10 printer profile values and 45 engine values. The guide for using them is <a href="user-guide.html">USER_GUIDE.md</a>.</p>
+<p>Generated from <code>moldkit/defaults.json</code> by <code>python tools/gen_param_docs.py</code>: do not edit by hand. 64 parameters: 6 you set, 10 printer profile values and 48 engine values. The guide for using them is <a href="user-guide.html">USER_GUIDE.md</a>.</p>
 <p>Every parameter has a name <code>mold_&lt;name&gt;</code>, but only some are user parameters in the design:</p>
 <ul>
 <li><strong>Parameters you set</strong> (6): SlipMold creates them as user parameters. Edit them in Fusion's own Change Parameters dialog: SlipMold &gt; Parameters opens it (and first creates any missing one), or use Modify &gt; Change Parameters &gt; User Parameters.</li>
 <li><strong>Printer profile</strong> (10): your printer's bed, nozzle and print clearances. They are not in the design: you set them once in the user config file and they apply to every mold.</li>
-<li><strong>Engine values</strong> (45): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).</li>
+<li><strong>Engine values</strong> (48): SlipMold works them out from the model, your inputs and the printer profile. You do not set them. To change one for a single mold, add a user parameter with its name (an override).</li>
 </ul>
 <p>Each user parameter's comment starts with the group title in brackets, for example <code>[Plaster]</code>. Values are expressions with units, for example <code>25 mm</code> or <code>15 deg</code>, and may be formulas that use the model's own parameters (<code>mold_plasterWall = cupHeight / 4</code>); SlipMold compares the evaluated values, so a change of <code>cupHeight</code> alone is seen through the model it reshapes (everything runs again), and after changing a parameter that does not shape the model use Reset from stage. Text parameters keep their single quotes (<code>'auto'</code>) and accept only the choices listed below; Make mold stops with a message before any stage runs when a Text value is not one of them. Changes apply on the next Make mold. The defaults below are research values (rule ids point to <code>docs/research/design-rules.md</code>); calibrate the ones marked in the description with the leak test (process sheet section 1: one piece's casing printed first). Model sizes are in millimetres whatever the document unit.</p>
 <h2 id="what-runs-again-when-a-value-changes">What runs again when a value changes</h2>
@@ -81,7 +81,7 @@ li { margin:2px 0; }
 <thead><tr><th>Parameter</th><th>Default</th><th>Unit</th><th>Group</th><th>Runs again</th><th>Description</th><th>Rule</th></tr></thead>
 <tbody>
 <tr><td><code>mold_plasterWall</code></td><td><code>25 mm</code></td><td>mm</td><td>Plaster</td><td>S4 onward</td><td>Nominal plaster wall around the cast plug</td><td>CER-09</td></tr>
-<tr><td><code>mold_spareHeight</code></td><td><code>20 mm</code></td><td>mm</td><td>Spare</td><td>S2 onward</td><td>Slip well height above the rim</td><td>CER-12</td></tr>
+<tr><td><code>mold_spareHeight</code></td><td><code>20 mm</code></td><td>mm</td><td>Spare</td><td>S2 onward</td><td>Least slip well height above the rim: S2 builds the well taller when the slip the cast draws needs it (castWall, slipDropRatio)</td><td>CER-12</td></tr>
 <tr><td><code>mold_spareStepOut</code></td><td><code>10 mm</code></td><td>mm</td><td>Spare</td><td>S2 onward</td><td>Outward step at rim height = flat plaster knife ledge for trimming</td><td>CER-12</td></tr>
 <tr><td><code>mold_layout</code></td><td><code>'auto'</code></td><td>text</td><td>Layout</td><td>S3 onward</td><td>Plaster piece layout: auto (S3 picks the best) | dropOut | sides2 | sides2Bottom | sides3Bottom | sides4Bottom. Choices: <code>'auto'</code>, <code>'dropOut'</code>, <code>'sides2'</code>, <code>'sides2Bottom'</code>, <code>'sides3Bottom'</code>, <code>'sides4Bottom'</code></td><td>SW-13</td></tr>
 <tr><td><code>mold_splitAzimuth</code></td><td><code>0 deg</code></td><td>deg</td><td>Layout</td><td>S3 onward</td><td>Azimuth of the first vertical split plane, used with a fixed layout or a turned (revolved) ware; with layout auto on any other ware S3 searches the azimuth itself</td><td>CER-06</td></tr>
@@ -120,6 +120,8 @@ li { margin:2px 0; }
 <thead><tr><th>Parameter</th><th>Engine value</th><th>Unit</th><th>Description</th><th>Rule</th></tr></thead>
 <tbody>
 <tr><td><code>mold_spareFlare</code></td><td><code>15 deg</code></td><td>deg</td><td>Outward flare of the well walls</td><td>CER-12</td></tr>
+<tr><td><code>mold_castWall</code></td><td><code>4 mm</code></td><td>mm</td><td>Cast wall thickness you aim for: sizes the slip well (the slip the plaster draws while it casts)</td><td>CER-24</td></tr>
+<tr><td><code>mold_slipDropRatio</code></td><td><code>0.24</code></td><td>-</td><td>Slip the plaster draws out of the well per volume of cast wall (cm3 per cm3; uncalibrated): the well holds twice the level drop plus 5 mm</td><td>CER-12</td></tr>
 </tbody></table>
 <h3 id="layout">Layout</h3>
 <p>How the plaster mold is split into pieces.</p>
@@ -155,7 +157,8 @@ li { margin:2px 0; }
 <tr><td><code>mold_natchClearance</code></td><td><code>0.5 mm</code></td><td>mm</td><td>Radial play between plaster bump and socket (independent casings); plaster to plaster, so it does not follow the printer fit (printed dome and cup errors both loosen it)</td><td>CER-15</td></tr>
 <tr><td><code>mold_natchesPerSeam</code></td><td><code>3</code></td><td>-</td><td>Keys per seam, asymmetric</td><td>CER-14</td></tr>
 <tr><td><code>mold_natchEdgeMargin</code></td><td><code>5 mm</code></td><td>mm</td><td>Min distance from a key to the cast (measured in 3D) and from its footprint to the seam edges</td><td>CER-14</td></tr>
-<tr><td><code>mold_natchGender</code></td><td><code>'mixed'</code></td><td>text</td><td>Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) | single (all bumps of an interface on one piece). Choices: <code>'mixed'</code>, <code>'single'</code></td><td>CER-14</td></tr>
+<tr><td><code>mold_natchGender</code></td><td><code>'mixed'</code></td><td>text</td><td>Key genders: mixed (each piece gets bumps and sockets on every interface, unique fit checked) | single (all bumps of a seam face on one piece). Choices: <code>'mixed'</code>, <code>'single'</code></td><td>CER-14</td></tr>
+<tr><td><code>mold_twinPieces</code></td><td><code>'auto'</code></td><td>text</td><td>Twin pieces: auto (when a half turn maps one side piece onto the other, both get the same keys and one casing casts both) | off (keys one way only, a casing per piece). Choices: <code>'auto'</code>, <code>'off'</code></td><td>CER-14</td></tr>
 </tbody></table>
 <h3 id="casing">Casing</h3>
 <p>The 3D-printed casing (mother mold) walls and fill line.</p>
@@ -221,6 +224,7 @@ li { margin:2px 0; }
 <tr><td>analysis</td><td><code>plasterWallFailRatio</code></td><td><code>0.6</code></td></tr>
 <tr><td>analysis</td><td><code>plasterWallMinAbsMm</code></td><td><code>15.0</code></td></tr>
 <tr><td>analysis</td><td><code>releaseToleranceCm3</code></td><td><code>1e-05</code></td></tr>
+<tr><td>analysis</td><td><code>twinToleranceCm3</code></td><td><code>0.001</code></td></tr>
 <tr><td>analysis</td><td><code>casingDraftWarnDeg</code></td><td><code>3.0</code></td></tr>
 <tr><td>analysis</td><td><code>casingDraftFailDeg</code></td><td><code>1.0</code></td></tr>
 <tr><td>process</td><td><code>plaster</code></td><td><code>USG No. 1 Pottery Plaster</code></td></tr>

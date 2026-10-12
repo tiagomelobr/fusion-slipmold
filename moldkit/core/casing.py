@@ -46,6 +46,8 @@ L6 print: plates, floors and base cores lie plate back on the bed (release -> +Z
 core with a ledge stand on their foot (cast orientation, foot lap plane -> z = 0; the core's spare step,
 the knife ledge, then needs build-plate supports). bed_fit, overhang helpers, part mass.
 Labels (moldkit.core.labels): plan_labels places one engraved label per part.
+Matching marks (moldkit.core.marks): plan_marks numbers the vertical sector seams and the sector feet and places
+the grooves that cross them (j["marks"]).
 """
 import math
 
@@ -54,6 +56,7 @@ from moldkit.core import dovetail as DV
 from moldkit.core import fit as F
 from moldkit.core import geom2d
 from moldkit.core import labels as LB
+from moldkit.core import marks as MK
 
 DEFAULTS = {
     "casingWall": 2.4, "casingBasePlate": 4.8,"casingRingSectors": 4, "casingFreeboard": 10.0,
@@ -66,6 +69,8 @@ DEFAULTS = {
 }
 GROOVE_WALL_MIN_MM = 1.2   # PRN-10: groove walls >= 1.2 mm and 3 nozzle lines (groove_wall)
 GROOVE_FLOOR_MIN_MM = 1.2  # PRN-10: flange skin under a groove; 0.6 mm (3 mm flange) was a likely leak
+# seam ridges (defaults.json): plan_marks keeps the marks at the flange edge clear of the ridge grooves
+RIDGE_DEFAULTS = {"ridgeWidth": 0.8, "ridgeHeight": 1.0, "ridgeInset": 1.5, "seamClearance": 0.16, "ridgeCount": 3}
 TEXT_DEFAULTS = {"clipRailStyle": "dovetail"}  # Text parameters plan_clips reads (casing_params passes them)
 PLAN_DEFAULTS = {"_doveStd": None,  # set by plan_pieces: the mold's standard dovetail clip lengths
                  "_roundStd": None}  # and its round clip length and radii {"L", "radii"}
@@ -81,6 +86,7 @@ def resolve_params(params=None):
     out = dict(DEFAULTS)
     out.update(CL.PARAM_DEFAULTS)
     out.update(DV.PARAM_DEFAULTS)
+    out.update(RIDGE_DEFAULTS)
     out.update(TEXT_DEFAULTS)
     out.update(PLAN_DEFAULTS)
     for k, v in (params or {}).items():
@@ -1254,6 +1260,7 @@ def _plan_piece(piece, outline, p, ridge_rule, nsec_want):
     # part since 2026-10-08: the base rests on the bench, the clips' lower arms just under its back)
     top_zp = up[2] * (screed_z - base_z) + p["casingFreeboard"]
     plan_clips(joints, byid, nsec, closed, outline, centre, base_z, up[2], top_zp, off_flange, p)
+    plan_marks(parts, joints, outline, centre, bounds, closed, base_z, up[2], top_zp, off_flange, p)
     plan_labels(parts, joints, outline, centre, bounds, closed, base_z, up[2], top_zp, off_band, off_flange, p)
 
     # print orientation + estimated bed fit (the adapter re-checks with the real bodies)
@@ -1344,6 +1351,91 @@ def sliding_base_lap(j, p):
               "ledge": {"widthMm": p["flangeWidth"], "thicknessMm": p["flangeThickness"]},
               "note": "horizontal lap under the plate foot; the plate's ledge on the base extension, short clips"})
     return j
+
+
+def _arc_end(az, ends):
+    """The arc end (deg) nearest to azimuth az."""
+    return min(ends, key=lambda e: abs(((az - e + 180.0) % 360.0) - 180.0))
+
+
+def plan_marks(parts, joints, outline, centre, bounds, closed, base_z, up_z, top_zp, of, p):
+    """j["marks"] (moldkit.core.marks) for every joint: rungs across the vertical sector seams (radial pairs and
+    arc-end laps), seam k along the arc from its start carrying k lines; ticks across each sector's foot seam,
+    sector k carrying k, in the widest stretch of the foot run free of clip sites; {"count": 0, "why"} elsewhere.
+    Cast heights zp as in the builder (lap plane L, foot top L + flangeThickness, casing top top_zp). Call after
+    plan_clips (the ticks avoid the clip sites)."""
+    q = MK.MARK
+    ft = p["flangeThickness"]
+    L = -(p["casingBasePlate"] - ft)
+    zf = L + ft
+    byid = {x["id"]: x for x in parts}
+    w = q["widthMm"]
+
+    def mark_depth(j):
+        zone = ridge_zone(p, j["ridge"])
+        return MK.depth(p["flangeWidth"] - (zone - groove_wall(p) if zone > 0 else 0.0), p["nozzle"], q)
+
+    rungs = []
+    for j in joints:
+        roles = [byid[x]["role"] for x in j["parts"]]
+        if j["kind"] == "radial":
+            rungs.append((j, byid[j["parts"][0]]["sector"]["toDeg"]))
+        elif j["kind"] == "lap" and "sector" in roles:
+            mid = j["path"][len(j["path"]) // 2]
+            rungs.append((j, _arc_end(math.degrees(math.atan2(mid[1] - centre[1], mid[0] - centre[0])),
+                                      (bounds[0], bounds[-1]))))
+        elif j["kind"] != "foot":
+            j["marks"] = {"count": 0, "why": "the core ledge places the core on the floor" if
+                          j.get("lapKind") == "baseSlide" else "%s joint between plates" % j["kind"]}
+
+    def along(b):  # position along the arc from its start; a closed ring's last seam (back at the start) last
+        k = (b - bounds[0]) % 360.0
+        return 360.0 if closed and k < 1e-6 else k
+
+    for n, (j, b) in enumerate(sorted(rungs, key=lambda x: along(x[1])), start=1):
+        dep = mark_depth(j)
+        zs = [round(top_zp - q["topMm"] - o, 6) for o in MK.offsets(n, q)]
+        if dep is None:
+            j["marks"] = {"count": 0, "why": "flange edge too thin outside the ridge grooves"}
+        elif zs[-1] - w / 2.0 < zf + q["footClearMm"]:
+            j["marks"] = {"count": 0, "why": "seam too short for %d lines" % n}
+        else:
+            j["marks"] = {"kind": "rungs", "count": n, "depthMm": dep, "widthMm": w,
+                          "halfMm": round(ft - q["rungInsetMm"], 6), "azDeg": round(b, 6), "zp": zs}
+
+    for j in joints:
+        if j["kind"] != "foot":
+            continue
+        sec = byid[j["parts"][1]]["sector"]
+        n, b0, b1 = sec["index"], sec["fromDeg"], sec["toDeg"]
+        r = outline.ray(centre, 0.5 * (b0 + b1), base_z + up_z * L, of)
+
+        def deg(mm, r=r):
+            return math.degrees(mm / r)
+
+        e, pad = deg(ft + q["edgeClearMm"]), deg(q["clipPadMm"])
+        cj = j.get("clip") or {}
+        busy = []
+        if cj.get("type") == "round":
+            for st in cj["stations"]:
+                a = [st["notchDeg"], st["headDeg"], st["lugDeg"]]
+                busy.append((min(x[0] for x in a) - pad, max(x[1] for x in a) + pad))
+        elif cj.get("type") == "short":
+            for s in cj["sites"]:
+                hw = deg(s["lengthMm"] / 2.0)
+                busy.append((s["atDeg"] - hw - pad, s["atDeg"] + hw + pad))
+        dep = mark_depth(j)
+        got = MK.place(b0 + e, b1 - e, busy, deg(MK.span(n, q)))
+        if dep is None:
+            j["marks"] = {"count": 0, "why": "flange edge too thin outside the ridge grooves"}
+        elif got is None:
+            j["marks"] = {"count": 0, "why": "foot too short between the crossing flanges"}
+        else:
+            c, clear = got
+            offs = MK.offsets(n, q)
+            j["marks"] = {"kind": "ticks", "count": n, "depthMm": dep, "widthMm": w,
+                          "halfMm": round(ft - q["tickInsetMm"], 6), "zp": round(L, 6), "clear": clear,
+                          "deg": [round(c + deg(o - offs[-1] / 2.0), 6) for o in offs]}
 
 
 def plan_labels(parts, joints, outline, centre, bounds, closed, base_z, up_z, top_zp, ob, of, p):

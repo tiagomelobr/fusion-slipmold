@@ -100,5 +100,28 @@ class PlanLabelTest(unittest.TestCase):
         self.assertNotIn("bottom_stand", p)  # no stand parts
 
 
+class PlasterTest(unittest.TestCase):
+    def test_lines_by_weight(self):
+        self.assertEqual(LB.plaster_lines({"dryPlasterG": 1763.6, "waterG": 1234.4}), ["Gesso/água: 1764g / 1234g"])
+
+    def test_part_prefers_the_first_sector_that_fits(self):
+        plans = {pl["piece"]: pl for pl in C.plan_casings(C.layout_pieces("sides2Bottom", ZB, ZTOP, h=H), MUG)["pieces"]}
+        rows = ["MUG", "side1 sector1", "Gesso/água: 1764g / 1234g"]
+        self.assertEqual(LB.plaster_part(plans["side1"]["parts"], lambda q: rows), "side1_sector1")
+        # the bottom piece's sectors are 15 mm tall: too low for three lines, the bottom core's back takes them
+        self.assertEqual(LB.plaster_part(plans["bottom"]["parts"], lambda q: rows), "bottom_core")
+        self.assertIsNone(LB.plaster_part([{"id": "a", "role": "sector"}], lambda q: rows))
+        self.assertEqual(LB.plaster_parts(plans["bottom"]["parts"], lambda q: rows)[0], "bottom_core")
+        self.assertEqual(LB.plaster_parts(plans["side1"]["parts"], lambda q: rows),
+                         ["side1_sector1", "side1_sector2", "side1_core", "side1_floor"])
+
+    def test_estimate(self):
+        lab = {"maxW": 60.0, "maxH": 40.0}
+        self.assertEqual(LB.est_height(lab, ["X" * 10]), 7.0)
+        self.assertAlmostEqual(LB.est_height(lab, ["X" * 20]), 60.0 / 13.0)
+        self.assertAlmostEqual(LB.est_height(dict(lab, maxH=30.0), ["X"] * 4), 30.0 / 5.7)
+        self.assertEqual(LB.est_height(lab, []), 0.0)
+
+
 if __name__ == "__main__":
     unittest.main()
